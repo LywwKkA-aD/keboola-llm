@@ -24,6 +24,8 @@ export function registerEventRoutes(app: FastifyInstance, { bus }: ServerDeps): 
       connection: 'keep-alive',
       'x-accel-buffering': 'no',
     });
+    // writeHead only buffers the headers; without a flush the client sees nothing until the first event.
+    res.flushHeaders();
     const send = (envelope: Envelope) => res.write(`id: ${envelope.seq}\ndata: ${JSON.stringify(envelope)}\n\n`);
 
     if (threadId) bus.history(threadId, since).forEach(send);
