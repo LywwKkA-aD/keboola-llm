@@ -2,6 +2,7 @@ node_modules/
 dist/
 coverage/
 data/
+!fixtures/*/data/
 .env
 .env.*
 !.env.example

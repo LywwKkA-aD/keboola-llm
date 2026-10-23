@@ -1,0 +1,201 @@
+customer_id,email,first_name,last_name,country,signup_date,updated_at
+C0066,ondrej.novak65@mail.test,,Novák,SK,25.02.2025,2025-02-25 22:41:00
+C0126,Lukas.prochazka125@mail.test,Lukas,Procházka,AT,15.08.2024,2024-08-15 16:04:00
+C0125,tomas.fischer124@example.com,Tomáš,Fischer,CZ ,07.12.2024,2024-12-07 23:11:00
+C0148,tomas.kucera147@shop.test,Tomáš,Kučera,de,07.01.2024,2024-01-07 19:17:00
+C0176,  EVA.CERNA175@EXAMPLE.COM ,Eva,Černá,CZ ,2024-02-24,2024-02-24 05:39:00
+C0098,Max.svoboda97@mail.test,Max,Svoboda,CZ,2025-07-07,2025-07-07 17:08:00
+C0140,jana.prochazka139@mail.test,Jana,Procházka,AT,16.05.2025,2025-05-16 12:32:00
+C0127,Lena.prochazka126@shop.test,Lena,Procházka,SK,05.04.2024,2024-04-05 21:04:00
+C0156,  TOMAS.DVORAK155@MAIL.TEST ,Tomáš,Dvořák,CZ ,2025-07-24,2025-07-24 09:04:00
+C0079,david.svoboda78@example.com,David,Svoboda,de,07.03.2024,2024-03-07 19:17:00
+C0077,tomas.svoboda76@example.com,Tomáš,Svoboda,sk,2024-07-20,2024-07-20 10:47:00
+C0063,  LUCIE.WEBER62@EXAMPLE.COM ,Lucie,Weber,DE,2024-06-02,2024-06-02 07:36:00
+C0142,lena.dvorak141@mail.test,Lena,Dvořák,SK,2024-02-10,2024-02-10 19:14:00
+C0071,lukas.vesela70@mail.test,Lukas,Veselá,AT,14.07.2025,2025-07-14 12:56:00
+C0010,Tomas.kucera9@example.com,Tomáš,Kučera,SK,28.04.2025,2025-04-28 16:11:00
+C0045,jakub.dvorak44@mail.test,Jakub,Dvořák,CZ,14.04.2024,2024-04-14 03:01:00
+C0133,  KLARA.CERNA132@SHOP.TEST ,Klára,Černá,de,10.01.2024,2024-01-10 15:08:00
+C0032,Jana.vesela31@example.com,Jana,Veselá,CZ,2025-02-24,2025-02-24 02:51:00
+C0114,martin.schmidt113@shop.test,Martin,Schmidt,cz,18.01.2024,2024-01-18 07:30:00
+C0105,david.novak104@example.com,,Novák,sk,2024-11-04,2024-11-04 08:28:00
+C0096,Eva.horak95@mail.test,,Horák,cz,2024-01-03,2024-01-03 20:00:00
+C0056,lukas.muller55@example.com,Lukas,Müller,de,20.06.2024,2024-06-20 12:04:00
+C0092,Tomas.dvorak91@shop.test,,Dvořák,de,06.05.2024,2024-05-06 11:55:00
+C0009,klara.novak8@example.com,Klára,Novák,de,2024-05-20,2024-05-20 07:57:00
+C0020,sophie.cerna19@shop.test,Sophie,Černá,CZ ,22.09.2024,2024-09-22 20:22:00
+C0097,  TOMAS.VESELA96@SHOP.TEST ,Tomáš,Veselá,CZ,2025-01-22,2025-01-22 12:58:00
+C0021,max.schmidt20@example.com,Max,Schmidt,CZ ,09.01.2024,2024-01-09 09:08:00
+C0124,lena.cerna123@shop.test,Lena,Černá,de,2025-07-02,2025-07-02 13:58:00
+C0104,anna.fischer103@shop.test,Anna,Fischer,cz,16.01.2024,2024-01-16 08:47:00
+C0174,Jana.kucera173@example.com,Jana,Kučera,SK,11.05.2024,2024-05-11 15:38:00
+C0161,  SOPHIE.WEBER160@EXAMPLE.COM ,Sophie,Weber,AT,19.01.2024,2024-01-19 06:42:00
+C0121,max.horak120@mail.test,,Horák,DE,24.09.2024,2024-09-24 10:16:00
+C0164,  LUCIE.DVORAK163@MAIL.TEST ,Lucie,Dvořák,de,2024-12-12,2024-12-12 08:44:00
+C0181,lena.cerna180@shop.test,Lena,,de,13.08.2025,2025-08-13 20:03:00
+C0134,lena.prochazka133@shop.test,Lena,Procházka,SK,27.12.2024,2024-12-27 15:01:00
+C0053,david.fischer52@shop.test,David,Fischer,AT,2025-03-19,2025-03-19 10:17:00
+C0027,tomas.weber26@example.com,Tomáš,Weber,DE,29.06.2025,2025-06-29 13:58:00
+C0078,tereza.cerna77@mail.test,Tereza,Černá,sk,2025-06-26,2025-06-26 09:45:00
+C0109,  TOMAS.MULLER108@MAIL.TEST ,Tomáš,Müller,cz,2024-08-29,2024-08-29 23:30:00
+C0175,jakub.fischer174@mail.test,Jakub,Fischer,de,2024-08-21,2024-08-21 13:01:00
+C0001,lucie.vesela0@mail.test,Lucie,Veselá,DE,17.01.2025,2025-01-17 12:25:00
+C0024,max.weber23@example.com,,Weber,DE,2025-04-26,2025-04-26 04:22:00
+C0144,klara.horak143@shop.test,Klára,Horák,CZ ,2024-01-21,2024-01-21 16:38:00
+C0070,Klara.novak69@shop.test,Klára,Novák,cz,2024-07-29,2024-07-29 14:06:00
+C0022,tereza.fischer21@example.com,Tereza,Fischer,CZ,2024-11-02,2024-11-02 21:41:00
+C0130,Max.svoboda129@mail.test,Max,Svoboda,sk,2025-02-12,2025-02-12 21:39:00
+C0007,klara.svoboda6@mail.test,Klára,Svoboda,CZ ,2025-06-10,2025-06-10 07:23:00
+C0032, JANA.VESELA31@EXAMPLE.COM,Jana,Veselá,CZ,2025-02-24,2025-09-30 08:00:00
+C0103,david.kucera102@example.com,David,Kučera,de,28.07.2025,2025-07-28 01:16:00
+C0148, TOMAS.KUCERA147@SHOP.TEST,Tomáš,Kučera,de,07.01.2024,2025-09-30 08:00:00
+C0184,jakub.novak183@example.com,Jakub,Novák,de,02.04.2025,2025-04-02 02:54:00
+C0054,tereza.cerna53@example.com,,,SK,10.07.2024,2024-07-10 17:58:00
+C0002,tereza.fischer1@shop.test,Tereza,Fischer,AT,2024-05-11,2024-05-11 12:57:00
+C0018,  TEREZA.KUCERA17@EXAMPLE.COM ,,Kučera,cz,24.03.2024,2024-03-24 01:43:00
+C0080,  EVA.SCHMIDT79@MAIL.TEST ,Eva,Schmidt,cz,2025-03-21,2025-03-21 13:09:00
+C0166,lukas.vesela165@mail.test,Lukas,Veselá,AT,2024-03-12,2024-03-12 21:37:00
+C0005, MAX.WEBER4@SHOP.TEST,Max,,CZ ,2025-06-16,2025-09-30 08:00:00
+C0135,tomas.novak134@shop.test,Tomáš,Novák,de,24.02.2025,2025-02-24 19:30:00
+C0185,lukas.weber184@example.com,Lukas,Weber,de,01.02.2025,2025-02-01 10:08:00
+C0038,lucie.prochazka37@shop.test,Lucie,Procházka,AT,17.07.2024,2024-07-17 21:25:00
+C0022, TEREZA.FISCHER21@EXAMPLE.COM,Tereza,Fischer,CZ,2024-11-02,2025-09-30 08:00:00
+C0068,martin.weber67@mail.test,Martin,Weber,AT,17.09.2024,2024-09-17 14:41:00
+C0131,  DAVID.SVOBODA130@MAIL.TEST ,David,,SK,2025-07-14,2025-07-14 23:24:00
+C0167,lukas.vesela166@mail.test,Lukas,Veselá,CZ ,2024-09-07,2024-09-07 10:45:00
+C0051,  JAKUB.SCHMIDT50@MAIL.TEST ,Jakub,Schmidt,CZ ,2025-05-18,2025-05-18 09:44:00
+C0137,jana.prochazka136@mail.test,,Procházka,CZ,2024-04-05,2024-04-05 05:06:00
+C0154,sophie.svoboda153@example.com,Sophie,Svoboda,CZ,24.01.2024,2024-01-24 23:27:00
+C0059,  ONDREJ.MULLER58@SHOP.TEST ,Ondřej,Müller,SK,2024-09-12,2024-09-12 22:17:00
+C0172,lena.weber171@example.com,Lena,Weber,sk,2025-07-02,2025-07-02 19:23:00
+C0036,jakub.weber35@shop.test,Jakub,Weber,DE,2025-06-12,2025-06-12 14:09:00
+C0100,Lukas.prochazka99@mail.test,Lukas,Procházka,AT,2025-01-29,2025-01-29 07:09:00
+C0153,Eva.muller152@shop.test,Eva,Müller,AT,2025-06-30,2025-06-30 06:28:00
+C0034,tomas.fischer33@example.com,Tomáš,Fischer,CZ ,2024-07-11,2024-07-11 10:18:00
+C0138,Eva.weber137@example.com,Eva,Weber,AT,2024-03-15,2024-03-15 21:02:00
+C0072,ondrej.weber71@example.com,Ondřej,Weber,de,22.07.2024,2024-07-22 22:29:00
+C0179,jakub.schmidt178@example.com,Jakub,,DE,2025-02-28,2025-02-28 15:08:00
+C0078, TEREZA.CERNA77@MAIL.TEST,Tereza,Černá,sk,2025-06-26,2025-09-30 08:00:00
+C0047,lukas.fischer46@shop.test,Lukas,Fischer,CZ ,2024-04-16,2024-04-16 02:36:00
+C0073,jana.novak72@example.com,,Novák,de,08.05.2025,2025-05-08 04:29:00
+C0150,ondrej.prochazka149@example.com,Ondřej,Procházka,CZ,19.12.2024,2024-12-19 20:03:00
+C0158,tereza.weber157@shop.test,Tereza,,CZ,27.03.2024,2024-03-27 11:43:00
+C0035,jana.horak34@mail.test,Jana,Horák,cz,2025-03-03,2025-03-03 06:09:00
+C0085,klara.weber84@shop.test,Klára,Weber,de,18.05.2024,2024-05-18 03:35:00
+C0088,  KLARA.KUCERA87@EXAMPLE.COM ,Klára,Kučera,CZ,15.08.2025,2025-08-15 10:03:00
+C0171,Lena.weber170@shop.test,Lena,Weber,cz,12.03.2024,2024-03-12 20:43:00
+C0094,lukas.muller93@mail.test,Lukas,Müller,CZ,2024-06-03,2024-06-03 09:11:00
+C0143,  TOMAS.HORAK142@EXAMPLE.COM ,Tomáš,Horák,DE,2025-06-07,2025-06-07 04:56:00
+C0016,david.svoboda15@mail.test,David,Svoboda,CZ,2024-05-29,2024-05-29 11:11:00
+C0075,martin.kucera74@example.com,Martin,Kučera,cz,13.08.2024,2024-08-13 05:53:00
+C0120,anna.dvorak119@shop.test,Anna,Dvořák,CZ,2024-11-20,2024-11-20 14:46:00
+C0102,jana.prochazka101@shop.test,Jana,Procházka,SK,2025-08-22,2025-08-22 18:55:00
+C0017,  PETR.FISCHER16@EXAMPLE.COM ,Petr,Fischer,DE,2025-03-07,2025-03-07 15:54:00
+C0093,jana.schmidt92@mail.test,Jana,Schmidt,SK,24.05.2024,2024-05-24 12:17:00
+C0178,Jakub.cerna177@shop.test,Jakub,Černá,sk,2024-02-17,2024-02-17 20:10:00
+C0048,max.novak47@example.com,Max,Novák,de,16.08.2025,2025-08-16 10:31:00
+C0062,max.dvorak61@mail.test,Max,Dvořák,sk,2025-07-19,2025-07-19 18:29:00
+C0168,anna.svoboda167@shop.test,Anna,Svoboda,CZ ,11.03.2024,2024-03-11 22:25:00
+C0046,  DAVID.NOVAK45@SHOP.TEST ,David,Novák,de,2025-03-12,2025-03-12 12:57:00
+C0006,  MARTIN.MULLER5@MAIL.TEST ,Martin,Müller,CZ,2024-08-03,2024-08-03 06:22:00
+C0076,  LUCIE.PROCHAZKA75@MAIL.TEST ,Lucie,Procházka,sk,24.09.2024,2024-09-24 20:54:00
+C0169,sophie.kucera168@example.com,Sophie,Kučera,de,2024-11-21,2024-11-21 17:31:00
+C0147,lena.schmidt146@example.com,Lena,Schmidt,sk,2024-11-03,2024-11-03 00:34:00
+C0149,lucie.weber148@example.com,Lucie,Weber,CZ ,2024-02-12,2024-02-12 07:56:00
+C0049,david.fischer48@shop.test,David,Fischer,de,2024-07-31,2024-07-31 10:33:00
+C0054, TEREZA.CERNA53@EXAMPLE.COM,Lena,,SK,10.07.2024,2025-09-30 08:00:00
+C0141,lukas.prochazka140@mail.test,Lukas,Procházka,CZ,2024-04-26,2024-04-26 13:23:00
+C0107,tereza.dvorak106@shop.test,Tereza,Dvořák,cz,02.12.2024,2024-12-02 20:03:00
+C0160,david.novak159@shop.test,David,Novák,DE,2025-01-01,2025-01-01 03:26:00
+C0145,Lukas.muller144@mail.test,Lukas,Müller,sk,27.06.2024,2024-06-27 11:44:00
+C0152,david.prochazka151@shop.test,David,Procházka,CZ ,13.07.2025,2025-07-13 20:41:00
+C0056, LUKAS.MULLER55@EXAMPLE.COM,Lukas,Müller,de,20.06.2024,2025-09-30 08:00:00
+C0042,david.horak41@mail.test,David,Horák,CZ ,21.02.2025,2025-02-21 05:58:00
+C0015,  JANA.CERNA14@MAIL.TEST ,Jana,Černá,AT,12.07.2024,2024-07-12 01:42:00
+C0023,Eva.dvorak22@example.com,Eva,Dvořák,cz,2024-03-08,2024-03-08 08:18:00
+C0069,lucie.vesela68@shop.test,Lucie,Veselá,CZ ,2025-03-15,2025-03-15 21:58:00
+C0180,Martin.schmidt179@mail.test,Martin,Schmidt,CZ ,21.07.2024,2024-07-21 20:25:00
+C0177, LENA.SCHMIDT176@SHOP.TEST,Lena,Schmidt,DE,23.08.2025,2025-09-30 08:00:00
+C0030,klara.horak29@mail.test,Klára,Horák,CZ ,2025-07-11,2025-07-11 14:16:00
+C0051, JAKUB.SCHMIDT50@MAIL.TEST,Jakub,Schmidt,CZ ,2025-05-18,2025-09-30 08:00:00
+C0026,  LUKAS.PROCHAZKA25@MAIL.TEST ,Lukas,Procházka,AT,2024-12-08,2024-12-08 21:59:00
+C0003,david.kucera2@mail.test,David,Kučera,de,04.03.2024,2024-03-04 00:02:00
+C0012,  JAKUB.KUCERA11@SHOP.TEST ,Jakub,Kučera,CZ,12.08.2024,2024-08-12 01:48:00
+C0008,lucie.svoboda7@example.com,Lucie,Svoboda,CZ,13.02.2025,2025-02-13 20:16:00
+C0091,max.svoboda90@shop.test,Max,Svoboda,de,30.03.2024,2024-03-30 14:03:00
+C0081,Tereza.kucera80@example.com,Tereza,Kučera,DE,2024-06-11,2024-06-11 09:09:00
+C0111,lucie.weber110@shop.test,Lucie,Weber,de,28.08.2024,2024-08-28 12:37:00
+C0005,  MAX.WEBER4@SHOP.TEST ,Max,,CZ ,2025-06-16,2025-06-16 10:30:00
+C0028,  SOPHIE.HORAK27@EXAMPLE.COM ,Sophie,Horák,sk,2024-06-07,2024-06-07 01:49:00
+C0014,david.svoboda13@example.com,David,Svoboda,CZ ,2025-01-02,2025-01-02 10:16:00
+C0170,  DAVID.WEBER169@SHOP.TEST ,David,Weber,de,2024-06-20,2024-06-20 14:44:00
+C0159,lena.novak158@shop.test,Lena,,cz,05.01.2025,2025-01-05 19:32:00
+C0162,lena.horak161@example.com,Lena,Horák,AT,2024-06-20,2024-06-20 21:02:00
+C0083,Lukas.weber82@shop.test,Lukas,Weber,sk,19.05.2025,2025-05-19 06:38:00
+C0115,ondrej.prochazka114@mail.test,Ondřej,Procházka,cz,11.06.2024,2024-06-11 01:45:00
+C0031,david.prochazka30@example.com,David,Procházka,DE,2025-06-18,2025-06-18 11:35:00
+C0052,  JAKUB.VESELA51@SHOP.TEST ,,Veselá,DE,19.01.2024,2024-01-19 02:56:00
+C0113,Tereza.cerna112@shop.test,Tereza,Černá,CZ ,17.06.2024,2024-06-17 15:15:00
+C0025,  PETR.SCHMIDT24@SHOP.TEST ,,Schmidt,AT,2025-06-02,2025-06-02 21:54:00
+C0061,martin.svoboda60@shop.test,Martin,Svoboda,sk,2025-07-24,2025-07-24 21:53:00
+C0057,max.svoboda56@shop.test,Max,Svoboda,sk,2024-09-09,2024-09-09 20:35:00
+C0123,Anna.dvorak122@shop.test,Anna,Dvořák,cz,2024-03-25,2024-03-25 23:37:00
+C0117,martin.prochazka116@shop.test,Martin,Procházka,SK,27.02.2024,2024-02-27 12:38:00
+C0183,petr.kucera182@example.com,Petr,Kučera,sk,24.01.2024,2024-01-24 01:35:00
+C0029,klara.dvorak28@shop.test,Klára,Dvořák,DE,2024-01-18,2024-01-18 18:08:00
+C0039,  MAX.WEBER38@EXAMPLE.COM ,Max,Weber,AT,15.09.2024,2024-09-15 07:39:00
+C0090,  LENA.NOVAK89@EXAMPLE.COM ,Lena,Novák,de,2025-04-03,2025-04-03 21:08:00
+C0119,tomas.weber118@mail.test,Tomáš,Weber,AT,2025-07-06,2025-07-06 20:56:00
+C0141, LUKAS.PROCHAZKA140@MAIL.TEST,Lukas,Procházka,CZ,2024-04-26,2025-09-30 08:00:00
+C0082,david.novak81@shop.test,David,Novák,sk,05.02.2024,2024-02-05 20:05:00
+C0019,lena.dvorak18@shop.test,Lena,Dvořák,sk,2024-05-13,2024-05-13 02:35:00
+C0118,anna.svoboda117@mail.test,Anna,Svoboda,cz,20.12.2024,2024-12-20 16:00:00
+C0074,Ondrej.fischer73@shop.test,Ondřej,Fischer,SK,01.12.2024,2024-12-01 01:21:00
+C0089,Anna.schmidt88@shop.test,Anna,Schmidt,cz,30.09.2024,2024-09-30 16:49:00
+C0033,jakub.cerna32@mail.test,,Černá,cz,16.07.2024,2024-07-16 20:41:00
+C0108,  DAVID.SCHMIDT107@MAIL.TEST ,David,Schmidt,de,2024-04-28,2024-04-28 10:26:00
+C0099,anna.svoboda98@shop.test,Anna,Svoboda,cz,07.05.2024,2024-05-07 00:39:00
+C0044,tomas.fischer43@shop.test,Tomáš,Fischer,DE,24.04.2025,2025-04-24 14:41:00
+C0037,Ondrej.novak36@example.com,Ondřej,Novák,AT,08.03.2024,2024-03-08 12:39:00
+C0177, LENA.SCHMIDT176@SHOP.TEST,Lena,Schmidt,DE,23.08.2025,2025-09-30 08:00:00
+C0106,david.schmidt105@example.com,David,Schmidt,AT,2024-12-22,2024-12-22 07:25:00
+C0110,  PETR.NOVAK109@SHOP.TEST ,Petr,Novák,sk,2025-04-22,2025-04-22 11:17:00
+C0058,Max.horak57@shop.test,Max,Horák,DE,2024-06-08,2024-06-08 08:27:00
+C0101,petr.schmidt100@shop.test,Petr,Schmidt,DE,2024-11-24,2024-11-24 17:47:00
+C0086,sophie.fischer85@mail.test,Sophie,Fischer,CZ ,29.05.2024,2024-05-29 14:13:00
+C0040,  LENA.DVORAK39@MAIL.TEST ,Lena,Dvořák,CZ ,13.08.2024,2024-08-13 21:09:00
+C0165,  TEREZA.SCHMIDT164@EXAMPLE.COM ,,Schmidt,SK,2025-02-10,2025-02-10 10:18:00
+C0087,martin.muller86@shop.test,Martin,Müller,cz,21.07.2025,2025-07-21 00:58:00
+C0004,  LUKAS.SVOBODA3@MAIL.TEST ,Lukas,Svoboda,sk,12.04.2025,2025-04-12 14:44:00
+C0055,ondrej.svoboda54@example.com,Ondřej,Svoboda,AT,2024-12-27,2024-12-27 07:46:00
+C0129,tereza.dvorak128@shop.test,Tereza,Dvořák,CZ ,06.02.2025,2025-02-06 17:28:00
+C0064,lukas.muller63@shop.test,Lukas,Müller,AT,2024-03-29,2024-03-29 09:49:00
+C0067,lucie.kucera66@example.com,Lucie,Kučera,sk,04.07.2024,2024-07-04 22:43:00
+C0116,lena.prochazka115@example.com,Lena,Procházka,sk,2025-01-08,2025-01-08 13:17:00
+C0136,ondrej.fischer135@shop.test,Ondřej,Fischer,sk,02.06.2024,2024-06-02 05:37:00
+C0060,sophie.svoboda59@example.com,Sophie,Svoboda,DE,2025-01-25,2025-01-25 02:27:00
+C0041,max.kucera40@shop.test,Max,Kučera,cz,08.05.2025,2025-05-08 05:37:00
+C0043,max.svoboda42@mail.test,Max,Svoboda,cz,2024-10-13,2024-10-13 18:07:00
+C0011,jakub.prochazka10@shop.test,Jakub,Procházka,sk,27.04.2024,2024-04-27 14:45:00
+C0065,jana.horak64@example.com,Jana,Horák,cz,29.06.2024,2024-06-29 23:33:00
+C0132,tereza.svoboda131@example.com,Tereza,Svoboda,de,2025-03-31,2025-03-31 20:55:00
+C0095,eva.svoboda94@example.com,Eva,Svoboda,SK,2025-04-23,2025-04-23 13:57:00
+C0055, ONDREJ.SVOBODA54@EXAMPLE.COM,Ondřej,Svoboda,AT,2024-12-27,2025-09-30 08:00:00
+C0050,anna.svoboda49@mail.test,Anna,Svoboda,DE,04.08.2024,2024-08-04 12:57:00
+C0155,petr.schmidt154@example.com,,Schmidt,SK,30.05.2025,2025-05-30 23:55:00
+C0013,lukas.cerna12@example.com,,Černá,CZ,2025-05-12,2025-05-12 18:11:00
+C0177,Lena.schmidt176@shop.test,Lena,Schmidt,DE,23.08.2025,2025-08-23 02:47:00
+C0128,lucie.fischer127@example.com,Lucie,Fischer,cz,2025-08-02,2025-08-02 22:23:00
+C0139,petr.kucera138@example.com,Petr,Kučera,CZ ,30.09.2024,2024-09-30 07:46:00
+C0122,ondrej.dvorak121@shop.test,Ondřej,Dvořák,SK,2024-05-04,2024-05-04 04:16:00
+C0157,max.prochazka156@example.com,Max,Procházka,cz,18.02.2024,2024-02-18 08:57:00
+C0147, LENA.SCHMIDT146@EXAMPLE.COM,Lena,Schmidt,sk,2024-11-03,2025-09-30 08:00:00
+C0010, TOMAS.KUCERA9@EXAMPLE.COM,Tomáš,Kučera,SK,28.04.2025,2025-09-30 08:00:00
+C0163,lena.prochazka162@example.com,Lena,Procházka,SK,2025-02-17,2025-02-17 00:35:00
+C0146,Max.kucera145@shop.test,,Kučera,CZ,2025-03-06,2025-03-06 15:12:00
+C0182,  EVA.NOVAK181@EXAMPLE.COM ,Eva,Novák,AT,30.06.2025,2025-06-30 09:34:00
+C0151,jakub.novak150@shop.test,Jakub,Novák,AT,07.05.2025,2025-05-07 03:43:00
+C0173,lucie.schmidt172@example.com,Lucie,Schmidt,DE,2025-07-29,2025-07-29 13:48:00
+C0112,ondrej.dvorak111@shop.test,Ondřej,Dvořák,AT,2024-03-31,2024-03-31 21:25:00
+C0048, MAX.NOVAK47@EXAMPLE.COM,Max,Novák,de,16.08.2025,2025-09-30 08:00:00
+C0084,lukas.dvorak83@example.com,Lukas,Dvořák,CZ ,24.12.2024,2024-12-24 18:08:00
