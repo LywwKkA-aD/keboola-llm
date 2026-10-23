@@ -38,6 +38,23 @@ describe('createThreadStore', () => {
     expect(store.list()).toEqual([]);
   });
 
+  it('stores the per-chat SQL permission without reordering threads', () => {
+    const file = join(makeTree({}), 'threads.json');
+    const store = createThreadStore(file, clock('2026-01-01T10:00:00Z', '2026-01-01T11:00:00Z'));
+    const older = store.create('Older');
+    const newer = store.create('Newer');
+
+    expect(store.policy(older.id)).toEqual({ allowSql: false });
+    store.setPolicy(older.id, { allowSql: true });
+
+    expect(store.policy(older.id)).toEqual({ allowSql: true });
+    expect(store.list().map((thread) => thread.id)).toEqual([newer.id, older.id]);
+    expect(createThreadStore(file).policy(older.id)).toEqual({ allowSql: true });
+    expect(store.policy('missing')).toBeUndefined();
+    store.setPolicy('missing', { allowSql: true });
+    expect(store.list()).toHaveLength(2);
+  });
+
   it('renames and removes threads', () => {
     const store = createThreadStore(join(makeTree({}), 'threads.json'));
     const thread = store.create('Old');

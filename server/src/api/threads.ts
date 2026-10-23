@@ -2,11 +2,18 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+/** Standing permissions the user grants per chat. */
+export interface ThreadPolicy {
+  /** Run kbagent_sql workspace queries without asking each time. */
+  readonly allowSql: boolean;
+}
+
 export interface Thread {
   readonly id: string;
   readonly title: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly allowSql?: boolean;
 }
 
 export interface ThreadStore {
@@ -16,6 +23,8 @@ export interface ThreadStore {
   touch(id: string): void;
   rename(id: string, title: string): void;
   remove(id: string): void;
+  policy(id: string): ThreadPolicy | undefined;
+  setPolicy(id: string, policy: ThreadPolicy): void;
 }
 
 const TITLE_CHARS = 60;
@@ -62,5 +71,15 @@ export function createThreadStore(file: string, now: () => Date = () => new Date
     },
     rename: (id, title) => update(id, { title: titleFrom(title) }),
     remove: (id) => save(threads.filter((thread) => thread.id !== id)),
+    policy(id) {
+      const thread = threads.find((entry) => entry.id === id);
+      return thread ? { allowSql: thread.allowSql === true } : undefined;
+    },
+    // A policy change is not chat activity, so updatedAt (and the list order) stays as is.
+    setPolicy: (id, policy) => {
+      if (threads.some((thread) => thread.id === id)) {
+        save(threads.map((thread) => (thread.id === id ? { ...thread, allowSql: policy.allowSql } : thread)));
+      }
+    },
   };
 }
