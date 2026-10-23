@@ -13,6 +13,7 @@ describe('titleFrom', () => {
     expect(titleFrom('  Find   where\ncustomer_id is used ')).toBe('Find where');
     expect(titleFrom('x'.repeat(100))).toHaveLength(60);
     expect(titleFrom('   ')).toBe('New chat');
+    expect(titleFrom(`${'a'.repeat(59)} tail`)).toBe('a'.repeat(59));
   });
 });
 

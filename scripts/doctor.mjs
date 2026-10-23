@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 /** Check that everything the app needs is installed and reachable. Exits 1 on any failure. */
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { loadDotEnv } from './lib/dotenv.mjs';
+import { compareKbagent, snapshotVersion } from './lib/kbagent-version.mjs';
 import { isSupportedNode } from './lib/node-version.mjs';
 import { readOmniRouteConfig } from './lib/omniroute-config.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ENV_PATH = join(ROOT, '.env');
+const SNAPSHOT_PATH = join(ROOT, 'server', 'src', 'tools', 'kbagent', 'operations-snapshot.ts');
 const run = promisify(execFile);
 
 const ok = (label, detail) => ({ level: 'ok', label, detail });
@@ -50,8 +52,10 @@ async function checkOmniRoute({ baseUrl, apiKey, model }) {
 
 async function checkKbagent() {
   try {
-    const { stdout } = await run('kbagent', ['--version'], { timeout: 15000 });
-    return ok('kbagent', stdout.trim());
+    const { stdout } = await run('kbagent', ['--version'], { timeout: 15000, env: { ...process.env, KBAGENT_AUTO_UPDATE: 'false' } });
+    const snapshot = snapshotVersion(readFileSync(SNAPSHOT_PATH, 'utf8'));
+    const { level, detail } = compareKbagent(stdout, snapshot);
+    return level === 'ok' ? ok('kbagent', detail) : warn('kbagent', detail);
   } catch {
     return warn('kbagent', 'not found on PATH: Keboola agents will be disabled (see README)');
   }

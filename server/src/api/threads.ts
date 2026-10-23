@@ -22,7 +22,7 @@ const TITLE_CHARS = 60;
 
 export function titleFrom(text: string): string {
   const firstLine = text.trim().split('\n')[0]?.replace(/\s+/g, ' ').trim() ?? '';
-  return firstLine.slice(0, TITLE_CHARS) || 'New chat';
+  return firstLine.slice(0, TITLE_CHARS).trim() || 'New chat';
 }
 
 function read(file: string): readonly Thread[] {
