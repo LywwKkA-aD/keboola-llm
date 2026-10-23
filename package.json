@@ -13,10 +13,17 @@
     "vendor:sync": "node scripts/vendor-keboola.mjs",
     "vendor:update": "node scripts/vendor-keboola.mjs --latest",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dev": "npm run dev -w server",
+    "start": "npm run start -w server",
+    "chat": "npm run chat -w server --",
+    "typecheck": "npm run typecheck -w server"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.5",
     "vitest": "^5.0.5"
-  }
+  },
+  "workspaces": [
+    "server"
+  ]
 }
