@@ -1,3 +1,4 @@
+import type { TeamInfo } from '../api/types.ts';
 import { Scene } from '../aquarium/Scene.tsx';
 import { moodOf } from '../aquarium/state.ts';
 import { useAquariumEvents } from '../aquarium/useAquariumEvents.ts';
@@ -5,9 +6,8 @@ import type { StringKey } from '../i18n/strings.ts';
 import { useSettings } from '../state/settings-context.tsx';
 import { useTeam } from '../state/team-context.tsx';
 
-export function AquariumPage() {
+function Aquarium({ team }: { team: TeamInfo }) {
   const { t } = useSettings();
-  const team = useTeam();
   const { state, now } = useAquariumEvents(team.lead);
   const agents = team.agents.filter((agent) => agent.enabled);
   const active = agents
@@ -35,4 +35,10 @@ export function AquariumPage() {
       </aside>
     </div>
   );
+}
+
+export function AquariumPage() {
+  const team = useTeam();
+  // Keyed by the lead: the aquarium state remembers the lead name, known only after /api/team.
+  return <Aquarium key={team.lead} team={team} />;
 }

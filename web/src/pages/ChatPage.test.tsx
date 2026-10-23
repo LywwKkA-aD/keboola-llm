@@ -98,6 +98,26 @@ describe('Chat page', () => {
     expect(await screen.findByText('Thread is busy with another run')).toBeInTheDocument();
   });
 
+  it('takes back a message the server did not accept', async () => {
+    await openChat({ 'POST /api/threads/t1/messages': () => errorResponse(409, 'Thread is busy with another run') });
+    await userEvent.type(screen.getByRole('textbox'), 'never sent{Enter}');
+    await screen.findByText('Thread is busy with another run');
+    expect(screen.queryByText('never sent')).toBeNull();
+  });
+
+  it('streams the reply of a lead agent that is not called "lead"', async () => {
+    const team = { lead: 'boss', agents: [], skills: [], warnings: [], loadErrors: [] };
+    await openChat({ 'GET /api/team': team });
+    // The first subscription was opened with the default lead name and replaced once /api/team answered.
+    await waitFor(() => expect(FakeEventSource.instances.length).toBeGreaterThanOrEqual(2));
+    expect(FakeEventSource.instances[0]?.closed).toBe(true);
+    act(() => {
+      FakeEventSource.latest().emit({ type: 'run.started', runId: 'r1' });
+      FakeEventSource.latest().emit({ type: 'token', agent: 'boss', text: 'Hello from boss' });
+    });
+    expect(screen.getByText('Hello from boss')).toBeInTheDocument();
+  });
+
   it('shows why a run failed', async () => {
     const { source } = await openChat();
     act(() => source.emit({ type: 'run.failed', runId: 'r1', error: 'model down' }));

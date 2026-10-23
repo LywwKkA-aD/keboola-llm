@@ -6,11 +6,13 @@ import { Composer } from '../components/Composer.tsx';
 import { Conversation } from '../components/Conversation.tsx';
 import { ThreadList } from '../components/ThreadList.tsx';
 import { useSettings } from '../state/settings-context.tsx';
+import { useTeam } from '../state/team-context.tsx';
 
 export function ChatPage() {
   const { t } = useSettings();
   const { threadId } = useParams();
   const navigate = useNavigate();
+  const team = useTeam();
   const [threads, setThreads] = useState<readonly Thread[]>([]);
   const [error, setError] = useState<string>();
 
@@ -40,7 +42,8 @@ export function ChatPage() {
     <div className="chat-page">
       <ThreadList threads={threads} onNew={() => navigate('/chat')} onDelete={(id) => void remove(id)} />
       {threadId ? (
-        <Conversation key={threadId} threadId={threadId} onActivity={refresh} />
+        // Keyed by the lead too: the event reducer filters chat tokens by the lead name, known only after /api/team.
+        <Conversation key={`${threadId}:${team.lead}`} threadId={threadId} onActivity={refresh} />
       ) : (
         <div className="chat-page__start">
           <p className="conversation__empty">{t('chat.empty')}</p>

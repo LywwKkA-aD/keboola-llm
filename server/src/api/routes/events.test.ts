@@ -95,6 +95,16 @@ describe('GET /api/events', () => {
     expect(first?.seq).toBe(3);
   });
 
+  it('ignores an empty Last-Event-ID header and keeps ?after=', async () => {
+    const bus = createEventBus({ historyPerThread: 10 });
+    ['a', 'b', 'c'].forEach((text) => bus.publish('t1', token(text)));
+    const base = await start(bus);
+
+    const stream = await open(`${base}/api/events?threadId=t1&after=2`, { 'last-event-id': '' });
+    const [first] = await stream.take(1);
+    expect(first?.seq).toBe(3);
+  });
+
   it('streams every thread without replay when no thread is given', async () => {
     const bus = createEventBus({ historyPerThread: 10 });
     bus.publish('t1', token('old'));

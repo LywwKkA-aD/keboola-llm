@@ -42,21 +42,28 @@ export function Conversation({ threadId, onActivity }: { threadId: string; onAct
     endRef.current?.scrollIntoView({ block: 'end' });
   }, [history, run.streamingText, run.approvals.length]);
 
-  const guard = async (action: () => Promise<unknown>) => {
+  /** Run an API call with the busy flag and error banner; resolves to whether it succeeded. */
+  const guard = async (action: () => Promise<unknown>): Promise<boolean> => {
     setBusy(true);
     setError(undefined);
     try {
       await action();
+      return true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t('error.generic'));
+      return false;
     } finally {
       setBusy(false);
     }
   };
 
   const send = (text: string) => {
-    setHistory((current) => [...current, { id: `local-${Date.now()}`, role: 'user', text }]);
-    void guard(() => api.send(threadId, text));
+    const local: ChatEntry = { id: `local-${Date.now()}`, role: 'user', text };
+    setHistory((current) => [...current, local]);
+    void guard(() => api.send(threadId, text)).then((sent) => {
+      // The server did not take it (e.g. the chat is busy): do not pretend it was sent.
+      if (!sent) setHistory((current) => current.filter((entry) => entry.id !== local.id));
+    });
   };
 
   const answer = (interruptId: string, decisions: Decision[]) =>

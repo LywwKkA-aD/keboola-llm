@@ -13,7 +13,9 @@ const PING_MS = 15_000;
 export function registerEventRoutes(app: FastifyInstance, { bus }: ServerDeps): void {
   app.get('/api/events', (request, reply) => {
     const { threadId, after } = eventsQuery.parse(request.query);
-    const lastEventId = Number(request.headers['last-event-id']);
+    const header = request.headers['last-event-id'];
+    // An empty header is not a position: keep ?after= instead of replaying from 0.
+    const lastEventId = typeof header === 'string' && header.trim() ? Number(header) : Number.NaN;
     const since = Number.isFinite(lastEventId) ? lastEventId : (after ?? 0);
 
     reply.hijack();
