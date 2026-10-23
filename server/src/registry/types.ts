@@ -14,6 +14,8 @@ export const agentFrontmatterSchema = z
     tools: z.array(z.string()).default([]),
     // Virtual path prefixes this agent may write to, e.g. "/agents/" or "/knowledge/".
     writes: z.array(z.string().startsWith('/')).default([]),
+    // Tool names whose every call waits for the user's approval in the UI.
+    approve: z.array(z.string()).default([]),
     keboola: z
       .object({
         project: z.string().optional(),

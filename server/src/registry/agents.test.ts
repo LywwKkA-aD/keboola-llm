@@ -18,8 +18,30 @@ describe('loadAgents', () => {
       skills: ['kbagent'],
       tools: ['kbagent'],
       writes: [],
+      approve: [],
       prompt: 'Do the job well.',
     });
+  });
+
+  it('accepts tools that need human approval and write prefixes', () => {
+    const root = makeTree({
+      'agents/lead/AGENT.md': orchestrator,
+      'agents/builder/AGENT.md': agentMd(
+        'name: builder\ndescription: Builds agents for the team.\nwrites: [/agents/]\napprove: [write_file]',
+      ),
+    });
+    expect(loadAgents(root).items.find((agent) => agent.name === 'builder')).toMatchObject({
+      writes: ['/agents/'],
+      approve: ['write_file'],
+    });
+  });
+
+  it('rejects write prefixes that are not absolute virtual paths', () => {
+    const root = makeTree({
+      'agents/lead/AGENT.md': orchestrator,
+      'agents/rel/AGENT.md': agentMd('name: rel\ndescription: Relative write prefix here.\nwrites: [agents/]'),
+    });
+    expect(loadAgents(root).errors).toHaveLength(1);
   });
 
   it('composes the prompt of an agent that extends an upstream file', () => {
