@@ -1,0 +1,39 @@
+{
+  "phases": [
+    {
+      "id": "shop-phase-lake",
+      "name": "Raw to lake",
+      "next": [{ "id": "shop-transition-dwh", "goto": "shop-phase-dwh" }]
+    },
+    {
+      "id": "shop-phase-dwh",
+      "name": "Lake to DWH"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "shop-task-01",
+      "name": "Shop 01 - raw to lake",
+      "phase": "shop-phase-lake",
+      "task": {
+        "type": "job",
+        "mode": "run",
+        "componentId": "keboola.google-bigquery-transformation",
+        "configId": "01m5ndt8s4stwess6fn86ksarc"
+      },
+      "enabled": true
+    },
+    {
+      "id": "shop-task-02",
+      "name": "Shop 02 - lake to DWH",
+      "phase": "shop-phase-dwh",
+      "task": {
+        "type": "job",
+        "mode": "run",
+        "componentId": "keboola.google-bigquery-transformation",
+        "configId": "01m5ne18awcvbsznntean4k7q4"
+      },
+      "enabled": true
+    }
+  ]
+}

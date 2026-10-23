@@ -1,0 +1,41 @@
+product_id,name,category,price,is_active
+P001,Classic Drone 1,Toys,"1 467,50 Kč",yes
+P002,Smart Speaker 2,Home & Garden,CZK 1325.00,yes
+P003,Eco Kettle 3,Toys,"2 420,00 Kč",true
+P004,Smart Speaker 4,electronics,CZK 1732.50,true
+P005,Eco Headphones 5,home-garden,"3 179,50 Kč",true
+P006,Smart Planter 6,home-garden,CZK 3143.00,0
+P007,Mini Mug 7,books,CZK 1047.50,0
+P008,Smart Drone 8,Electronics,"320,00 Kč",true
+P009,Smart Planter 9,Electronics,"4 953,50 Kč",1
+P010,Classic Kettle 10,home-garden,CZK 1460.90,TRUE
+P011,Smart Lamp 11,home-garden,2848.50,yes
+P012,Classic Drone 12,Electronics,"3 745,50 Kč",yes
+P013,Mini Mug 13,Home & Garden,CZK 1468.90,no
+P014,Pro Robot 14, ELECTRONICS,"114,90 Kč",true
+P015,Smart Speaker 15,Toys,CZK 3725.00,1
+P016,Mini Robot 16,Toys,CZK 4794.90,0
+P017,Pro Puzzle 17,home-garden,"4 005,00 Kč",true
+P018,Pro Cable 18,Home & Garden,"1 363,50 Kč",0
+P019,Classic Cable 19,Toys,"4 336,00 Kč",1
+P020,Classic Atlas 20,Home & Garden,377.00,no
+P021,Classic Mug 21, ELECTRONICS,3928.00,0
+P022,Classic Novel 22,electronics,CZK 3077.50,no
+P023,Classic Planter 23,books,"3 384,50 Kč",TRUE
+P024,Pro Planter 24,electronics,3364.90,TRUE
+P025,Pro Atlas 25,Toys,"4 932,50 Kč",TRUE
+P026,Pro Cable 26,electronics,3239.50,true
+P027,Classic Puzzle 27,Home & Garden,"4 826,50 Kč",yes
+P028,Mini Robot 28,toys ,CZK 793.50,true
+P029,Eco Speaker 29,Books,295.90,0
+P030,Classic Novel 30,Toys,"613,90 Kč",yes
+P031,Mini Speaker 31,Toys,CZK 3867.50,0
+P032,Pro Robot 32,books,"3 306,90 Kč",TRUE
+P033,Smart Kettle 33,electronics,CZK 336.50,no
+P034,Eco Atlas 34,books,2782.90,yes
+P035,Mini Mug 35,home-garden,1384.90,TRUE
+P036,Eco Drone 36,books,CZK 1555.90,no
+P037,Mini Speaker 37,Books,CZK 4648.90,1
+P038,Classic Atlas 38,Toys,"4 414,50 Kč",TRUE
+P039,Eco Puzzle 39, ELECTRONICS,4639.00,TRUE
+P040,Mini Drone 40,electronics,"2 110,90 Kč",yes

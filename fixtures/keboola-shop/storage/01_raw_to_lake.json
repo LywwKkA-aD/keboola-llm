@@ -1,0 +1,18 @@
+{
+  "input": {
+    "tables": [
+      { "source": "in.c-shop_raw.customers", "destination": "customers" },
+      { "source": "in.c-shop_raw.products", "destination": "products" },
+      { "source": "in.c-shop_raw.orders", "destination": "orders" },
+      { "source": "in.c-shop_raw.order_items", "destination": "order_items" }
+    ]
+  },
+  "output": {
+    "tables": [
+      { "source": "lake_customers", "destination": "out.c-shop_lake.customers", "primary_key": ["customer_id"] },
+      { "source": "lake_products", "destination": "out.c-shop_lake.products", "primary_key": ["product_id"] },
+      { "source": "lake_orders", "destination": "out.c-shop_lake.orders", "primary_key": ["order_id"] },
+      { "source": "lake_order_items", "destination": "out.c-shop_lake.order_items", "primary_key": ["order_item_id"] }
+    ]
+  }
+}
