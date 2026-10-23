@@ -1,20 +1,19 @@
 import { CameraControls } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type { Vector3 } from 'three';
+import { overviewPose } from '../camera.ts';
 
-export const OVERVIEW = { position: [0, 8.2, 17.5] as const, target: [0, 0.4, 0.2] as const };
-const AUTO_ORBIT_RAD_PER_S = 0.035;
-const IDLE_BEFORE_ORBIT_MS = 15_000;
+export { OVERVIEW } from '../camera.ts';
 
-/** Orbit camera: overview by default, flies to the selected octopus, drifts slowly when untouched. */
+/** Orbit camera: an overview that fits the viewport and flies to the selected octopus. It never moves on its own. */
 export function CameraRig({ selected, positions, motion }: {
   selected?: string;
   positions: ReadonlyMap<string, Vector3>;
   motion: boolean;
 }) {
   const controls = useRef<CameraControls>(null);
-  const lastTouch = useRef(Date.now());
+  const aspect = useThree((state) => state.size.width / Math.max(1, state.size.height));
 
   useEffect(() => {
     const rig = controls.current;
@@ -23,31 +22,20 @@ export function CameraRig({ selected, positions, motion }: {
     if (position) {
       void rig.setLookAt(position.x * 0.8, position.y + 3.2, position.z + 7.5, position.x, position.y + 0.8, position.z, motion);
     } else {
-      void rig.setLookAt(...OVERVIEW.position, ...OVERVIEW.target, motion);
+      const { position: eye, target } = overviewPose(aspect);
+      void rig.setLookAt(...eye, ...target, motion);
     }
-  }, [selected, positions, motion]);
-
-  useFrame((_, delta) => {
-    const rig = controls.current;
-    if (!rig || !motion || selected) return;
-    if (Date.now() - lastTouch.current > IDLE_BEFORE_ORBIT_MS) rig.azimuthAngle += AUTO_ORBIT_RAD_PER_S * delta;
-  });
+  }, [selected, positions, motion, aspect]);
 
   return (
     <CameraControls
       ref={controls}
       makeDefault
       minDistance={5}
-      maxDistance={34}
+      maxDistance={40}
       minPolarAngle={0.25}
       maxPolarAngle={1.42}
       smoothTime={0.6}
-      onStart={() => {
-        lastTouch.current = Date.now();
-      }}
-      onEnd={() => {
-        lastTouch.current = Date.now();
-      }}
     />
   );
 }

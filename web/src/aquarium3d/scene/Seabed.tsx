@@ -1,6 +1,8 @@
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
-import { Color, DodecahedronGeometry, type ShaderMaterial } from 'three';
+import { useRef } from 'react';
+import { Color, type ShaderMaterial } from 'three';
+import { DARK_STONE, STONE } from './natural/materials.ts';
+import { rockGeometry } from './natural/rockGeometry.ts';
 import { WATER } from './Water.tsx';
 
 /** Seabed with animated caustics, fading into the fog colour toward the horizon. */
@@ -52,6 +54,11 @@ function Floor({ motion }: { motion: boolean }) {
   );
 }
 
+// Silhouettes far back in the fog: a ridge that closes the scene.
+const RIDGE = [
+  [-24, -18, 7, 4], [-12, -26, 9, 5], [3, -28, 11, 6], [17, -24, 9, 5], [27, -14, 7, 4], [-28, -4, 6, 3.5],
+] as const;
+
 // Outside the ring of rest pods (radius ~10.5) so nothing grows through the team.
 const ROCKS = [
   [-13, -8, 1.8], [-6, -14, 1.3], [4, -14.5, 1.6], [12.5, -9, 2], [-15, 2, 1.4], [15.5, 3, 1.5], [-11, 9.5, 1.1], [11.5, 10, 1.2],
@@ -95,14 +102,14 @@ function Kelp({ x, z, motion, seed }: { x: number; z: number; motion: boolean; s
 }
 
 export function Seabed({ motion }: { motion: boolean }) {
-  const rock = useMemo(() => new DodecahedronGeometry(1, 0), []);
   return (
     <group>
       <Floor motion={motion} />
+      {RIDGE.map(([x, z, w, h], index) => (
+        <mesh key={`${x}${z}`} geometry={rockGeometry(200 + index, 3)} material={DARK_STONE} position={[x, -0.6 + h * 0.35, z]} scale={[w, h, w * 0.7]} />
+      ))}
       {ROCKS.map(([x, z, s], index) => (
-        <mesh key={`${x}${z}`} geometry={rock} position={[x, -0.6 + s * 0.25, z]} scale={[s, s * 0.6, s * 0.9]} rotation={[0.2 * index, index, 0]}>
-          <meshStandardMaterial color="#0d1d2e" roughness={0.95} metalness={0.05} flatShading />
-        </mesh>
+        <mesh key={`${x}${z}`} geometry={rockGeometry(40 + index, 3)} material={STONE} position={[x, -0.6 + s * 0.2, z]} scale={[s, s * 0.6, s * 0.85]} rotation={[0, index, 0]} />
       ))}
       {KELP.map(([x, z], index) => (
         <Kelp key={`${x}${z}`} x={x} z={z} motion={motion} seed={index * 2.3} />

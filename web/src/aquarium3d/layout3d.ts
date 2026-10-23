@@ -11,7 +11,7 @@ export type StationId = 'command' | 'archive' | 'console' | 'forge' | 'beacon';
 
 /** Work stations on the seabed. Position is where the first octopus floats; facing turns it to the station. */
 export const STATIONS_3D: Readonly<Record<StationId, Spot & { readonly label: string }>> = {
-  command: { position: [0, 0.75, 1.2], facing: 0, label: 'command' },
+  command: { position: [0, 0.5, 1.2], facing: 0, label: 'command' },
   archive: { position: [-7.6, 0.6, 0.2], facing: -Math.PI / 2, label: 'archive' },
   console: { position: [7.6, 0.6, 0.2], facing: Math.PI / 2, label: 'console' },
   forge: { position: [-4.6, 0.55, 5.2], facing: -Math.PI / 4, label: 'forge' },

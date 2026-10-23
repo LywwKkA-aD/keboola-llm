@@ -139,7 +139,7 @@ export function Octopus3D({ name, caption, mood, spot, selected, motion, onSelec
         <meshBasicMaterial color={auraColor} transparent opacity={0.3} side={DoubleSide} depthWrite={false} toneMapped={false} />
       </mesh>
       {/* Always mounted and hidden with CSS: unmounting drei Html during a render trips React 19. */}
-      <Html position={[0, 2.25, 0]} center distanceFactor={10} zIndexRange={[20, 0]} pointerEvents="none">
+      <Html position={[0, 2.3, 0]} center distanceFactor={15} zIndexRange={[20, 0]} pointerEvents="none">
         <div className={`octo-tag octo-tag--${mood}${selected ? ' octo-tag--selected' : ''}${mood === 'idle' && !selected && !hovered ? ' octo-tag--hidden' : ''}`}>
           <span className="octo-tag__name">{name.replace(/^kbc-/, '')}</span>
           {caption && <span className="octo-tag__caption">{caption}</span>}

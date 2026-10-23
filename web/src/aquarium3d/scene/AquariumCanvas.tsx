@@ -54,7 +54,7 @@ export default function AquariumCanvas({ agents, lead, state, now, selected, onS
     <Canvas
       dpr={dpr}
       gl={{ antialias: quality === 'low', powerPreference: 'high-performance' }}
-      camera={{ fov: 45, position: [...OVERVIEW.position], near: 0.1, far: 140 }}
+      camera={{ fov: 45, position: [...OVERVIEW.position], near: 0.1, far: 160 }}
       onCreated={({ gl }) => {
         gl.toneMapping = ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.05;
@@ -87,7 +87,7 @@ export default function AquariumCanvas({ agents, lead, state, now, selected, onS
           />
         );
       })}
-      <Links lead={lead} targets={model.links} positions={positions} motion={motion} />
+      <Links lead={lead} targets={model.links} positions={positions} />
       <Bubbles busy={agents.map((agent) => agent.name).filter((name) => (model.moods[name] ?? 'idle') !== 'idle')} positions={positions} motion={motion} />
       <CameraRig selected={selected} positions={positions} motion={motion} />
       <Effects quality={quality} />

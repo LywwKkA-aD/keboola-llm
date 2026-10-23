@@ -44,14 +44,14 @@
   flex-direction: column;
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
   gap: 1px;
-  max-width: 190px;
-  padding: 3px 7px;
+  max-width: 260px;
+  padding: 4px 9px;
   user-select: none;
   white-space: nowrap;
 }
 
 .octo-tag__name {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -59,8 +59,8 @@
 
 .octo-tag__caption {
   color: #7fc8ff;
-  font-size: 9px;
-  max-width: 176px;
+  font-size: 11.5px;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -93,9 +93,9 @@
 }
 
 .station-tag {
-  color: rgb(127 200 255 / 70%);
+  color: rgb(127 200 255 / 75%);
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 0.22em;
   user-select: none;
   white-space: nowrap;
