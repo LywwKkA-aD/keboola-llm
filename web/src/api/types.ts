@@ -5,9 +5,31 @@
 
 export type Language = 'ru' | 'en' | 'cs';
 
+export type Theme = 'dark' | 'light' | 'system';
+export type Quality = 'high' | 'medium' | 'low';
+export type ReduceMotion = 'on' | 'off' | 'system';
+
 export interface Settings {
   readonly language: Language;
+  readonly theme: Theme;
+  readonly quality: Quality;
+  readonly reduceMotion: ReduceMotion;
+  /** Empty: the model from the server .env. */
+  readonly model: string;
+  /** Empty: the Keboola project from the server .env. */
+  readonly keboolaProject: string;
+  readonly allowSqlByDefault: boolean;
 }
+
+export const DEFAULT_SETTINGS: Settings = {
+  language: 'ru',
+  theme: 'dark',
+  quality: 'high',
+  reduceMotion: 'system',
+  model: '',
+  keboolaProject: '',
+  allowSqlByDefault: false,
+};
 
 export interface Thread {
   readonly id: string;
@@ -24,6 +46,7 @@ export interface ChatEntry {
 
 export interface ApprovalRequest {
   readonly tool: string;
+  readonly agent?: string;
   readonly args: Readonly<Record<string, unknown>>;
   readonly description?: string;
   readonly decisions: readonly string[];
@@ -83,4 +106,41 @@ export type Decision = { readonly type: 'approve' } | { readonly type: 'reject';
 export interface InterruptAnswer {
   readonly interruptId: string;
   readonly decisions: readonly Decision[];
+}
+
+/** A paused run waiting for the user, across all chats (GET /api/approvals). */
+export interface PendingApprovalEntry {
+  readonly threadId: string;
+  readonly threadTitle: string;
+  readonly interruptId: string;
+  readonly requests: readonly ApprovalRequest[];
+}
+
+export interface AppStatus {
+  readonly model: string;
+  readonly keboolaProject: string;
+  readonly version: string;
+  readonly activeRuns: number;
+  readonly pendingApprovals: number;
+}
+
+export interface KeboolaProject {
+  readonly alias: string;
+  readonly name: string;
+  readonly id: number | null;
+  readonly stackUrl: string;
+  readonly isDefault: boolean;
+}
+
+export interface Check {
+  readonly ok: boolean;
+  readonly detail: string;
+}
+
+export interface SystemStatus {
+  readonly app: Check;
+  readonly node: Check;
+  readonly omniroute: Check;
+  readonly model: Check;
+  readonly kbagent: Check;
 }

@@ -1,4 +1,15 @@
-import type { ChatEntry, InterruptAnswer, Settings, TeamInfo, Thread, ThreadPolicy } from './types.ts';
+import type {
+  AppStatus,
+  ChatEntry,
+  InterruptAnswer,
+  KeboolaProject,
+  PendingApprovalEntry,
+  Settings,
+  SystemStatus,
+  TeamInfo,
+  Thread,
+  ThreadPolicy,
+} from './types.ts';
 import type { PendingApproval } from '../state/run-state.ts';
 
 export class ApiError extends Error {
@@ -39,6 +50,12 @@ export const api = {
   setPolicy: (id: string, policy: ThreadPolicy) => request<ThreadPolicy>(`${thread(id)}/policy`, 'PUT', policy),
   rename: (id: string, title: string) => request<Thread>(thread(id), 'PATCH', { title }),
   remove: (id: string) => request<void>(thread(id), 'DELETE'),
+  allApprovals: () => request<PendingApprovalEntry[]>('/api/approvals'),
+  status: () => request<AppStatus>('/api/status'),
+  models: () => request<{ models: string[]; current: string }>('/api/models'),
+  keboolaProjects: () => request<{ projects: KeboolaProject[]; current: string }>('/api/keboola/projects'),
+  memory: () => request<{ content: string }>('/api/memory'),
+  system: () => request<SystemStatus>('/api/system'),
 };
 
 export const eventsUrl = (threadId?: string) =>

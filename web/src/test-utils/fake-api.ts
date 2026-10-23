@@ -43,6 +43,8 @@ export class FakeEventSource {
 
   readonly url: string;
   onmessage: ((message: MessageEvent<string>) => void) | null = null;
+  onopen: (() => void) | null = null;
+  onerror: (() => void) | null = null;
   closed = false;
   private seq = 0;
 
@@ -59,6 +61,29 @@ export class FakeEventSource {
 
   close(): void {
     this.closed = true;
+  }
+
+  /** Simulate the connection opening or dropping. */
+  open(): void {
+    this.onopen?.();
+  }
+
+  fail(): void {
+    this.onerror?.();
+  }
+
+  /** The latest stream of one chat (the app also keeps a global stream open). */
+  static forThread(threadId: string): FakeEventSource {
+    const source = FakeEventSource.instances.filter((entry) => entry.url.includes(`threadId=${encodeURIComponent(threadId)}`)).at(-1);
+    if (!source) throw new Error(`No EventSource for thread ${threadId}`);
+    return source;
+  }
+
+  /** The latest all-chats stream that drives the top bar and the aquarium. */
+  static global(): FakeEventSource {
+    const source = FakeEventSource.instances.filter((entry) => !entry.url.includes('threadId=')).at(-1);
+    if (!source) throw new Error('No global EventSource was opened');
+    return source;
   }
 
   static latest(): FakeEventSource {

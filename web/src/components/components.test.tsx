@@ -2,11 +2,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { initialRunState, reduceRun } from '../state/run-state.ts';
-import { ActivityPanel } from './ActivityPanel.tsx';
 import { ApprovalCard } from './ApprovalCard.tsx';
 import { Composer } from './Composer.tsx';
 import { MessageBubble } from './MessageBubble.tsx';
 import { SqlToggle } from './SqlToggle.tsx';
+import { StepRows } from './StepRows.tsx';
 
 describe('Composer', () => {
   it('sends on Enter, keeps Shift+Enter for new lines, and clears the box', async () => {
@@ -87,23 +87,42 @@ describe('MessageBubble', () => {
   });
 });
 
-describe('ActivityPanel', () => {
-  it('lists the newest activity first with usage', () => {
-    const run = [
-      { type: 'usage', agent: 'lead', input: 1200, output: 30, cached: 1000 },
-      { type: 'delegate.start', agent: 'lead', callId: 'd', to: 'helper', task: 'Find tables' },
-      { type: 'tool.start', agent: 'helper', callId: 't', tool: 'kbagent_read', args: { purpose: 'List configs' } },
-    ].reduce(reduceRun as never, initialRunState('lead'));
+describe('StepRows', () => {
+  const steps = [
+    { event: { type: 'delegate.start', agent: 'lead', callId: 'd', to: 'kbc-sql-reviewer', task: 'Review the orders SQL' }, at: 1000 },
+    { event: { type: 'tool.start', agent: 'kbc-sql-reviewer', callId: 't', tool: 'kbagent_read', args: { args: ['config', 'list'], purpose: 'List configs' } }, at: 1100 },
+    { event: { type: 'tool.end', agent: 'kbc-sql-reviewer', callId: 't', tool: 'kbagent_read', ok: true, preview: '[{"id":"1"}]' }, at: 1340 },
+    { event: { type: 'tool.start', agent: 'kbc-sql-reviewer', callId: 's', tool: 'kbagent_sql', args: {} }, at: 1400 },
+  ] as const;
+  const run = steps.reduce((state, { event, at }) => reduceRun(state, event as never, at), initialRunState('lead'));
 
-    render(<ActivityPanel run={run} />);
-    const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('List configs');
-    expect(items[1]).toHaveTextContent('Find tables');
-    expect(screen.getByText(/1,200|1 200/)).toBeInTheDocument();
+  it('shows every step with its kind, actor, status and duration', () => {
+    render(<StepRows steps={run.activities} />);
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent('Поручение');
+    expect(rows[0]).toHaveTextContent('lead → sql-reviewer');
+    expect(rows[1]).toHaveTextContent('Чтение');
+    expect(rows[1]).toHaveTextContent('List configs');
+    expect(rows[1]).toHaveTextContent('готово');
+    expect(rows[1]).toHaveTextContent('240 ms');
+    expect(rows[2]).toHaveTextContent('SQL');
+    expect(rows[2]).toHaveTextContent('идёт');
   });
 
-  it('says when nothing happened yet', () => {
-    render(<ActivityPanel run={initialRunState('lead')} />);
-    expect(screen.getByText('Пока ничего не происходит.')).toBeInTheDocument();
+  it('expands a step into its arguments and result', async () => {
+    render(<StepRows steps={run.activities} />);
+    const [, toolRow] = screen.getAllByRole('button');
+    await userEvent.click(toolRow as HTMLElement);
+    expect(toolRow).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/"list"/)).toBeInTheDocument();
+    expect(screen.getByText('[{"id":"1"}]')).toBeInTheDocument();
+    await userEvent.click(toolRow as HTMLElement);
+    expect(screen.queryByText(/"list"/)).toBeNull();
+  });
+
+  it('renders nothing without steps', () => {
+    const { container } = render(<StepRows steps={[]} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });

@@ -1,4 +1,6 @@
 import type { Settings } from '../config/settings.ts';
+import type { KeboolaProject } from '../system/keboola.ts';
+import type { SystemStatus } from '../system/status.ts';
 import type { LoadError } from '../registry/types.ts';
 import type { EventBus } from './bus.ts';
 import type { Allowed } from './guard.ts';
@@ -36,4 +38,14 @@ export interface ServerDeps {
   readonly deleteThread: (threadId: string) => Promise<void>;
   readonly allowed: Allowed;
   readonly staticDir?: string;
+  /** Model ids from OmniRoute (asked with the server key). */
+  readonly models: () => Promise<readonly string[]>;
+  /** Projects registered in kbagent, without tokens. */
+  readonly keboolaProjects: () => Promise<readonly KeboolaProject[]>;
+  /** The shared memory file the lead agent keeps. */
+  readonly memory: () => Promise<string>;
+  readonly system: () => Promise<SystemStatus>;
+  /** Model and Keboola project in use after settings overrides. */
+  readonly effective: () => { readonly model: string; readonly keboolaProject: string };
+  readonly version: string;
 }

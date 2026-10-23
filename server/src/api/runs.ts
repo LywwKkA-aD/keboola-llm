@@ -39,6 +39,8 @@ export interface RunManager {
   pending(threadId: string): readonly PendingApproval[];
   isBusy(threadId: string): boolean;
   cancel(threadId: string): boolean;
+  /** Threads with a run executing now (not counting ones paused for approval). */
+  active(): readonly string[];
 }
 
 const RECURSION_LIMIT = 200;
@@ -158,6 +160,7 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove }: {
     },
     pending: (threadId) => waiting.get(threadId)?.human ?? [],
     isBusy: (threadId) => running.has(threadId) || waiting.has(threadId),
+    active: () => [...running.keys()],
     cancel(threadId) {
       const controller = running.get(threadId);
       controller?.abort();

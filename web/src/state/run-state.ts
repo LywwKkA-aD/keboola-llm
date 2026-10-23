@@ -12,6 +12,12 @@ export interface Activity {
   readonly target: string;
   readonly label: string;
   readonly status: 'running' | 'done' | 'failed';
+  /** Client receipt times (ms); 0 when unknown. */
+  readonly startedAt: number;
+  readonly endedAt?: number;
+  readonly args?: Readonly<Record<string, unknown>>;
+  /** Start of the tool result, for the expanded step row. */
+  readonly preview?: string;
 }
 
 export interface PendingApproval {
@@ -58,10 +64,15 @@ function withActivities(state: RunState, activities: readonly Activity[]): RunSt
   return { ...state, activities: capped, busyAgents: busyFrom(capped) };
 }
 
-const finish = (ok: boolean) => (activity: Activity): Activity => ({ ...activity, status: ok ? 'done' : 'failed' });
+const finish = (ok: boolean, at: number, preview?: string) => (activity: Activity): Activity => ({
+  ...activity,
+  status: ok ? 'done' : 'failed',
+  ...(at ? { endedAt: at } : {}),
+  ...(preview === undefined ? {} : { preview }),
+});
 
 /** Fold one server event into the chat view state. Pure: returns a new state. */
-export function reduceRun(state: RunState, event: BusEvent): RunState {
+export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
   switch (event.type) {
     case 'run.started': {
       const { error: _previousError, ...rest } = state;
@@ -97,33 +108,44 @@ export function reduceRun(state: RunState, event: BusEvent): RunState {
             target: request.tool,
             label: labelFor(request.tool, request.args),
             status: 'done',
+            startedAt: at,
+            args: request.args,
           }),
         ),
       ]);
     case 'delegate.start':
       return withActivities(state, [
         ...state.activities,
-        { id: event.callId, kind: 'delegate', agent: event.agent, target: event.to, label: event.task, status: 'running' },
+        { id: event.callId, kind: 'delegate', agent: event.agent, target: event.to, label: event.task, status: 'running', startedAt: at },
       ]);
     case 'delegate.end':
       // The subagent's run is over: close its delegation and anything it left open.
       return withActivities(
         state,
         state.activities.map((activity) => {
-          if (activity.id === event.callId) return finish(event.ok)(activity);
-          if (activity.status === 'running' && activity.kind === 'tool' && activity.agent === event.to) return finish(true)(activity);
+          if (activity.id === event.callId) return finish(event.ok, at)(activity);
+          if (activity.status === 'running' && activity.kind === 'tool' && activity.agent === event.to) return finish(true, at)(activity);
           return activity;
         }),
       );
     case 'tool.start':
       return withActivities(state, [
         ...state.activities,
-        { id: event.callId, kind: 'tool', agent: event.agent, target: event.tool, label: labelFor(event.tool, event.args), status: 'running' },
+        {
+          id: event.callId,
+          kind: 'tool',
+          agent: event.agent,
+          target: event.tool,
+          label: labelFor(event.tool, event.args),
+          status: 'running',
+          startedAt: at,
+          args: event.args,
+        },
       ]);
     case 'tool.end':
       return withActivities(
         state,
-        state.activities.map((activity) => (activity.id === event.callId ? finish(event.ok)(activity) : activity)),
+        state.activities.map((activity) => (activity.id === event.callId ? finish(event.ok, at, event.preview)(activity) : activity)),
       );
     default:
       return state;

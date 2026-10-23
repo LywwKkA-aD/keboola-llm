@@ -12,7 +12,7 @@ async function openChat(routes: Record<string, unknown> = {}, path = '/chat/t1')
   visit(path);
   render(<App />);
   await screen.findByText('Где используется customer_id?', { selector: '.message__plain' });
-  return { ...api, source: FakeEventSource.latest() };
+  return { ...api, source: FakeEventSource.forThread('t1') };
 }
 
 beforeEach(() => {
@@ -109,11 +109,12 @@ describe('Chat page', () => {
     const team = { lead: 'boss', agents: [], skills: [], warnings: [], loadErrors: [] };
     await openChat({ 'GET /api/team': team });
     // The first subscription was opened with the default lead name and replaced once /api/team answered.
-    await waitFor(() => expect(FakeEventSource.instances.length).toBeGreaterThanOrEqual(2));
-    expect(FakeEventSource.instances[0]?.closed).toBe(true);
+    const chatStreams = () => FakeEventSource.instances.filter((entry) => entry.url.includes('threadId=t1'));
+    await waitFor(() => expect(chatStreams().length).toBeGreaterThanOrEqual(2));
+    expect(chatStreams()[0]?.closed).toBe(true);
     act(() => {
-      FakeEventSource.latest().emit({ type: 'run.started', runId: 'r1' });
-      FakeEventSource.latest().emit({ type: 'token', agent: 'boss', text: 'Hello from boss' });
+      FakeEventSource.forThread('t1').emit({ type: 'run.started', runId: 'r1' });
+      FakeEventSource.forThread('t1').emit({ type: 'token', agent: 'boss', text: 'Hello from boss' });
     });
     expect(screen.getByText('Hello from boss')).toBeInTheDocument();
   });
@@ -162,7 +163,7 @@ describe('Chat page', () => {
 
     expect(callsTo('POST', '/api/threads')[0]?.body).toEqual({ text: 'Новый вопрос' });
     await waitFor(() => expect(window.location.pathname).toBe('/chat/t9'));
-    expect(FakeEventSource.latest().url).toBe('/api/events?threadId=t9');
+    expect(FakeEventSource.forThread('t9').url).toBe('/api/events?threadId=t9');
   });
 
   it('reports a failure to start a chat', async () => {
@@ -187,7 +188,7 @@ describe('Chat page', () => {
     const { source } = await openChat();
     await userEvent.click(screen.getByRole('link', { name: 'Почему упал джоб?' }));
 
-    await waitFor(() => expect(FakeEventSource.latest().url).toBe('/api/events?threadId=t2'));
+    await waitFor(() => expect(FakeEventSource.forThread('t2').closed).toBe(false));
     expect(source.closed).toBe(true);
   });
 });

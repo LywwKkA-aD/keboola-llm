@@ -22,6 +22,8 @@ export function ChatPage() {
 
   useEffect(refresh, [refresh]);
 
+  const current = threads.find((thread) => thread.id === threadId);
+
   const start = async (text: string) => {
     try {
       const { thread } = await api.createThread(text);
@@ -43,9 +45,16 @@ export function ChatPage() {
       <ThreadList threads={threads} onNew={() => navigate('/chat')} onDelete={(id) => void remove(id)} />
       {threadId ? (
         // Keyed by the lead too: the event reducer filters chat tokens by the lead name, known only after /api/team.
-        <Conversation key={`${threadId}:${team.lead}`} threadId={threadId} onActivity={refresh} />
+        <Conversation
+          key={`${threadId}:${team.lead}`}
+          threadId={threadId}
+          title={current?.title ?? ''}
+          {...(current ? { updatedAt: current.updatedAt } : {})}
+          onActivity={refresh}
+        />
       ) : (
         <div className="chat-page__start">
+          <span className="label">{t('chat.new')}</span>
           <p className="conversation__empty">{t('chat.empty')}</p>
           {error && <div className="conversation__status conversation__status--error">{error}</div>}
           <Composer onSend={(text) => void start(text)} onStop={() => {}} running={false} disabled={false} />
