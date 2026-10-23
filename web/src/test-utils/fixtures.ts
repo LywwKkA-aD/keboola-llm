@@ -30,6 +30,8 @@ export const THREADS: Thread[] = [
 /** The routes every page needs; tests spread their own on top. */
 export const baseRoutes = {
   'GET /api/settings': { language: 'ru' },
+  'GET /api/approvals': [],
+  'GET /api/status': { model: 'cc/model', keboolaProject: 'sandbox', version: '0.1.0', activeRuns: 0, pendingApprovals: 0 },
   'GET /api/team': TEAM,
   'GET /api/threads': THREADS,
   'GET /api/threads/t1/messages': [

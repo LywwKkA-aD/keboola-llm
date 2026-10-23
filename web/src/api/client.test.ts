@@ -50,4 +50,24 @@ describe('api client', () => {
     expect(eventsUrl('a/b')).toBe('/api/events?threadId=a%2Fb');
     expect(eventsUrl()).toBe('/api/events');
   });
+
+  it('reads the cross-chat and system endpoints', async () => {
+    const { calls } = stubApi({
+      'GET /api/approvals': [],
+      'GET /api/status': { activeRuns: 1 },
+      'GET /api/models': { models: ['m'], current: 'm' },
+      'GET /api/keboola/projects': { projects: [], current: '' },
+      'GET /api/memory': { content: 'x' },
+      'GET /api/system': {},
+    });
+    await Promise.all([api.allApprovals(), api.status(), api.models(), api.keboolaProjects(), api.memory(), api.system()]);
+    expect(calls.map((call) => call.path).toSorted()).toEqual([
+      '/api/approvals',
+      '/api/keboola/projects',
+      '/api/memory',
+      '/api/models',
+      '/api/status',
+      '/api/system',
+    ]);
+  });
 });

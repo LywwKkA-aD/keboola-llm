@@ -4,15 +4,30 @@ import type { ChatEntry, Decision } from '../api/types.ts';
 import { useThreadEvents } from '../hooks/useThreadEvents.ts';
 import { useSettings } from '../state/settings-context.tsx';
 import { useTeam } from '../state/team-context.tsx';
-import { ActivityPanel } from './ActivityPanel.tsx';
 import { ApprovalCard } from './ApprovalCard.tsx';
 import { Composer } from './Composer.tsx';
 import { MessageBubble } from './MessageBubble.tsx';
 import { SqlToggle } from './SqlToggle.tsx';
+import { StepRows } from './StepRows.tsx';
+import { formatClock } from '../lib/format.ts';
+import type { StringKey } from '../i18n/strings.ts';
+import type { RunStatus } from '../state/run-state.ts';
 
-/** One chat: history, the live stream of the lead agent, approvals, composer and activity side panel. */
-export function Conversation({ threadId, onActivity }: { threadId: string; onActivity: () => void }) {
-  const { t } = useSettings();
+const STATUS: Record<RunStatus, [StringKey, string]> = {
+  idle: ['chat.status.idle', ''],
+  running: ['chat.status.running', 'chip--blue'],
+  waiting: ['chat.status.waiting', 'chip--amber'],
+  failed: ['chat.status.failed', 'chip--red'],
+};
+
+/** One chat: header, history, the steps the team took, the live stream of the lead agent, approvals and the composer. */
+export function Conversation({ threadId, title, updatedAt, onActivity }: {
+  threadId: string;
+  title: string;
+  updatedAt?: string;
+  onActivity: () => void;
+}) {
+  const { t, settings } = useSettings();
   const team = useTeam();
   const [history, setHistory] = useState<readonly ChatEntry[]>([]);
   const [busy, setBusy] = useState(false);
@@ -72,17 +87,30 @@ export function Conversation({ threadId, onActivity }: { threadId: string; onAct
   const running = run.status === 'running';
   const showStream = (running || run.status === 'waiting') && run.streamingText;
 
+  const [statusKey, statusChip] = STATUS[run.status];
+
   return (
     <div className="conversation">
       <div className="conversation__main">
-        <div className="conversation__toolbar">
-          <SqlToggle checked={allowSql} onChange={changeSql} disabled={busy} />
-        </div>
+        <header className="conversation__head">
+          <div>
+            <span className="label">
+              {t('chat.label')} · #{threadId.slice(0, 8)}
+              {updatedAt ? ` · ${formatClock(Date.parse(updatedAt), settings.language)}` : ''}
+            </span>
+            <h1 className="conversation__title">{title}</h1>
+          </div>
+          <div className="conversation__tools">
+            <span className={`chip ${statusChip}`}>{t(statusKey)}</span>
+            <SqlToggle checked={allowSql} onChange={changeSql} disabled={busy} />
+          </div>
+        </header>
         <div className="conversation__messages">
           {history.length === 0 && !running && <p className="conversation__empty">{t('chat.empty')}</p>}
           {history.map((entry) => (
             <MessageBubble key={entry.id} role={entry.role} text={entry.text} />
           ))}
+          <StepRows steps={run.activities} />
           {showStream && <MessageBubble role="assistant" text={run.streamingText} pending />}
           {running && <div className="conversation__status conversation__status--working">{t('chat.working')}</div>}
           {run.status === 'waiting' && <div className="conversation__status">{t('chat.waiting')}</div>}
@@ -95,7 +123,6 @@ export function Conversation({ threadId, onActivity }: { threadId: string; onAct
         </div>
         <Composer onSend={send} onStop={() => void guard(() => api.cancel(threadId))} running={running} disabled={busy || run.status === 'waiting'} />
       </div>
-      <ActivityPanel run={run} />
     </div>
   );
 }

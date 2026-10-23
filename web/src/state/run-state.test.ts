@@ -25,10 +25,20 @@ describe('reduceRun', () => {
       { type: 'tool.end', agent: 'helper', callId: 't1', tool: 'kbagent_read', ok: true, preview: '[]' },
       { type: 'delegate.end', agent: 'lead', callId: 'd1', to: 'helper', ok: true },
     ]);
-    expect(state.activities).toEqual([
+    expect(state.activities).toMatchObject([
       { id: 'd1', kind: 'delegate', agent: 'lead', target: 'helper', label: 'Look it up', status: 'done' },
-      { id: 't1', kind: 'tool', agent: 'helper', target: 'kbagent_read', label: 'List configs', status: 'done' },
+      { id: 't1', kind: 'tool', agent: 'helper', target: 'kbagent_read', label: 'List configs', status: 'done', preview: '[]' },
     ]);
+  });
+
+  it('times steps and keeps their arguments when told when events arrived', () => {
+    const started = reduceRun(
+      initialRunState(lead),
+      { type: 'tool.start', agent: 'helper', callId: 't1', tool: 'kbagent_read', args: { args: ['config', 'list'] } },
+      1000,
+    );
+    const ended = reduceRun(started, { type: 'tool.end', agent: 'helper', callId: 't1', tool: 'kbagent_read', ok: true, preview: 'ok' }, 1240);
+    expect(ended.activities[0]).toMatchObject({ startedAt: 1000, endedAt: 1240, args: { args: ['config', 'list'] }, preview: 'ok' });
   });
 
   it('marks failed tools', () => {
@@ -81,7 +91,7 @@ describe('reduceRun', () => {
         requests: [{ tool: 'kbagent_sql', args: { args: ['workspace', 'query'], purpose: 'Count orders' }, decisions: ['approve'] }],
       },
     ]);
-    expect(state.activities).toEqual([
+    expect(state.activities).toMatchObject([
       { id: 'auto-i9-0', kind: 'auto', agent: 'app', target: 'kbagent_sql', label: 'Count orders', status: 'done' },
     ]);
     expect(state.approvals).toEqual([]);

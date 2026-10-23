@@ -1,28 +1,13 @@
-/* Design tokens. Provisional values: to be replaced with the Keboola Connection palette and type scale. */
+/* Design tokens. Dark is the default; <html data-theme="light"> switches. Keboola blue is the brand accent. */
 :root {
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --color-bg: #f2f4f7;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f7f8fa;
-  --color-border: #d9dee6;
-  --color-text: #222529;
-  --color-text-muted: #6b7581;
-  --color-primary: #1f8fff;
-  --color-primary-hover: #0a72e0;
-  --color-primary-soft: #e6f2ff;
-  --color-success: #07be07;
-  --color-success-soft: #e7f8e7;
-  --color-danger: #e5383b;
-  --color-danger-soft: #fdecec;
-  --color-warning: #f5a524;
-  --color-warning-soft: #fff6e6;
+  --brand: #228dff;
+  --brand-strong: #0f74e0;
 
   --radius-sm: 4px;
   --radius-md: 6px;
-  --radius-lg: 10px;
-  --shadow-card: 0 1px 2px rgb(34 37 41 / 8%);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -30,13 +15,69 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --space-7: 48px;
 
-  --text-xs: 12px;
-  --text-sm: 13px;
-  --text-md: 14px;
-  --text-lg: 16px;
-  --text-xl: 20px;
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 15px;
+  --text-xl: 18px;
   --text-2xl: 24px;
 
-  --topbar-height: 56px;
+  --topbar-height: 48px;
+  --panel-left: 300px;
+  --panel-right: 360px;
+  --tracking-label: 0.12em;
+}
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #0a0e15;
+  --color-surface: #10151f;
+  --color-surface-2: #151c29;
+  --color-surface-3: #1a2333;
+  --color-border: #1e2838;
+  --color-border-strong: #2a3850;
+  --color-text: #e6edf7;
+  --color-text-muted: #8592a8;
+  --color-text-faint: #5a6780;
+  --color-primary: var(--brand);
+  --color-primary-hover: #4aa3ff;
+  --color-primary-soft: rgb(34 141 255 / 14%);
+  --color-on-primary: #ffffff;
+  --color-success: #2bd47d;
+  --color-success-soft: rgb(43 212 125 / 12%);
+  --color-warning: #f5b53d;
+  --color-warning-soft: rgb(245 181 61 / 12%);
+  --color-danger: #ff5c5c;
+  --color-danger-soft: rgb(255 92 92 / 12%);
+  --color-scrim: rgb(5 8 13 / 70%);
+  --shadow-panel: 0 12px 32px rgb(0 0 0 / 45%);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #f4f6f9;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8fafc;
+  --color-surface-3: #eef2f7;
+  --color-border: #dce2ea;
+  --color-border-strong: #c5cfdc;
+  --color-text: #282d38;
+  --color-text-muted: #6b7686;
+  --color-text-faint: #9aa4b2;
+  --color-primary: var(--brand);
+  --color-primary-hover: var(--brand-strong);
+  --color-primary-soft: rgb(34 141 255 / 10%);
+  --color-on-primary: #ffffff;
+  --color-success: #0f9d58;
+  --color-success-soft: rgb(15 157 88 / 10%);
+  --color-warning: #b7791f;
+  --color-warning-soft: rgb(245 181 61 / 16%);
+  --color-danger: #d93636;
+  --color-danger-soft: rgb(217 54 54 / 10%);
+  --color-scrim: rgb(40 45 56 / 35%);
+  --shadow-panel: 0 12px 32px rgb(40 45 56 / 14%);
 }
