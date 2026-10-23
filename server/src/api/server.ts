@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { isAllowedRequest } from './guard.ts';
 import { registerEventRoutes } from './routes/events.ts';
 import { registerMetaRoutes } from './routes/meta.ts';
+import { registerStaticRoutes } from './routes/static.ts';
 import { registerThreadRoutes } from './routes/threads.ts';
 import type { RunErrorCode } from './runs.ts';
 import type { ServerDeps } from './types.ts';
@@ -11,7 +12,7 @@ export type { ServerDeps } from './types.ts';
 
 const STATUS_BY_CODE: Record<RunErrorCode, number> = { RUN_CONFLICT: 409, RUN_INVALID: 400 };
 
-export function createServer(deps: ServerDeps): FastifyInstance {
+export async function createServer(deps: ServerDeps): Promise<FastifyInstance> {
   const app = Fastify({ logger: false, bodyLimit: 1024 * 1024 });
 
   app.addHook('onRequest', async (request, reply) => {
@@ -30,5 +31,6 @@ export function createServer(deps: ServerDeps): FastifyInstance {
   registerMetaRoutes(app, deps);
   registerThreadRoutes(app, deps);
   registerEventRoutes(app, deps);
+  await registerStaticRoutes(app, deps.staticDir);
   return app;
 }

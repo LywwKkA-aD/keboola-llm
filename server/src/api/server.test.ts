@@ -34,7 +34,7 @@ function fakeRuns(): RunManager & { started: Array<[string, unknown]> } {
   };
 }
 
-function setup(overrides: Partial<ServerDeps> = {}) {
+async function setup(overrides: Partial<ServerDeps> = {}) {
   let settings: Settings = { language: 'ru' };
   const runs = fakeRuns();
   const deps: ServerDeps = {
@@ -54,7 +54,7 @@ function setup(overrides: Partial<ServerDeps> = {}) {
     allowed: allowedFor({ port: 4800, devPort: 5173 }),
     ...overrides,
   };
-  return { app: createServer(deps), runs, deps };
+  return { app: await createServer(deps), runs, deps };
 }
 
 let close: (() => Promise<unknown>) | undefined;
@@ -64,7 +64,7 @@ afterEach(async () => {
 
 describe('createServer', () => {
   it('rejects requests from foreign hosts and origins', async () => {
-    const { app } = setup();
+    const { app } = await setup();
     close = () => app.close();
     expect((await app.inject({ url: '/api/health', headers: { host: 'evil.example' } })).statusCode).toBe(403);
     expect((await app.inject({ url: '/api/health', headers: { ...HOST, origin: 'https://evil.example' } })).statusCode).toBe(403);
@@ -72,7 +72,7 @@ describe('createServer', () => {
   });
 
   it('creates a thread from the first message and starts a run', async () => {
-    const { app, runs } = setup();
+    const { app, runs } = await setup();
     close = () => app.close();
     const response = await app.inject({ method: 'POST', url: '/api/threads', headers: HOST, payload: { text: 'Where is customer_id used?' } });
 
@@ -87,14 +87,14 @@ describe('createServer', () => {
   });
 
   it('validates message bodies and unknown threads', async () => {
-    const { app } = setup();
+    const { app } = await setup();
     close = () => app.close();
     expect((await app.inject({ method: 'POST', url: '/api/threads', headers: HOST, payload: { text: '' } })).statusCode).toBe(400);
     expect((await app.inject({ method: 'POST', url: '/api/threads/nope/messages', headers: HOST, payload: { text: 'x' } })).statusCode).toBe(404);
   });
 
   it('answers 409 when the thread is busy', async () => {
-    const { app } = setup();
+    const { app } = await setup();
     close = () => app.close();
     const created = (await app.inject({ method: 'POST', url: '/api/threads', headers: HOST, payload: { text: 'a' } })).json();
     await app.inject({ method: 'POST', url: `/api/threads/${created.thread.id}/cancel`, headers: HOST });
@@ -103,7 +103,7 @@ describe('createServer', () => {
   });
 
   it('returns history, renames and deletes threads', async () => {
-    const { app } = setup();
+    const { app } = await setup();
     close = () => app.close();
     const { thread } = (await app.inject({ method: 'POST', url: '/api/threads', headers: HOST, payload: { text: 'a' } })).json();
 
@@ -115,7 +115,7 @@ describe('createServer', () => {
   });
 
   it('forwards approval answers and validates them', async () => {
-    const { app, runs } = setup();
+    const { app, runs } = await setup();
     close = () => app.close();
     const { thread } = (await app.inject({ method: 'POST', url: '/api/threads', headers: HOST, payload: { text: 'a' } })).json();
     const url = `/api/threads/${thread.id}/approvals`;
@@ -131,7 +131,7 @@ describe('createServer', () => {
   });
 
   it('reads and updates settings', async () => {
-    const { app } = setup();
+    const { app } = await setup();
     close = () => app.close();
     expect((await app.inject({ url: '/api/settings', headers: HOST })).json()).toEqual({ language: 'ru' });
     const updated = await app.inject({ method: 'PUT', url: '/api/settings', headers: HOST, payload: { language: 'cs' } });
@@ -140,7 +140,7 @@ describe('createServer', () => {
   });
 
   it('describes the team', async () => {
-    const { app } = setup();
+    const { app } = await setup();
     close = () => app.close();
     expect((await app.inject({ url: '/api/team', headers: HOST })).json()).toMatchObject({ lead: 'lead' });
   });

@@ -29,7 +29,7 @@ bus.subscribe(({ threadId, event }) => {
   if (event.type === 'run.failed') console.error(`[run] ${threadId}: ${event.error}`);
 });
 
-const server = createServer({
+const server = await createServer({
   bus,
   runs,
   threads,
@@ -51,6 +51,7 @@ const server = createServer({
   },
   deleteThread: (threadId) => app.checkpointer.deleteThread(threadId),
   allowed: allowedFor({ port: app.env.port, devPort: app.env.webDevPort }),
+  staticDir: join(app.env.rootDir, 'web', 'dist'),
 });
 
 const shutdown = async () => {

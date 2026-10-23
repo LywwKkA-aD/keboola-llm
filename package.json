@@ -14,17 +14,19 @@
     "vendor:update": "node scripts/vendor-keboola.mjs --latest",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "npm run dev -w server",
-    "start": "npm run start -w server",
+    "dev": "node scripts/dev.mjs",
+    "start": "npm run build -w web && npm run start -w server",
     "chat": "npm run chat -w server --",
-    "typecheck": "npm run typecheck -w server",
-    "kbagent:snapshot": "node scripts/kbagent-snapshot.mjs"
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
+    "kbagent:snapshot": "node scripts/kbagent-snapshot.mjs",
+    "build": "npm run build -w web"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.5",
     "vitest": "^5.0.5"
   },
   "workspaces": [
-    "server"
+    "server",
+    "web"
   ]
 }
