@@ -6,6 +6,7 @@ import './styles/base.css';
 import './styles/layout.css';
 import './styles/chat.css';
 import './styles/team.css';
+import './styles/aquarium.css';
 
 const root = document.getElementById('root');
 if (root) {
