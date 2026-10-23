@@ -26,6 +26,8 @@ export interface InvocationRequest {
   readonly branch?: string | number;
   /** Sent as X-Conversation-ID for Keboola-side observability. */
   readonly conversationId?: string;
+  /** When set, only these operations (e.g. "workspace.query") are allowed, on top of every other rule. */
+  readonly operations?: ReadonlySet<string>;
 }
 
 const LONG_FLAG = /^--[a-z0-9][a-z0-9-]*(=[\s\S]*)?$/;
@@ -102,6 +104,18 @@ function scopeBranch(
   return { inject: !hasBranch && operation.acceptsBranch ? ['--branch', id] : [] };
 }
 
+/** "workspace commands: create, list" when all operations share a group, else the full names. */
+function describeOperations(operations: ReadonlySet<string>): string {
+  const names = [...operations].toSorted();
+  const groups = new Set(names.map((name) => name.split('.')[0]));
+  const [group] = groups;
+  if (groups.size === 1 && group) return `${group} commands: ${names.map((name) => name.slice(group.length + 1).replaceAll('.', ' ')).join(', ')}`;
+  return names.map((name) => name.replaceAll('.', ' ')).join(', ');
+}
+
+const outsideAllowlist = (command: string, operations: ReadonlySet<string>) =>
+  reject(`"${command}" is not available in this tool. It only runs ${describeOperations(operations)}.`);
+
 function globalFlags(access: Access, conversationId: string | undefined): string[] {
   const firewall = access === 'read' ? '--deny-writes' : '--deny-destructive';
   return ['--json', firewall, ...(conversationId === undefined ? [] : ['--conversation-id', conversationId])];
@@ -115,7 +129,7 @@ export function operationOf(args: readonly string[]): string | undefined {
 }
 
 export function buildInvocation(request: InvocationRequest): InvocationResult {
-  const { args, access, project, branch, conversationId } = request;
+  const { args, access, project, branch, conversationId, operations: allowlist } = request;
   if (!Array.isArray(args) || !args.every((token) => typeof token === 'string')) {
     return reject('args must be an array of strings.');
   }
@@ -141,15 +155,23 @@ export function buildInvocation(request: InvocationRequest): InvocationResult {
   const help = tokens.includes('--help');
 
   if (!operation) {
-    if (help && isKnownGroup(first)) return { ok: true, argv: [...globalFlags('read', conversationId), ...tokens], operation: first, category: 'read' };
+    const groupAllowed = !allowlist || [...allowlist].some((name) => name.startsWith(`${first}.`));
+    if (help && isKnownGroup(first) && groupAllowed) {
+      return { ok: true, argv: [...globalFlags('read', conversationId), ...tokens], operation: first, category: 'read' };
+    }
+    if (allowlist && isKnownGroup(first)) return outsideAllowlist(commandWords.join(' '), allowlist);
     return reject(`Unknown kbagent command "${commandWords.join(' ')}". Use ["${first}", "--help"] to list commands.`);
   }
   const denied = DENIED_OPERATIONS.get(operation.name);
   if (denied) return reject(`"${operation.name.replaceAll('.', ' ')}" is not available to agents: ${denied}.`);
-  if (help) return { ok: true, argv: [...globalFlags(access, conversationId), ...tokens], operation: operation.name, category: 'read' };
-
   const analysed = analysisTokens(tokens);
   const category = categorize(operation, analysed);
+  // Destructive/admin operations fall through to the clearer "must be done by a human" message.
+  if (allowlist && !allowlist.has(operation.name) && (category === 'read' || category === 'write')) {
+    return outsideAllowlist(operation.name.replaceAll('.', ' '), allowlist);
+  }
+  if (help) return { ok: true, argv: [...globalFlags(access, conversationId), ...tokens], operation: operation.name, category: 'read' };
+
   const categoryError = checkCategory(operation, category, access);
   if (categoryError) return reject(categoryError);
   if (operation.name.startsWith('semantic-layer.') && analysed.includes('--scope')) {

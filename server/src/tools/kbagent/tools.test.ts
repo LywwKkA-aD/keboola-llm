@@ -2,7 +2,7 @@ import { ToolMessage } from '@langchain/core/messages';
 import { describe, expect, it } from 'vitest';
 import { buildChildEnv } from './env.ts';
 import type { ExecFn, ExecOptions } from './runner.ts';
-import { createKbagentTools } from './tools.ts';
+import { createKbagentSqlTool, createKbagentTools } from './tools.ts';
 
 interface Call {
   readonly file: string;
@@ -113,6 +113,50 @@ describe('createKbagentTools', () => {
     expect(calls[0]?.options.env).toMatchObject({ PATH: '/usr/bin', KBAGENT_CONFIG_DIR: '/cfg' });
     expect(calls[0]?.options.env).not.toHaveProperty('OPENAI_API_KEY');
     expect(calls[0]?.options.env).not.toHaveProperty('KBC_TOKEN');
+  });
+});
+
+describe('createKbagentSqlTool', () => {
+  it('is named kbagent_sql and runs workspace queries behind --deny-destructive', async () => {
+    const { calls, exec } = recordingExec('{"status":"ok","data":{"statements":[]}}');
+    const sql = createKbagentSqlTool({ project: 'sandbox', exec });
+    expect(sql.name).toBe('kbagent_sql');
+
+    await sql.invoke({ args: ['workspace', 'query', '--workspace-id', '7', '--sql', 'SELECT 1'], purpose: 'count rows' });
+    expect(calls[0]?.args).toEqual([
+      '--json',
+      '--deny-destructive',
+      'workspace',
+      'query',
+      '--workspace-id',
+      '7',
+      '--sql',
+      'SELECT 1',
+      '--project',
+      'sandbox',
+    ]);
+  });
+
+  it('rejects non-workspace commands without running kbagent', async () => {
+    const { calls, exec } = recordingExec();
+    const result = await createKbagentSqlTool({ exec }).invoke({
+      args: ['config', 'update', '--component-id', 'c', '--config-id', '1'],
+      purpose: 'change config',
+    });
+    expect(result).toMatch(/^Rejected: .*only runs workspace commands/);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('never hands workspace passwords to the model', async () => {
+    const { exec } = recordingExec('{"status":"ok","data":{"workspace_id":7,"password":"s3cret"}}');
+    const result = await createKbagentSqlTool({ exec }).invoke({ args: ['workspace', 'create', '--name', 'agent-ws'], purpose: 'ws' });
+    expect(result).not.toContain('s3cret');
+  });
+
+  it('documents approval and result caps for the model', () => {
+    const { description } = createKbagentSqlTool({ exec: recordingExec().exec });
+    expect(description).toMatch(/approv/i);
+    expect(description).toMatch(/--limit/);
   });
 });
 

@@ -23,7 +23,7 @@ The text above reads a local `kbc` project (`.keboola/manifest.json`, `config.js
 | Transformation blocks | `["transformation", "show", "--config-id", K]` |
 | Data lineage via `storage.input` / `storage.output` | the mappings in `config detail`, plus `["storage", "tables", "--include-usage"]` |
 | Flow tasks and phases | `["flow", "detail", "--flow-id", F]` |
-| Find a config by name or content | `["search", Q]`, `["config", "search", "--query", Q, "-i"]` |
+| Find a config by name or content | `["search", Q]`, `["config", "search", "--query", Q, "--ignore-case"]` |
 
 ### Output
 Return the analysis in the upstream structure (Overview, Data Flow, Key Logic, Dependencies, Potential Issues) as your final reply, in English, to the orchestrator. Name configs with their IDs so the orchestrator can link them.

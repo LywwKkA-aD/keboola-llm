@@ -29,3 +29,18 @@ describe('createToolFactories', () => {
     expect(read?.description).toContain('sandbox');
   });
 });
+
+describe('kbagent-sql tool id', () => {
+  const factories = createToolFactories({ defaultProject: 'sandbox' });
+
+  it('produces kbagent_sql behind human approval, independent of the agent access level', () => {
+    const bundle = factories['kbagent-sql']?.(agent({ access: 'read' }));
+    expect(bundle?.tools.map((tool) => tool.name)).toEqual(['kbagent_sql']);
+    expect(bundle?.interruptOn).toEqual({ kbagent_sql: { allowedDecisions: ['approve', 'reject'] } });
+  });
+
+  it('pins the project like the other kbagent tools', () => {
+    const [sql] = factories['kbagent-sql']?.(agent({ access: 'read', project: 'other' })).tools ?? [];
+    expect(sql?.description).toContain('"other"');
+  });
+});

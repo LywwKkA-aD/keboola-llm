@@ -1,11 +1,13 @@
-import type { TeamEvent } from '../runtime/events.ts';
+import type { ApprovalRequest, TeamEvent } from '../runtime/events.ts';
 
 /** Run lifecycle events published next to the agent events. */
 export type RunEvent =
   | { readonly type: 'run.started'; readonly runId: string }
   | { readonly type: 'run.waiting'; readonly runId: string }
   | { readonly type: 'run.finished'; readonly runId: string }
-  | { readonly type: 'run.failed'; readonly runId: string; readonly error: string };
+  | { readonly type: 'run.failed'; readonly runId: string; readonly error: string }
+  // An approval the app granted on the user's standing permission (e.g. SQL allowed for the chat).
+  | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] };
 
 export type BusEvent = TeamEvent | RunEvent;
 

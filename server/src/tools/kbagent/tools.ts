@@ -6,7 +6,8 @@ import { buildChildEnv } from './env.ts';
 import { buildInvocation } from './policy.ts';
 import { runKbagent } from './runner.ts';
 import type { ExecFn, RunResult } from './runner.ts';
-import type { Access, Category } from './types.ts';
+import { SQL_OPERATIONS } from './sql.ts';
+import type { Access, Category, InvocationResult } from './types.ts';
 
 export interface KbagentToolsOptions {
   readonly access: Access;
@@ -73,6 +74,14 @@ const WRITE_DESCRIPTION = `Run a kbagent (Keboola CLI) command that changes the 
 - ["workspace", "query", "--workspace-id", "456", "--sql", "SELECT COUNT(*) FROM \\"orders\\""]
 Use kbagent_read for anything that only reads.`;
 
+const SQL_DESCRIPTION = `Query Keboola data with SQL through a workspace (kbagent workspace commands only). Each call waits for the user's approval unless the user allowed SQL for this chat. Typical flow: reuse or create one workspace, load only the tables you need, then run SELECTs. Examples:
+- ["workspace", "list"] to reuse an existing workspace
+- ["workspace", "create", "--name", "agent-analysis"] (returns workspace_id)
+- ["workspace", "load", "--workspace-id", "123", "--tables", "in.c-crm.orders"]
+- ["workspace", "query", "--workspace-id", "123", "--sql", "SELECT COUNT(*) FROM \\"orders\\"", "--limit", "100"]
+- ["workspace", "from-transformation", "--component-id", "keboola.snowflake-transformation", "--config-id", "456"] to debug a transformation with its inputs loaded
+Results are capped by --limit (default 500 rows): check statements[].truncated and total_rows, use COUNT(*) for counts. Only read data: never INSERT, UPDATE, DELETE or DROP. Write SQL in the project's backend dialect (see ["project", "info"] via kbagent_read: Snowflake or BigQuery).`;
+
 function formatResult(result: RunResult): string {
   if (result.ok) return typeof result.output === 'string' ? result.output : JSON.stringify(result.output);
   return JSON.stringify({
@@ -85,7 +94,22 @@ function formatResult(result: RunResult): string {
   });
 }
 
-function createTool(name: string, access: Access, description: string, options: KbagentToolsOptions) {
+type Invoke = (args: readonly string[], conversationId: string | undefined) => InvocationResult;
+
+/** Policy for one tool: which access level, and optionally which operations only. */
+const invokeWith =
+  (access: Access, options: KbagentToolsOptions, operations?: ReadonlySet<string>): Invoke =>
+  (args, conversationId) =>
+    buildInvocation({
+      args,
+      access,
+      ...(operations === undefined ? {} : { operations }),
+      ...(options.project === undefined ? {} : { project: options.project }),
+      ...(options.branch === undefined ? {} : { branch: options.branch }),
+      ...(conversationId === undefined ? {} : { conversationId }),
+    });
+
+function createTool(name: string, description: string, options: KbagentToolsOptions, invoke: Invoke) {
   const env = buildChildEnv({
     parentEnv: options.env ?? process.env,
     ...(options.configDir === undefined ? {} : { configDir: options.configDir }),
@@ -95,14 +119,7 @@ function createTool(name: string, access: Access, description: string, options: 
 
   return tool(
     async (input: Input, config?: RunnableConfig): Promise<[string, KbagentCallArtifact]> => {
-      const conversationId = conversationIdFrom(config);
-      const invocation = buildInvocation({
-        args: input.args,
-        access,
-        ...(options.project === undefined ? {} : { project: options.project }),
-        ...(options.branch === undefined ? {} : { branch: options.branch }),
-        ...(conversationId === undefined ? {} : { conversationId }),
-      });
+      const invocation = invoke(input.args, conversationIdFrom(config));
       if (!invocation.ok) {
         return [`Rejected: ${invocation.reason}`, { ok: false, purpose: input.purpose, rejected: invocation.reason }];
       }
@@ -135,8 +152,14 @@ function createTool(name: string, access: Access, description: string, options: 
 
 /** kbagent_read always; kbagent_write only for write access (put it behind human approval). */
 export function createKbagentTools(options: KbagentToolsOptions) {
-  const read = createTool('kbagent_read', 'read', READ_DESCRIPTION, options);
+  const read = createTool('kbagent_read', READ_DESCRIPTION, options, invokeWith('read', options));
   return options.access === 'write'
-    ? [read, createTool('kbagent_write', 'write', WRITE_DESCRIPTION, options)]
+    ? [read, createTool('kbagent_write', WRITE_DESCRIPTION, options, invokeWith('write', options))]
     : [read];
+}
+
+/** kbagent_sql: workspace commands for querying data only; put it behind human approval. */
+export function createKbagentSqlTool(options: Omit<KbagentToolsOptions, 'access'>) {
+  const sqlOptions: KbagentToolsOptions = { ...options, access: 'write' };
+  return createTool('kbagent_sql', SQL_DESCRIPTION, sqlOptions, invokeWith('write', sqlOptions, SQL_OPERATIONS));
 }

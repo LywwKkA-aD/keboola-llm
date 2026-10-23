@@ -1,10 +1,27 @@
 import { randomUUID } from 'node:crypto';
 import { Command } from '@langchain/langgraph';
 import { type InterruptAnswer, toResumeValue } from '../runtime/approvals.ts';
-import { createEventMapper, type TeamEvent } from '../runtime/events.ts';
+import { type ApprovalRequest, createEventMapper, type TeamEvent } from '../runtime/events.ts';
 import type { EventBus } from './bus.ts';
 
 export type PendingApproval = Extract<TeamEvent, { type: 'approval.required' }>;
+
+/** Decides whether one approval request may be approved without asking the user. */
+export type AutoApprove = (threadId: string, request: ApprovalRequest) => boolean;
+
+/** Upper bound of automatic resumes in one run, so a looping agent cannot spin forever unattended. */
+export const MAX_AUTO_RESUMES = 25;
+
+interface Waiting {
+  readonly human: readonly PendingApproval[];
+  // Auto-approved interrupts from the same pause; they are resumed together with the human answers.
+  readonly auto: readonly InterruptAnswer[];
+}
+
+const approveAll = (approval: PendingApproval): InterruptAnswer => ({
+  interruptId: approval.interruptId,
+  decisions: approval.requests.map(() => ({ type: 'approve' })),
+});
 
 /** The slice of a compiled LangGraph graph the run manager needs; easy to fake in tests. */
 export interface StreamingGraph {
@@ -32,38 +49,75 @@ export type RunErrorCode = 'RUN_CONFLICT' | 'RUN_INVALID';
 export const runError = (code: RunErrorCode, message: string): Error & { code: RunErrorCode } =>
   Object.assign(new Error(message), { code });
 
-/** Runs agent turns in the background, one per thread, publishing every event to the bus. */
-export function createRunManager({ bus, getGraph, leadName }: {
+/**
+ * Runs agent turns in the background, one per thread, publishing every event to the bus.
+ * With autoApprove, interrupts whose every request it accepts are answered without the user
+ * (announced as approval.auto) and the run continues under the same run id.
+ */
+export function createRunManager({ bus, getGraph, leadName, autoApprove }: {
   bus: EventBus;
   getGraph: () => StreamingGraph;
   leadName: () => string;
+  autoApprove?: AutoApprove;
 }): RunManager {
   const running = new Map<string, AbortController>();
-  const waiting = new Map<string, readonly PendingApproval[]>();
+  const waiting = new Map<string, Waiting>();
 
-  async function execute(threadId: string, runId: string, input: unknown, controller: AbortController): Promise<void> {
+  const isAutomatic = (threadId: string, approval: PendingApproval) =>
+    autoApprove !== undefined &&
+    approval.requests.length > 0 &&
+    approval.requests.every((request) => autoApprove(threadId, request));
+
+  /** Stream one segment of a run, until it ends or pauses on interrupts. */
+  async function streamSegment(
+    threadId: string,
+    input: unknown,
+    controller: AbortController,
+    mapEvents: (chunk: unknown) => TeamEvent[],
+  ): Promise<Waiting> {
+    const human: PendingApproval[] = [];
+    const auto: InterruptAnswer[] = [];
+    const stream = await getGraph().stream(input, {
+      configurable: { thread_id: threadId },
+      streamMode: ['updates', 'messages'],
+      subgraphs: true,
+      recursionLimit: RECURSION_LIMIT,
+      signal: controller.signal,
+    });
+    for await (const chunk of stream) {
+      mapEvents(chunk).forEach((event) => {
+        if (event.type === 'approval.required' && isAutomatic(threadId, event)) {
+          auto.push(approveAll(event));
+          bus.publish(threadId, { type: 'approval.auto', interruptId: event.interruptId, requests: event.requests });
+          return;
+        }
+        if (event.type === 'approval.required') human.push(event);
+        bus.publish(threadId, event);
+      });
+    }
+    return { human, auto };
+  }
+
+  async function execute(threadId: string, runId: string, firstInput: unknown, controller: AbortController): Promise<void> {
     const mapEvents = createEventMapper(leadName());
-    const approvals: PendingApproval[] = [];
     bus.publish(threadId, { type: 'run.started', runId });
     try {
-      const stream = await getGraph().stream(input, {
-        configurable: { thread_id: threadId },
-        streamMode: ['updates', 'messages'],
-        subgraphs: true,
-        recursionLimit: RECURSION_LIMIT,
-        signal: controller.signal,
-      });
-      for await (const chunk of stream) {
-        mapEvents(chunk).forEach((event) => {
-          if (event.type === 'approval.required') approvals.push(event);
-          bus.publish(threadId, event);
-        });
-      }
-      if (approvals.length > 0) {
-        waiting.set(threadId, approvals);
-        bus.publish(threadId, { type: 'run.waiting', runId });
-      } else {
-        bus.publish(threadId, { type: 'run.finished', runId });
+      let input = firstInput;
+      for (let resumes = 0; ; resumes += 1) {
+        const paused = await streamSegment(threadId, input, controller, mapEvents);
+        if (paused.human.length > 0) {
+          waiting.set(threadId, paused);
+          bus.publish(threadId, { type: 'run.waiting', runId });
+          return;
+        }
+        if (paused.auto.length === 0) {
+          bus.publish(threadId, { type: 'run.finished', runId });
+          return;
+        }
+        if (resumes >= MAX_AUTO_RESUMES) {
+          throw new Error(`Stopped after ${MAX_AUTO_RESUMES} automatic approvals in one run; ask the agent to continue.`);
+        }
+        input = new Command({ resume: toResumeValue(paused.auto) });
       }
     } catch (error) {
       bus.publish(threadId, { type: 'run.failed', runId, error: error instanceof Error ? error.message : String(error) });
@@ -86,8 +140,9 @@ export function createRunManager({ bus, getGraph, leadName }: {
       return launch(threadId, input);
     },
     answer(threadId, answers) {
-      const pending = waiting.get(threadId);
-      if (!pending) throw runError('RUN_CONFLICT', 'No pending approvals for this thread');
+      const paused = waiting.get(threadId);
+      if (!paused) throw runError('RUN_CONFLICT', 'No pending approvals for this thread');
+      const pending = paused.human;
       const ids = new Set(pending.map((approval) => approval.interruptId));
       if (answers.length !== ids.size || answers.some((answer) => !ids.has(answer.interruptId))) {
         throw runError('RUN_INVALID', 'Answers must cover exactly the pending interrupt ids');
@@ -99,9 +154,9 @@ export function createRunManager({ bus, getGraph, leadName }: {
         }
       });
       waiting.delete(threadId);
-      return launch(threadId, new Command({ resume: toResumeValue(answers) }));
+      return launch(threadId, new Command({ resume: toResumeValue([...paused.auto, ...answers]) }));
     },
-    pending: (threadId) => waiting.get(threadId) ?? [],
+    pending: (threadId) => waiting.get(threadId)?.human ?? [],
     isBusy: (threadId) => running.has(threadId) || waiting.has(threadId),
     cancel(threadId) {
       const controller = running.get(threadId);

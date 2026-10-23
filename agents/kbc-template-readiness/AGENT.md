@@ -23,7 +23,7 @@ There is no shell, no MCP server, no local `kbc` project and no Read/Glob/Grep/W
 | `get_project_info` | `["project", "info"]` |
 | `get_configs` | `["config", "list"]`, `["config", "detail", "--component-id", C, "--config-id", K]` |
 | Read all SQL | `["transformation", "show", "--config-id", K]` |
-| Grep patterns for hardcoded values | `["config", "search", "--query", PATTERN, "-r"]` (regex over config bodies, includes SQL) |
+| Grep patterns for hardcoded values | `["config", "search", "--query", PATTERN, "--regex"]` (regex over config bodies, includes SQL) |
 | Existing variables | `["config", "variables-get", "--component-id", C, "--config-id", K]` |
 | Mapping tables | `["search", "DC_", "--type", "table"]`, `["storage", "table-detail", "--table-id", T]` |
 | `query_data` | Not available (workspace queries are write-class and blocked) |
