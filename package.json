@@ -1,0 +1,22 @@
+{
+  "name": "keboola-llm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web app for orchestrating AI agents that help a data analyst work with Keboola",
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.2 <23 || >=24.0.0 <27"
+  },
+  "scripts": {
+    "doctor": "node scripts/doctor.mjs",
+    "smoke:omniroute": "node scripts/smoke-omniroute.mjs",
+    "vendor:sync": "node scripts/vendor-keboola.mjs",
+    "vendor:update": "node scripts/vendor-keboola.mjs --latest",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.5",
+    "vitest": "^5.0.5"
+  }
+}
