@@ -20,7 +20,7 @@ The text above was written for Claude Code with the Keboola MCP server and a loc
 |---|---|
 | `get_project_info` | `["project", "info"]` |
 | Read transformation SQL | `["config", "list", "--component-type", "transformation"]`, `["transformation", "show", "--config-id", K]` |
-| `search` | `["search", Q]`, `["config", "search", "--query", Q, "-i"]` |
+| `search` | `["search", Q]`, `["config", "search", "--query", Q, "--ignore-case"]` |
 
 `kbagent_read` takes the command as an args array without root flags; the tool adds `--json`, the write firewall and, when configured, `--project` (otherwise get the alias from `["project", "list"]`). Files: `ls`, `read_file`, `glob`, `grep` over `/skills/...` and `/knowledge/...`.
 

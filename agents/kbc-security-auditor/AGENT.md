@@ -20,7 +20,7 @@ The text above was written for Claude Code with the Keboola MCP server and a loc
 |---|---|
 | `get_project_info` | `["project", "info"]` |
 | Full config scan | `["config", "list"]`, then `["config", "detail", "--component-id", C, "--config-id", K]` per config; encrypted values show as `KBC::...` ciphertext, anything else under a secret-like key is plaintext |
-| SQL scan | `["transformation", "show", "--config-id", K]`; or `["config", "search", "--query", "@", "-i"]` and similar patterns to find candidates fast |
+| SQL scan | `["transformation", "show", "--config-id", K]`; or `["config", "search", "--query", "@", "--ignore-case"]` and similar patterns to find candidates fast |
 | Access control | `["token", "list", "--with-last-used"]` (no secrets returned), `["project", "member-list"]` |
 | Data exposure | `["sharing", "list"]`, `["sharing", "edges"]`, `["data-app", "list"]`, `["data-app", "detail", "--app-id", N]` (auth type; PAT redacted), `["data-app", "secrets-list", "--app-id", N]` (key names only) |
 | `get_jobs` (leaks in logs) | `["job", "list", "--status", "error"]`, `["job", "detail", "--job-id", J, "--log-tail-lines", "100"]` |

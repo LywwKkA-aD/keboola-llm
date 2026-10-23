@@ -3,7 +3,7 @@ name: kbc-financial-analyst
 description: "Use to check business and financial logic in transformations: P&L and balance sheet formulas, sign conventions, period and YTD logic, currency conversion, chart-of-accounts mapping completeness, KPI and budget-variance formulas. Returns findings with the expected formula and corrected SQL."
 extends: vendor/keboola/ai-kit/plugins/keboola-cli/agents/kbc-financial-analyst.md
 skills: [kbagent]
-tools: [kbagent]
+tools: [kbagent, kbagent-sql]
 keboola:
   access: read
 avatar: { color: "#219653", prop: calculator }
@@ -13,17 +13,18 @@ The text above was written for Claude Code with the Keboola MCP server and a loc
 
 ### Tools
 - `kbagent_read` runs the `kbagent` CLI with writes blocked. Pass the command as an args array without root flags, e.g. `["config", "list", "--component-type", "transformation"]`. The tool adds `--json`, the write firewall and, when configured, `--project`; otherwise get the alias from `["project", "list"]` and pass `--project <alias>`.
+- `kbagent_sql` runs SQL on data through a workspace; every call waits for the user's approval unless SQL is allowed for the chat, so query only what the code and metadata cannot settle. Reuse one workspace (`["workspace", "list"]`, else `["workspace", "create", "--name", "agent-financial-analyst"]`), load only the tables you need (`["workspace", "load", "--workspace-id", W, "--tables", T]`), then `["workspace", "query", "--workspace-id", W, "--sql", "SELECT ... LIMIT 100"]`. Read only: never INSERT, UPDATE, DELETE, CREATE or DROP. Use the dialect of the backend from `["project", "info"]` (Snowflake or BigQuery). Results are capped by `--limit` (default 500): check `statements[].truncated`, use `COUNT(*)` for counts. Report every SQL statement you ran.
 - `ls`, `read_file`, `glob`, `grep` over `/skills/...` and `/knowledge/...` (the team may keep business definitions in `/knowledge/`).
 
 ### Workflow mapping
 | Upstream step | Do this instead |
 |---|---|
 | `get_project_info` | `["project", "info"]` |
-| Identify financial transformations | `["config", "list", "--component-type", "transformation"]`, `["search", "pnl", "--type", "transformation"]`, `["config", "search", "--query", "EBITDA", "-i"]` |
+| Identify financial transformations | `["config", "list", "--component-type", "transformation"]`, `["search", "pnl", "--type", "transformation"]`, `["config", "search", "--query", "EBITDA", "--ignore-case"]` |
 | Read SQL | `["transformation", "show", "--config-id", K]` |
 | `get_tables` | `["storage", "table-detail", "--table-id", T]` (columns, types, row counts) |
 | `search` | `["search", Q]` |
-| `query_data` (validate outputs) | Not available (workspace queries are write-class and blocked). Review the formulas in SQL and write the validation queries (P&L cascade, balance check, debit = credit) for someone to run |
+| `query_data` (validate outputs) | Review the formulas in SQL first, then run the validation queries (P&L cascade, balance check, debit = credit) with `kbagent_sql` on aggregates; list any you could not run with their SQL |
 
 Not every project is financial. If the transformations hold no financial logic, say so and review the business KPIs that are there with the same rigor (denominators, period alignment, division by zero).
 
