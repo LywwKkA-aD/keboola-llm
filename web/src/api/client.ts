@@ -1,4 +1,4 @@
-import type { ChatEntry, InterruptAnswer, Settings, TeamInfo, Thread } from './types.ts';
+import type { ChatEntry, InterruptAnswer, Settings, TeamInfo, Thread, ThreadPolicy } from './types.ts';
 import type { PendingApproval } from '../state/run-state.ts';
 
 export class ApiError extends Error {
@@ -35,6 +35,8 @@ export const api = {
   approvals: (id: string) => request<PendingApproval[]>(`${thread(id)}/approvals`),
   answer: (id: string, answers: readonly InterruptAnswer[]) => request<{ runId: string }>(`${thread(id)}/approvals`, 'POST', { answers }),
   cancel: (id: string) => request<{ cancelled: boolean }>(`${thread(id)}/cancel`, 'POST'),
+  policy: (id: string) => request<ThreadPolicy>(`${thread(id)}/policy`),
+  setPolicy: (id: string, policy: ThreadPolicy) => request<ThreadPolicy>(`${thread(id)}/policy`, 'PUT', policy),
   rename: (id: string, title: string) => request<Thread>(thread(id), 'PATCH', { title }),
   remove: (id: string) => request<void>(thread(id), 'DELETE'),
 };

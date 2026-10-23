@@ -3,6 +3,7 @@ import { useSettings } from '../state/settings-context.tsx';
 import type { RunState } from '../state/run-state.ts';
 import { AgentAvatar } from './AgentAvatar.tsx';
 
+const ARROW = { delegate: '→', tool: '·', auto: '⇢' } as const;
 const STATUS_MARK = { running: '…', done: '✓', failed: '✕' } as const;
 
 export function ActivityPanel({ run }: { run: RunState }) {
@@ -29,7 +30,7 @@ export function ActivityPanel({ run }: { run: RunState }) {
               <div className="activity__body">
                 <div className="activity__head">
                   <span className="activity__agent">{activity.agent}</span>
-                  <span className="activity__arrow">{activity.kind === 'delegate' ? '→' : '·'}</span>
+                  <span className="activity__arrow">{ARROW[activity.kind]}</span>
                   <span className="activity__target">{activity.target}</span>
                   <span className="activity__status">{STATUS_MARK[activity.status]}</span>
                 </div>

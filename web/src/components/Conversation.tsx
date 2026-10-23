@@ -8,6 +8,7 @@ import { ActivityPanel } from './ActivityPanel.tsx';
 import { ApprovalCard } from './ApprovalCard.tsx';
 import { Composer } from './Composer.tsx';
 import { MessageBubble } from './MessageBubble.tsx';
+import { SqlToggle } from './SqlToggle.tsx';
 
 /** One chat: history, the live stream of the lead agent, approvals, composer and activity side panel. */
 export function Conversation({ threadId, onActivity }: { threadId: string; onActivity: () => void }) {
@@ -24,10 +25,18 @@ export function Conversation({ threadId, onActivity }: { threadId: string; onAct
   }, [threadId, onActivity]);
 
   const run = useThreadEvents(threadId, team.lead, reload);
+  const [allowSql, setAllowSql] = useState(false);
 
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    api.policy(threadId).then((policy) => setAllowSql(policy.allowSql)).catch(() => {});
+  }, [threadId]);
+
+  const changeSql = (allowed: boolean) =>
+    void guard(async () => setAllowSql((await api.setPolicy(threadId, { allowSql: allowed })).allowSql));
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
@@ -59,6 +68,9 @@ export function Conversation({ threadId, onActivity }: { threadId: string; onAct
   return (
     <div className="conversation">
       <div className="conversation__main">
+        <div className="conversation__toolbar">
+          <SqlToggle checked={allowSql} onChange={changeSql} disabled={busy} />
+        </div>
         <div className="conversation__messages">
           {history.length === 0 && !running && <p className="conversation__empty">{t('chat.empty')}</p>}
           {history.map((entry) => (

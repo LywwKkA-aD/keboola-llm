@@ -6,6 +6,7 @@ import { ActivityPanel } from './ActivityPanel.tsx';
 import { ApprovalCard } from './ApprovalCard.tsx';
 import { Composer } from './Composer.tsx';
 import { MessageBubble } from './MessageBubble.tsx';
+import { SqlToggle } from './SqlToggle.tsx';
 
 describe('Composer', () => {
   it('sends on Enter, keeps Shift+Enter for new lines, and clears the box', async () => {
@@ -60,6 +61,15 @@ describe('ApprovalCard', () => {
   it('falls back to raw JSON for other tools', () => {
     render(<ApprovalCard approval={{ interruptId: 'i', requests: [{ tool: 'other', args: { a: 1 }, decisions: [] }] }} onAnswer={() => {}} busy />);
     expect(screen.getByText(/"a": 1/)).toBeInTheDocument();
+  });
+});
+
+describe('SqlToggle', () => {
+  it('reports the new permission when clicked', async () => {
+    const onChange = vi.fn();
+    render(<SqlToggle checked={false} onChange={onChange} />);
+    await userEvent.click(screen.getByRole('checkbox'));
+    expect(onChange).toHaveBeenCalledWith(true);
   });
 });
 

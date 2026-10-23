@@ -73,6 +73,20 @@ describe('reduceRun', () => {
     expect(state.usage).toEqual({ input: 150, output: 15, cached: 90 });
   });
 
+  it('logs approvals the app granted on the chat permission', () => {
+    const state = apply([
+      {
+        type: 'approval.auto',
+        interruptId: 'i9',
+        requests: [{ tool: 'kbagent_sql', args: { args: ['workspace', 'query'], purpose: 'Count orders' }, decisions: ['approve'] }],
+      },
+    ]);
+    expect(state.activities).toEqual([
+      { id: 'auto-i9-0', kind: 'auto', agent: 'app', target: 'kbagent_sql', label: 'Count orders', status: 'done' },
+    ]);
+    expect(state.approvals).toEqual([]);
+  });
+
   it('tracks which agents are busy', () => {
     const started = apply([
       { type: 'delegate.start', agent: 'lead', callId: 'd1', to: 'helper', task: 't' },

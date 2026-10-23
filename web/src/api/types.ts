@@ -43,7 +43,12 @@ export type RunEvent =
   | { readonly type: 'run.started'; readonly runId: string }
   | { readonly type: 'run.waiting'; readonly runId: string }
   | { readonly type: 'run.finished'; readonly runId: string }
-  | { readonly type: 'run.failed'; readonly runId: string; readonly error: string };
+  | { readonly type: 'run.failed'; readonly runId: string; readonly error: string }
+  | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] };
+
+export interface ThreadPolicy {
+  readonly allowSql: boolean;
+}
 
 export type BusEvent = TeamEvent | RunEvent;
 

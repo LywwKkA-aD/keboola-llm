@@ -4,7 +4,8 @@ export type RunStatus = 'idle' | 'running' | 'waiting' | 'failed';
 
 export interface Activity {
   readonly id: string;
-  readonly kind: 'delegate' | 'tool';
+  /** delegate: task handed to a subagent; tool: a tool call; auto: an approval granted by a chat permission. */
+  readonly kind: 'delegate' | 'tool' | 'auto';
   /** Who acts: the delegating agent, or the agent calling the tool. */
   readonly agent: string;
   /** The delegated-to agent, or the tool name. */
@@ -85,6 +86,20 @@ export function reduceRun(state: RunState, event: BusEvent): RunState {
       };
     case 'approval.required':
       return { ...state, approvals: [...state.approvals, { interruptId: event.interruptId, requests: event.requests }] };
+    case 'approval.auto':
+      return withActivities(state, [
+        ...state.activities,
+        ...event.requests.map(
+          (request, index): Activity => ({
+            id: `auto-${event.interruptId}-${index}`,
+            kind: 'auto',
+            agent: 'app',
+            target: request.tool,
+            label: labelFor(request.tool, request.args),
+            status: 'done',
+          }),
+        ),
+      ]);
     case 'delegate.start':
       return withActivities(state, [
         ...state.activities,

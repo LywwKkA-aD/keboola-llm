@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import type { BaseMessage } from '@langchain/core/messages';
+import { createAutoApprover } from './api/auto-approve.ts';
 import { createEventBus } from './api/bus.ts';
 import { allowedFor } from './api/guard.ts';
 import { toChatHistory } from './api/history.ts';
@@ -23,7 +24,12 @@ team.spec.warnings.forEach((warning) => console.warn(`[team] ${warning}`));
 
 const bus = createEventBus({ historyPerThread: 5000 });
 const threads = createThreadStore(join(app.env.dataDir, 'threads.json'));
-const runs = createRunManager({ bus, getGraph: () => team.graph, leadName: () => team.spec.lead.name });
+const runs = createRunManager({
+  bus,
+  getGraph: () => team.graph,
+  leadName: () => team.spec.lead.name,
+  autoApprove: createAutoApprover({ isSqlAllowed: (threadId) => threads.policy(threadId)?.allowSql === true }),
+});
 bus.subscribe(({ threadId, event }) => {
   if (event.type === 'run.finished' || event.type === 'run.waiting') threads.touch(threadId);
   if (event.type === 'run.failed') console.error(`[run] ${threadId}: ${event.error}`);
