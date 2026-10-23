@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ACESFilmicToneMapping, Vector3 } from 'three';
 import type { AquariumViewProps, SceneQuality } from '../AquariumView.tsx';
 import { buildSceneModel } from '../sceneModel.ts';
+import { Bubbles } from './Bubbles.tsx';
 import { CameraRig, OVERVIEW } from './CameraRig.tsx';
 import { Effects } from './Effects.tsx';
 import { Links } from './Links.tsx';
@@ -87,6 +88,7 @@ export default function AquariumCanvas({ agents, lead, state, now, selected, onS
         );
       })}
       <Links lead={lead} targets={model.links} positions={positions} motion={motion} />
+      <Bubbles busy={agents.map((agent) => agent.name).filter((name) => (model.moods[name] ?? 'idle') !== 'idle')} positions={positions} motion={motion} />
       <CameraRig selected={selected} positions={positions} motion={motion} />
       <Effects quality={quality} />
     </Canvas>

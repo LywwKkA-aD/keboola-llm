@@ -107,7 +107,7 @@ function Archive({ active, motion }: { active: boolean; motion: boolean }) {
         <boxGeometry args={[0.12, 0.08, 1.0]} />
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
-      <Tag text="KNOWLEDGE ARCHIVE" position={[-0.1, 5.0, 0]} />
+      <Tag text="KNOWLEDGE ARCHIVE" position={[1.6, -0.45, 0]} />
     </group>
   );
 }
@@ -147,7 +147,7 @@ function Console({ active, motion }: { active: boolean; motion: boolean }) {
           </mesh>
         </group>
       ))}
-      <Tag text="KEBOOLA CONSOLE" position={[0, 3.2, 0]} />
+      <Tag text="KEBOOLA CONSOLE" position={[-1.6, -0.45, 0]} />
     </group>
   );
 }
@@ -174,7 +174,7 @@ function Forge({ active, motion }: { active: boolean; motion: boolean }) {
         <icosahedronGeometry args={[0.65, 1]} />
         <meshBasicMaterial wireframe toneMapped={false} />
       </mesh>
-      <Tag text="BUILD" position={[0, 2.8, 0]} />
+      <Tag text="BUILD" position={[0.4, -0.45, 1.8]} />
     </group>
   );
 }
@@ -189,20 +189,20 @@ function Beacon({ active, motion }: { active: boolean; motion: boolean }) {
   });
   return (
     <group position={[x, 0, z]}>
-      <mesh position={[0, 1.6, 0]}>
-        <cylinderGeometry args={[0.1, 0.18, 3.2, 12]} />
+      <mesh position={[0, 1.1, 0]}>
+        <cylinderGeometry args={[0.08, 0.16, 2.2, 12]} />
         <meshStandardMaterial {...METAL} />
       </mesh>
-      <mesh position={[0, 3.3, 0]}>
-        <cylinderGeometry args={[0.16, 0.16, 0.42, 20]} />
+      <mesh position={[0, 2.35, 0]}>
+        <cylinderGeometry args={[0.15, 0.15, 0.38, 20]} />
         <meshStandardMaterial ref={lamp} color="#3a2f17" emissive={AMBER} toneMapped={false} />
       </mesh>
-      <mesh position={[0, 3.3, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 2.35, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.32, 0.015, 6, 48]} />
         <meshBasicMaterial color={AMBER} transparent opacity={active ? 0.9 : 0.25} toneMapped={false} />
       </mesh>
-      {active && <pointLight position={[0, 3.35, 0]} color={AMBER} intensity={6} distance={7} />}
-      <Tag text="APPROVALS" position={[0, 4.0, 0]} />
+      {active && <pointLight position={[0, 2.4, 0]} color={AMBER} intensity={6} distance={7} />}
+      <Tag text="APPROVALS" position={[0, -0.45, 1.2]} />
     </group>
   );
 }
