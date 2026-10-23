@@ -68,6 +68,16 @@ describe('GET /api/events', () => {
     expect(stream.response.headers.get('content-type')).toMatch(/^text\/event-stream/);
   });
 
+  it('sends a first byte at once so buffering proxies (e.g. the Vite dev proxy) pass the stream on', async () => {
+    const base = await start(createEventBus({ historyPerThread: 10 }));
+    const controller = new AbortController();
+    const response = await fetch(`${base}/api/events`, { signal: controller.signal });
+    const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+    const first = await Promise.race([reader.read(), new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000))]);
+    controller.abort();
+    expect(first && new TextDecoder().decode(first.value)).toMatch(/^: connected\n\n/);
+  });
+
   it('replays the thread after ?after= and then delivers that thread live', async () => {
     const bus = createEventBus({ historyPerThread: 10 });
     bus.publish('t1', token('a'));

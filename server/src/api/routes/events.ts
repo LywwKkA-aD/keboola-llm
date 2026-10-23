@@ -28,6 +28,8 @@ export function registerEventRoutes(app: FastifyInstance, { bus }: ServerDeps): 
     });
     // writeHead only buffers the headers; without a flush the client sees nothing until the first event.
     res.flushHeaders();
+    // A first byte right away: proxies that buffer until the body starts (the Vite dev proxy does) pass the stream on.
+    res.write(': connected\n\n');
     const send = (envelope: Envelope) => res.write(`id: ${envelope.seq}\ndata: ${JSON.stringify(envelope)}\n\n`);
 
     if (threadId) bus.history(threadId, since).forEach(send);
