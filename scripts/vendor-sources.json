@@ -1,0 +1,23 @@
+{
+  "targetDir": "vendor/keboola",
+  "sources": [
+    {
+      "name": "ai-kit",
+      "repo": "https://github.com/keboola/ai-kit.git",
+      "branch": "main",
+      "ref": "e75e1e0d5eeae707d6e9e4a2204e968f585f701c",
+      "license": "MIT",
+      "include": ["^LICENSE$", "^plugins/"],
+      "exclude": ["^plugins/[^/]+/evals/"]
+    },
+    {
+      "name": "cli",
+      "repo": "https://github.com/keboola/cli.git",
+      "branch": "main",
+      "ref": "d72fd4c7af4bc92723fbf9c6e4f3b8ac8640d5fd",
+      "license": "Apache-2.0",
+      "include": ["^LICENSE$", "^plugins/"],
+      "exclude": ["^plugins/[^/]+/evals/"]
+    }
+  ]
+}

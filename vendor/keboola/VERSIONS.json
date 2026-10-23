@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "name": "ai-kit",
+      "repo": "https://github.com/keboola/ai-kit.git",
+      "ref": "e75e1e0d5eeae707d6e9e4a2204e968f585f701c",
+      "license": "MIT",
+      "files": 195
+    },
+    {
+      "name": "cli",
+      "repo": "https://github.com/keboola/cli.git",
+      "ref": "d72fd4c7af4bc92723fbf9c6e4f3b8ac8640d5fd",
+      "license": "Apache-2.0",
+      "files": 59
+    }
+  ]
+}

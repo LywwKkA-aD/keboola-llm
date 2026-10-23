@@ -1,0 +1,132 @@
+# Troubleshooting
+
+**Use this when:** the app is failing to start, returning errors, or behaving unexpectedly. Each entry is symptom → cause → pointer to the canonical fix in the relevant reference.
+
+## Contents
+- "Cannot POST /" / "Method Not Allowed" on startup
+- "externally-managed-environment" / PEP 668
+- WebSocket fails / Streamlit blank page
+- Streaming responses arrive all at once
+- App won't start / restart loop
+- Port mismatch local vs Keboola
+- Exit code 153
+- Dev API picks up only the first push
+- `workspace.workspaceNotFound` 404
+- Non-numeric `WORKSPACE_ID` (`WORKSPACE_<id>`)
+- 500 from missing env var
+- `KeyError` on Storage Access env var
+- Query Service auth error with narrow-scoped token
+- `Insufficient privileges` on write
+- Reading logs (incl. Streamlit silent exceptions)
+
+## "Cannot POST /" / "Method Not Allowed" on startup
+
+**Cause:** Root route only accepts GET. Keboola POSTs to `/` on startup.
+
+**Fix:** Flask `methods=["GET","POST"]`, Express `app.all('/')`, Streamlit handles natively. See [python-js-apps.md](python-js-apps.md) §POST handling on /.
+
+## "externally-managed-environment" / PEP 668
+
+**Cause:** `setup.sh` calls `pip install`. The base image blocks bare `pip`.
+
+**Fix:** Replace with `uv sync` and prefix supervisord commands with `uv run`. See [python-js-apps.md](python-js-apps.md) §Python dependencies.
+
+## WebSocket fails / Streamlit blank page
+
+**Cause:** Nginx not configured to upgrade WebSocket connections — page loads but never updates.
+
+**Fix:** Add the WebSocket upgrade snippet to the `location /` block in `keboola-config/nginx/sites/default.conf`. See [python-js-apps.md](python-js-apps.md) §Nginx (WebSocket snippet).
+
+## Streaming responses arrive all at once
+
+**Cause:** Nginx buffers the entire upstream response before forwarding (SSE / long responses).
+
+**Fix:** `proxy_buffering off; proxy_cache off; proxy_request_buffering off;` in the relevant location block. See [python-js-apps.md](python-js-apps.md) §Nginx (SSE snippet); for Kai chat specifically, [kai-integration.md](kai-integration.md) §Pattern B.
+
+## App won't start / restart loop
+
+**Cause:** Any of: relative paths in supervisord configs, missing `uv run` prefix for Python, non-executable `setup.sh`, `[program:nginx]` declared (the base image owns nginx).
+
+**Fix:** Absolute `/app/...` paths, `command=uv run python /app/app.py`, `chmod +x keboola-config/setup.sh` (commit the executable bit), and remove any `[program:nginx]` block. See [python-js-apps.md](python-js-apps.md) §Supervisord.
+
+## Port mismatch local vs Keboola
+
+**Cause:** The port in `nginx/sites/default.conf` `proxy_pass` doesn't match the port the app listens on.
+
+**Fix:** Make them match. Common conventions: Flask 5000, FastAPI/Streamlit (production) 8050, Node/Express 3000. Streamlit's `--server.port 8050` flag overrides its default 8501.
+
+## Dev API picks up only the first push
+
+**Cause:** `keboola-config/supervisord-dev/` runs the Node server under `node --watch`. Each push replaces the changed files by write-and-rename, and on Linux `node --watch` sees only the first replacement, so later server changes never load.
+
+**Fix:** Switch it to `tsx watch` with `CHOKIDAR_USEPOLLING="1"` and add `tsx` to `devDependencies`, as `templates/react-vite-app/keboola-config/supervisord-dev/services/api.conf` does. The change loads on that same push.
+
+## Exit code 153
+
+**Cause:** Git commit locking — the locked commit no longer exists in the remote (force-push, history rewrite, branch deletion).
+
+**Fix:** Restore the missing commit, or trigger a fresh deploy that re-locks to current HEAD: `kbagent data-app deploy --project P --app-id N --wait`. See [python-js-apps.md](python-js-apps.md) §Git commit locking.
+
+## `workspace.workspaceNotFound` 404 from legacy workspace-query endpoint
+
+**Cause:** Calling `{KBC_URL}/v2/storage/branch/<b>/workspaces/<w>/query` on a Snowflake project. That endpoint serves BigQuery workspaces, not Snowflake ones.
+
+**Fix:** Switch to the Query Service via `keboola-query-service` (Python) / `@keboola/api-client`'s `queryService` client + SDK (JS) — the preferred path on both backends. See [storage-access.md](storage-access.md) §Direct RO workspace queries.
+
+## Non-numeric `WORKSPACE_ID` (`WORKSPACE_<id>`)
+
+**Cause:** A hand-set secret or local `.env` value holds the Snowflake schema name (`WORKSPACE_12345`). The platform's own `WORKSPACE_ID` is always numeric.
+
+**Fix:** Set the value to the numeric ID (`12345`) instead of adding code that strips the prefix. See [storage-access.md](storage-access.md) §WORKSPACE_ID for where to get it.
+
+## 500 from missing env var
+
+**Cause:** Required secret not configured in `dataApp.secrets`.
+
+**Fix:** Add the secret. UI: Configuration → Secrets → `#KEY=value`. kbagent: `kbagent data-app secrets-set --app-id N --secret '#KEY=value'` then `data-app deploy --wait`. Secret names get `#` stripped, dashes→underscores, uppercased: `#my-key` → env `MY_KEY`.
+
+## `missing required env vars: WORKSPACE_ID` / `KeyError: 'BRANCH_ID'` (or any Storage Access env var) on app start
+
+**Cause:** Storage access isn't enabled on the component config (production), or local `.env` / `.env.local` is missing the variable.
+
+**Fix:**
+- **Production, python-js app:** enable it through MCP, no UI step —
+  `modify_python_js_data_app(configuration_id=..., storage_access=True)`, then `deploy_data_app`.
+  Confirm via `data_app.storage_access_enabled` in the response. Needs MCP server 1.87.3+; see
+  [storage-access.md](storage-access.md) §Enabling Storage access on a deployed app. Note
+  `update_config` is rejected for `keboola.data-apps` — that rejection means "use the data-app
+  tool", not "use the UI".
+- **Production, writable tables:** UI → Advanced Settings → Storage Access, or set the output
+  mapping with `unload_strategy: "direct-grant"`. Redeploy.
+- **Local dev:** add the four variables to `.env` / `.env.local`. See [storage-access.md](storage-access.md) §Getting the env vars for local development.
+
+## Query Service auth error with a narrow-scoped Storage API token
+
+**Cause:** Token scoped to specific buckets / tables. Query Service evaluates access at the workspace level and rejects narrow-scoped tokens regardless of SQL.
+
+**Fix:** Replace with a project-wide token (master token or a dedicated Full Access Storage API token). See [storage-access.md](storage-access.md) §`KBC_TOKEN`.
+
+## `Insufficient privileges` / write blocked by the Query Service
+
+**Cause:** Destination table not in `storage.output.tables` with `unload_strategy: "direct-grant"` (production), or the local workspace lacks write grants on the table (local dev).
+
+**Fix:**
+- **Production:** add the table to the data app config's output mapping with `direct-grant`; redeploy so the ephemeral workspace is re-provisioned.
+- **Local dev:** create a dedicated workspace and grant write access on the same tables. See [storage-access.md](storage-access.md) §`WORKSPACE_ID`.
+- Bucket stage (`in.` vs `out.`) isn't the issue — the workspace grant is.
+
+## Reading logs
+
+Three options:
+
+- **MCP `mcp__keboola__get_data_apps(configuration_ids=[cfg_id])`** — latest 20 log lines via `deployment_info.logs`. Preferred from an agent / Claude Code session.
+- **Keboola UI Terminal Log tab** — near-real-time `stdout`/`stderr`. "Download Logs" gives the full file. Logs are deleted when the app stops.
+- **kbagent CLI** — a `data-app logs` command is a follow-up. For now, fall through to the Terminal Log UI link surfaced in `data-app deploy --wait` error output.
+
+### Streamlit-specific footgun: silent exceptions
+
+Streamlit catches uncaught exceptions and renders them in the UI but **does NOT propagate them to `stdout`/`stderr`** — log readers show nothing for an error clearly visible in the browser.
+
+**Fix:** wrap `main()` in a logging decorator that catches, logs to `stderr`, then re-raises. See [streamlit-apps.md](streamlit-apps.md) §Capturing errors for platform logs.
+
+Python/JS apps (Flask, FastAPI, Express) don't have this issue — their frameworks log uncaught exceptions to `stderr` automatically and supervisord forwards them.

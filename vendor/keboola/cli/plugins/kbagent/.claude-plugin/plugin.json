@@ -1,0 +1,12 @@
+{
+  "name": "kbagent",
+  "version": "0.100.0",
+  "description": "AI-friendly interface to Keboola Connection projects — explore configs, jobs, lineage, sync configs as files, manage dev branches, and debug SQL in workspaces",
+  "author": {
+    "name": "Keboola",
+    "email": "support@keboola.com"
+  },
+  "homepage": "https://github.com/keboola/cli",
+  "repository": "https://github.com/keboola/cli",
+  "license": "Apache-2.0"
+}
