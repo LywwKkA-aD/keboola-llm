@@ -66,7 +66,7 @@ export default function AquariumCanvas({ agents, lead, state, now, selected, onS
       />
       <Hall particles={PARTICLES[quality]} motion={motion} />
       <Lights />
-      <Stations active={model.stations} motion={motion} />
+      <Stations active={model.stations} occupancy={model.occupancy} motion={motion} />
       <Docks count={Math.max(0, agents.length - 1)} />
       {agents.map((agent) => {
         const spot = model.spots[agent.name];

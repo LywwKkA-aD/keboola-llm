@@ -33,6 +33,15 @@ describe('buildSceneModel', () => {
     expect(model.captions.lead).toBe('Find usages of customer_id');
   });
 
+  it('counts how many places of each station are taken', () => {
+    const state = play([
+      { type: 'tool.start', agent: 'keboola-expert', callId: 't1', tool: 'kbagent_read', args: {} },
+      { type: 'tool.start', agent: 'kbc-sql-reviewer', callId: 't2', tool: 'kbagent_sql', args: {} },
+    ]);
+    const model = buildSceneModel({ agents, lead: 'lead', state, now: 0 });
+    expect(model.occupancy).toMatchObject({ console: 2, beacon: 0, archive: 0 });
+  });
+
   it('does not link agents working in another chat than the lead', () => {
     const state = [
       { threadId: 't1', event: { type: 'run.started', runId: 'r' } },

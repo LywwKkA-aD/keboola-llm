@@ -14,10 +14,14 @@ const BUSY: BusEvent[] = [
   { type: 'run.started', runId: 'busy' },
   { type: 'delegate.start', agent: 'lead', callId: 'd1', to: 'keboola-expert', task: 'Find where customer_id is used' },
   { type: 'tool.start', agent: 'keboola-expert', callId: 't1', tool: 'kbagent_read', args: { purpose: 'Search configs for customer_id' } },
-  { type: 'tool.start', agent: 'knowledge-keeper', callId: 't2', tool: 'read_file', args: { file_path: '/knowledge/glossary.md' } },
-  { type: 'tool.start', agent: 'kbc-dwh-architect', callId: 't3', tool: 'write_file', args: { file_path: '/agents/data-contracts/AGENT.md' } },
-  { type: 'tool.start', agent: 'agent-builder', callId: 't4', tool: 'write_file', args: { file_path: '/skills/custom/sql-style/SKILL.md' } },
+  { type: 'tool.start', agent: 'kbc-sql-reviewer', callId: 't2', tool: 'kbagent_sql', args: { purpose: 'Count duplicated order rows' } },
+  { type: 'tool.start', agent: 'kbc-performance-optimizer', callId: 't3', tool: 'kbagent_read', args: { purpose: 'Job durations, last 30 days' } },
+  { type: 'tool.start', agent: 'knowledge-keeper', callId: 't4', tool: 'read_file', args: { file_path: '/knowledge/glossary.md' } },
+  { type: 'tool.start', agent: 'kbc-config-reviewer', callId: 't5', tool: 'edit_file', args: { file_path: '/knowledge/conventions/naming.md' } },
+  { type: 'tool.start', agent: 'agent-builder', callId: 't6', tool: 'write_file', args: { file_path: '/agents/data-contracts/AGENT.md' } },
   { type: 'approval.required', interruptId: 'a1', requests: [{ tool: 'write_file', args: {}, decisions: ['approve', 'reject'] }] },
+  { type: 'tool.start', agent: 'kbc-dwh-architect', callId: 't7', tool: 'kbagent_write', args: { purpose: 'Create dev branch' } },
+  { type: 'approval.required', interruptId: 'a2', requests: [{ tool: 'kbagent_write', args: {}, decisions: ['approve', 'reject'] }] },
 ];
 
 function Preview() {

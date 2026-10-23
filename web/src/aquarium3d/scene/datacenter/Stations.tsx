@@ -3,11 +3,12 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import { Color, type Group, type InstancedMesh, type MeshBasicMaterial, Object3D } from 'three';
 import { STATIONS_3D, type StationId } from '../../layout3d.ts';
-import { Checkpoint } from './Checkpoint.tsx';
 import { Fabricator } from './Fabricator.tsx';
-import { PipelineConsole } from './PipelineConsole.tsx';
+import { WaitingArea } from './WaitingArea.tsx';
+import { Workstations } from './Workstations.tsx';
 
 export type StationActivity = Readonly<Record<StationId, boolean>>;
+export type StationOccupancy = Readonly<Record<StationId, number>>;
 
 const FLOOR = -0.6;
 const METAL = { color: '#0d1520', metalness: 0.75, roughness: 0.35 } as const;
@@ -112,24 +113,19 @@ function StorageRacks({ active, motion }: { active: boolean; motion: boolean }) 
 }
 
 /** Data-centre equipment that doubles as work stations; equipment in use glows and moves more. */
-export function Stations({ active, motion }: { active: StationActivity; motion: boolean }) {
+export function Stations({ active, occupancy, motion }: { active: StationActivity; occupancy: StationOccupancy; motion: boolean }) {
   return (
     <group>
       <OpsDesk active={active.command} motion={motion} />
       <StorageRacks active={active.archive} motion={motion} />
-      <group position={ahead('console', 1.6)}>
-        <PipelineConsole active={active.console} motion={motion} />
-        <Tag text="KEBOOLA" position={[-1.7, 0.1, 0]} />
-      </group>
+      <Workstations occupied={occupancy.console} motion={motion} />
+      <Tag text="KEBOOLA" position={ahead('console', -1.2)} />
       <group position={ahead('forge', 1.6)} rotation={[0, STATIONS_3D.forge.facing + Math.PI * 0.75, 0]}>
         <Fabricator active={active.forge} motion={motion} />
         <Tag text="BUILD" position={[0, 0.1, 1.5]} />
       </group>
-      {/* The gate stands behind the waiting agent, facing the viewer: the agent waits looking at the user. */}
-      <group position={ahead('beacon', -1.3)} rotation={[0, STATIONS_3D.beacon.facing, 0]}>
-        <Checkpoint active={active.beacon} motion={motion} />
-        <Tag text="APPROVALS" position={[0, 0.1, 2.2]} />
-      </group>
+      <WaitingArea waiting={occupancy.beacon} motion={motion} />
+      <Tag text="APPROVALS" position={ahead('beacon', 1.1)} />
     </group>
   );
 }

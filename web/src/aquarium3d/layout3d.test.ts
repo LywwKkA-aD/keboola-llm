@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layout3d, STATIONS_3D } from './layout3d.ts';
+import { layout3d, STATIONS_3D, stationSlots } from './layout3d.ts';
 import { auraFor } from './status.ts';
 
 const names = ['lead', 'a', 'b', 'c', 'd'];
@@ -31,6 +31,24 @@ describe('layout3d', () => {
     const spots = layout3d({ names, lead: 'lead', moods: { a: 'thinking', b: 'waiting' } });
     expect(spots.a!.position).toEqual(resting.a!.position);
     expect(dist(spots.b!.position, STATIONS_3D.beacon.position)).toBeLessThan(0.01);
+  });
+
+  it('seats agents at the Keboola workstations one per desk, never on top of each other', () => {
+    const many = ['lead', 'a', 'b', 'c', 'd'];
+    const spots = layout3d({ names: many, lead: 'lead', moods: { a: 'computing', b: 'querying', c: 'computing', d: 'querying' } });
+    const desks = stationSlots('console');
+    expect(desks).toHaveLength(3);
+    ['a', 'b', 'c'].forEach((name) => expect(desks.some((desk) => dist(desk, spots[name]!.position) < 1e-9)).toBe(true));
+    const positions = ['a', 'b', 'c', 'd'].map((name) => spots[name]!.position);
+    positions.forEach((p, i) => positions.slice(i + 1).forEach((q) => expect(dist(p, q)).toBeGreaterThan(1)));
+  });
+
+  it('gives agents waiting for approval their own pads at the waiting area', () => {
+    const spots = layout3d({ names, lead: 'lead', moods: { a: 'waiting', b: 'waiting' } });
+    const pads = stationSlots('beacon');
+    expect(pads.length).toBeGreaterThanOrEqual(3);
+    expect(dist(spots.a!.position, pads[0]!)).toBeLessThan(1e-9);
+    expect(dist(spots.b!.position, pads[1]!)).toBeLessThan(1e-9);
   });
 
   it('places many resting agents without collisions', () => {

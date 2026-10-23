@@ -13,7 +13,7 @@ export type StationId = 'command' | 'archive' | 'console' | 'forge' | 'beacon';
 export const STATIONS_3D: Readonly<Record<StationId, Spot & { readonly label: string }>> = {
   command: { position: [0, 0.4, 1.2], facing: 0, label: 'command' },
   archive: { position: [-7.6, 0.2, 0.2], facing: -Math.PI / 2, label: 'archive' },
-  console: { position: [6.9, 0.2, 0.9], facing: Math.PI / 2, label: 'console' },
+  console: { position: [5.3, 0.2, -1.2], facing: Math.PI, label: 'console' },
   forge: { position: [-3.9, 0.2, 6.0], facing: -Math.PI / 4, label: 'forge' },
   beacon: { position: [3.9, 0.2, 6.4], facing: -0.3, label: 'beacon' },
 };
@@ -40,6 +40,35 @@ function slotAt(station: Spot, slot: number): Vec3 {
   const offset = Math.ceil(slot / 2) * SLOT_GAP * side;
   const [x, y, z] = station.position;
   return [x + Math.cos(station.facing) * offset, y, z - Math.sin(station.facing) * offset];
+}
+
+/** Stations with fixed places (desks, pads), as offsets along the station's tangent; the first is the station spot. */
+const SLOT_OFFSETS: Partial<Record<StationId, readonly number[]>> = {
+  console: [0, -1.9, 1.9],
+  beacon: [0, -1.25, 1.25],
+};
+const QUEUE_GAP = 1.2;
+
+const alongTangent = (station: Spot, offset: number, back: number): Vec3 => {
+  const [x, y, z] = station.position;
+  return [
+    x + Math.cos(station.facing) * offset - Math.sin(station.facing) * back,
+    y,
+    z - Math.sin(station.facing) * offset - Math.cos(station.facing) * back,
+  ];
+};
+
+/** The fixed places of a station (e.g. the Keboola desks), where the scene draws a desk or pad for each. */
+export function stationSlots(id: StationId): Vec3[] {
+  return (SLOT_OFFSETS[id] ?? [0]).map((offset) => alongTangent(STATIONS_3D[id], offset, 0));
+}
+
+/** Where the n-th agent at a station stands: its own place, or a queue behind the places when all are taken. */
+function placeAt(id: StationId, slot: number): Vec3 {
+  const offsets = SLOT_OFFSETS[id];
+  if (!offsets) return slotAt(STATIONS_3D[id], slot);
+  const offset = offsets[slot % offsets.length] ?? 0;
+  return alongTangent(STATIONS_3D[id], offset, Math.floor(slot / offsets.length) * QUEUE_GAP);
 }
 
 /** Resting places: an arc of pods behind the stations, a second arc further out when crowded. */
@@ -70,8 +99,7 @@ export function layout3d({ names, lead, moods }: {
       if (!stationId || (stationId === 'command' && name === lead)) return [name, home(name)];
       const slot = used.get(stationId) ?? 0;
       used.set(stationId, slot + 1);
-      const station = STATIONS_3D[stationId];
-      return [name, { position: slotAt(station, slot), facing: station.facing }];
+      return [name, { position: placeAt(stationId, slot), facing: STATIONS_3D[stationId].facing }];
     }),
   );
 }
