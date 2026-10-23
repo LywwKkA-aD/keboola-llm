@@ -18,6 +18,7 @@ const TOOL_FACTORIES: Readonly<Record<string, ToolFactory>> = {};
 
 export interface App {
   readonly env: AppEnv;
+  readonly checkpointer: SqliteSaver;
   readonly settingsFile: string;
   readonly agents: readonly AgentDefinition[];
   readonly skills: readonly SkillInfo[];
@@ -52,6 +53,7 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
 
   return {
     env,
+    checkpointer,
     settingsFile,
     agents: agents.items,
     skills: skills.items,

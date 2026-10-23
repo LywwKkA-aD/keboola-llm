@@ -11,6 +11,8 @@ export interface AppEnv {
   readonly dataDir: string;
   readonly host: string;
   readonly port: number;
+  // Port of the Vite dev server, allowed as an origin during development.
+  readonly webDevPort: number;
   readonly omniroute: OmniRouteConfig;
 }
 
@@ -30,6 +32,7 @@ export function readAppEnv(env: Env, rootDir: string): AppEnv {
     dataDir: value('DATA_DIR') || join(rootDir, 'data'),
     host: value('HOST') || '127.0.0.1',
     port: readPort(value('PORT') || '4800'),
+    webDevPort: readPort(value('WEB_DEV_PORT') || '5173'),
     omniroute: {
       baseUrl: (value('OMNIROUTE_BASE_URL') || 'http://127.0.0.1:20128/v1').replace(/\/+$/, ''),
       apiKey: value('OMNIROUTE_API_KEY'),

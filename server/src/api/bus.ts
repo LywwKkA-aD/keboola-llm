@@ -1,0 +1,56 @@
+import type { TeamEvent } from '../runtime/events.ts';
+
+/** Run lifecycle events published next to the agent events. */
+export type RunEvent =
+  | { readonly type: 'run.started'; readonly runId: string }
+  | { readonly type: 'run.waiting'; readonly runId: string }
+  | { readonly type: 'run.finished'; readonly runId: string }
+  | { readonly type: 'run.failed'; readonly runId: string; readonly error: string };
+
+export type BusEvent = TeamEvent | RunEvent;
+
+export interface Envelope {
+  readonly seq: number;
+  readonly threadId: string;
+  readonly event: BusEvent;
+}
+
+type Listener = (envelope: Envelope) => void;
+
+export interface EventBus {
+  publish(threadId: string, event: BusEvent): Envelope;
+  subscribe(listener: Listener, filter?: { threadId?: string }): () => void;
+  history(threadId: string, afterSeq: number): readonly Envelope[];
+}
+
+/** In-process pub/sub with a short per-thread replay buffer for reconnecting clients. */
+export function createEventBus({ historyPerThread }: { historyPerThread: number }): EventBus {
+  let seq = 0;
+  const listeners = new Set<{ listener: Listener; threadId?: string }>();
+  const recent = new Map<string, readonly Envelope[]>();
+
+  return {
+    publish(threadId, event) {
+      seq += 1;
+      const envelope: Envelope = { seq, threadId, event };
+      recent.set(threadId, [...(recent.get(threadId) ?? []), envelope].slice(-historyPerThread));
+      listeners.forEach(({ listener, threadId: only }) => {
+        if (only && only !== threadId) return;
+        try {
+          listener(envelope);
+        } catch {
+          // A broken subscriber (e.g. a closed socket) must not break the run.
+        }
+      });
+      return envelope;
+    },
+    subscribe(listener, filter = {}) {
+      const entry = { listener, ...filter };
+      listeners.add(entry);
+      return () => listeners.delete(entry);
+    },
+    history(threadId, afterSeq) {
+      return (recent.get(threadId) ?? []).filter((envelope) => envelope.seq > afterSeq);
+    },
+  };
+}
