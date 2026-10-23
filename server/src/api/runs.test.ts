@@ -52,6 +52,15 @@ describe('createRunManager', () => {
     expect(runs.isBusy('t1')).toBe(false);
   });
 
+  it('lists the threads that are running right now', async () => {
+    const { runs } = setup(() => [finalMessage]);
+    expect(runs.active()).toEqual([]);
+    const { done } = runs.start('t1', {});
+    expect(runs.active()).toEqual(['t1']);
+    await done;
+    expect(runs.active()).toEqual([]);
+  });
+
   it('refuses a second run on a busy thread', async () => {
     const { runs } = setup(() => [finalMessage]);
     const first = runs.start('t1', {});

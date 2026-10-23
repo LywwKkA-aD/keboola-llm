@@ -124,6 +124,17 @@ describe('mapChunk', () => {
     ]);
   });
 
+  it('names the agent whose tool call is waiting for approval', () => {
+    const builderWrites = [
+      SUB_NS,
+      'updates',
+      { model_request: { messages: [new AIMessage({ content: '', name: 'agent-builder', tool_calls: [{ id: 'w1', name: 'write_file', args: {} }] })] } },
+    ] as const;
+    const [state] = mapChunk(initialMapperState('lead'), builderWrites);
+    const [, events] = mapChunk(state, interruptChunk(SUB_NS));
+    expect(events[0]).toMatchObject({ requests: [{ tool: 'write_file', agent: 'agent-builder' }] });
+  });
+
   it('reports an interrupt once even when parent and subgraph both emit it', () => {
     const [state, first] = mapChunk(initialMapperState('lead'), interruptChunk(SUB_NS));
     const [, second] = mapChunk(state, interruptChunk([]));

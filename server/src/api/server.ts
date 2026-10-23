@@ -6,6 +6,7 @@ import { registerMetaRoutes } from './routes/meta.ts';
 import { registerPolicyRoutes } from './routes/policies.ts';
 import { registerStaticRoutes } from './routes/static.ts';
 import { registerThreadRoutes } from './routes/threads.ts';
+import { registerWorkspaceRoutes } from './routes/workspace.ts';
 import type { RunErrorCode } from './runs.ts';
 import type { ServerDeps } from './types.ts';
 
@@ -32,6 +33,7 @@ export async function createServer(deps: ServerDeps): Promise<FastifyInstance> {
   registerMetaRoutes(app, deps);
   registerThreadRoutes(app, deps);
   registerPolicyRoutes(app, deps);
+  registerWorkspaceRoutes(app, deps);
   registerEventRoutes(app, deps);
   await registerStaticRoutes(app, deps.staticDir);
   return app;

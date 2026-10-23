@@ -4,7 +4,7 @@ import type { ServerDeps } from '../types.ts';
 
 const userMessage = (text: string) => ({ messages: [{ role: 'user', content: text }] });
 
-export function registerThreadRoutes(app: FastifyInstance, { runs, threads, history, deleteThread }: ServerDeps): void {
+export function registerThreadRoutes(app: FastifyInstance, { runs, threads, history, deleteThread, settings }: ServerDeps): void {
   const findThread = (id: string, reply: FastifyReply) => {
     const thread = threads.get(id);
     if (!thread) reply.code(404).send({ error: 'Thread not found' });
@@ -16,6 +16,7 @@ export function registerThreadRoutes(app: FastifyInstance, { runs, threads, hist
   app.post('/api/threads', async (request, reply) => {
     const { text } = messageBody.parse(request.body);
     const thread = threads.create(text);
+    if (settings.get().allowSqlByDefault) threads.setPolicy(thread.id, { allowSql: true });
     const { runId } = runs.start(thread.id, userMessage(text));
     return reply.code(201).send({ thread, runId });
   });

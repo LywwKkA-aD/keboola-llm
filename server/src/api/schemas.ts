@@ -4,7 +4,7 @@ export const messageBody = z.object({ text: z.string().trim().min(1).max(20_000)
 
 export const titleBody = z.object({ title: z.string().trim().min(1).max(200) });
 
-export const settingsBody = z.object({ language: z.enum(['ru', 'en', 'cs']) }).partial().strict();
+export { settingsPatchSchema as settingsBody } from '../config/settings.ts';
 
 export const policyBody = z.object({ allowSql: z.boolean() }).strict();
 

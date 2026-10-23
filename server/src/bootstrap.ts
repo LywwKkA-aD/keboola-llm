@@ -23,7 +23,19 @@ export interface App {
   readonly skills: readonly SkillInfo[];
   readonly loadErrors: readonly LoadError[];
   readonly loadSettings: () => Settings;
-  readonly buildTeam: (settings: Settings) => { spec: TeamSpec; graph: ReturnType<typeof createTeam> };
+  readonly buildTeam: (settings: Settings) => Team;
+}
+
+/** Model and Keboola project actually in use: settings override .env, empty means .env. */
+export interface Effective {
+  readonly model: string;
+  readonly keboolaProject: string;
+}
+
+export interface Team {
+  readonly spec: TeamSpec;
+  readonly graph: ReturnType<typeof createTeam>;
+  readonly effective: Effective;
 }
 
 function loadDotEnv(file: string): void {
@@ -48,7 +60,6 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
   const checkpointer = SqliteSaver.fromConnString(join(env.dataDir, 'checkpoints.sqlite'));
   const backend = createBackend({ rootDir, dataDir: env.dataDir, skillSources });
   const createModel = createModelFactory(env.omniroute);
-  const resolveTools = createToolResolver(createToolFactories({ defaultProject: env.keboolaProject }));
 
   return {
     env,
@@ -59,8 +70,12 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
     loadErrors: [...agents.errors, ...skills.errors],
     loadSettings: () => loadSettings(settingsFile),
     buildTeam: (settings) => {
+      const effective = { model: settings.model || env.omniroute.model, keboolaProject: settings.keboolaProject || env.keboolaProject };
+      const resolveTools = createToolResolver(createToolFactories({ defaultProject: effective.keboolaProject }));
       const spec = buildTeamSpec({ agents: agents.items, skills: skills.items, language: settings.language, resolveTools });
-      return { spec, graph: createTeam({ spec, createModel, backend, checkpointer }) };
+      // Agents without their own model use the effective default instead of the .env one.
+      const modelFor = (modelId?: string) => createModel(modelId ?? effective.model);
+      return { spec, graph: createTeam({ spec, createModel: modelFor, backend, checkpointer }), effective };
     },
   };
 }

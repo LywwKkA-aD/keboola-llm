@@ -1,0 +1,110 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { ExecFn } from '../tools/kbagent/index.ts';
+import { kbagentVersion, listKeboolaProjects } from './keboola.ts';
+import { listModels } from './models.ts';
+import { systemStatus } from './status.ts';
+
+const CONFIG = { baseUrl: 'http://omni/v1', apiKey: 'secret-key', model: 'm' };
+
+const okJson = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { 'content-type': 'application/json' } });
+
+describe('listModels', () => {
+  it('asks OmniRoute with the server key and returns sorted unique ids only', async () => {
+    const fetchImpl = vi.fn(async () => okJson({ data: [{ id: 'b/model', owned_by: 'x' }, { id: 'a/model' }, { id: 'b/model' }, { nope: 1 }] }));
+    expect(await listModels(CONFIG, fetchImpl as unknown as typeof fetch)).toEqual(['a/model', 'b/model']);
+
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('http://omni/v1/models');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer secret-key');
+  });
+
+  it('fails with a message that does not echo the key', async () => {
+    const fetchImpl = vi.fn(async () => new Response('denied', { status: 401 }));
+    await expect(listModels(CONFIG, fetchImpl as unknown as typeof fetch)).rejects.toThrow(/401/);
+    await expect(listModels(CONFIG, fetchImpl as unknown as typeof fetch)).rejects.not.toThrow(/secret-key/);
+  });
+});
+
+const execReturning = (stdout: string, exitCode = 0): ExecFn => async () => ({ stdout, stderr: '', exitCode, timedOut: false });
+
+describe('listKeboolaProjects', () => {
+  it('returns aliases and names but never tokens', async () => {
+    const stdout = JSON.stringify({
+      status: 'ok',
+      data: [
+        {
+          alias: 'sandbox',
+          project_name: 'Sandbox',
+          project_id: 6487,
+          stack_url: 'https://connection.example',
+          token: '6487-abcdefghijklmnopqrstuvwxyz',
+          auth_mode: 'session',
+          is_default: true,
+          active_branch_id: null,
+        },
+      ],
+    });
+    const exec = vi.fn(execReturning(stdout));
+    const projects = await listKeboolaProjects({ exec });
+
+    expect(projects).toEqual([{ alias: 'sandbox', name: 'Sandbox', id: 6487, stackUrl: 'https://connection.example', isDefault: true }]);
+    expect(JSON.stringify(projects)).not.toContain('abcdefghij');
+    expect(exec.mock.calls[0]?.[1]).toEqual(['--json', 'project', 'list']);
+  });
+
+  it('reports kbagent failures', async () => {
+    await expect(listKeboolaProjects({ exec: execReturning('{"status":"error","error":{"message":"no config"}}', 5) })).rejects.toThrow(/kbagent/);
+  });
+});
+
+describe('kbagentVersion', () => {
+  it('reads the version line', async () => {
+    expect(await kbagentVersion({ exec: execReturning('kbagent v0.100.2\n') })).toBe('kbagent v0.100.2');
+  });
+
+  it('throws when kbagent is missing', async () => {
+    const exec: ExecFn = async () => {
+      throw Object.assign(new Error('spawn kbagent ENOENT'), { code: 'ENOENT' });
+    };
+    await expect(kbagentVersion({ exec })).rejects.toThrow();
+  });
+});
+
+describe('systemStatus', () => {
+  it('collects the state of OmniRoute, kbagent, the app and Node', async () => {
+    const status = await systemStatus({
+      version: '0.1.0',
+      models: async () => ['a', 'b'],
+      kbagent: async () => 'kbagent v0.100.2',
+      model: 'a',
+    });
+    expect(status).toEqual({
+      app: { ok: true, detail: '0.1.0' },
+      node: { ok: true, detail: process.version },
+      omniroute: { ok: true, detail: '2 models' },
+      model: { ok: true, detail: 'a' },
+      kbagent: { ok: true, detail: 'kbagent v0.100.2' },
+    });
+  });
+
+  it('marks unreachable parts without failing the whole check', async () => {
+    const status = await systemStatus({
+      version: '0.1.0',
+      models: async () => {
+        throw new Error('OmniRoute answered HTTP 401');
+      },
+      kbagent: async () => {
+        throw new Error('not installed');
+      },
+      model: '',
+    });
+    expect(status.omniroute).toEqual({ ok: false, detail: 'OmniRoute answered HTTP 401' });
+    expect(status.kbagent).toEqual({ ok: false, detail: 'not installed' });
+    expect(status.model).toEqual({ ok: false, detail: 'not set' });
+  });
+
+  it('flags a configured model that OmniRoute does not list', async () => {
+    const status = await systemStatus({ version: '1', models: async () => ['x'], kbagent: async () => 'v', model: 'gone' });
+    expect(status.model).toEqual({ ok: false, detail: 'gone (not listed by OmniRoute)' });
+  });
+});

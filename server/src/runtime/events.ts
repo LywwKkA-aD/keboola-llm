@@ -15,6 +15,8 @@ export type TeamEvent =
 
 export interface ApprovalRequest {
   readonly tool: string;
+  /** The agent whose pending call this is, when known. */
+  readonly agent?: string;
   readonly args: Readonly<Record<string, unknown>>;
   readonly description?: string;
   readonly decisions: readonly string[];
@@ -97,15 +99,22 @@ function fromToolResult(state: MapperState, message: Rec): TeamEvent[] {
   return [{ type: 'tool.end', agent, callId, tool, ok, preview: preview(message.content) }];
 }
 
-function toRequests(value: Rec): ApprovalRequest[] {
+/** The agent that most recently called this tool: the interrupt itself does not say who asked. */
+function callerOf(state: MapperState, tool: string): string | undefined {
+  return [...state.calls.values()].toReversed().find((call) => call.tool === tool)?.agent;
+}
+
+function toRequests(state: MapperState, value: Rec): ApprovalRequest[] {
   const configs = list(value.reviewConfigs).filter(isRec);
   return list(value.actionRequests)
     .filter(isRec)
     .map((request): ApprovalRequest => {
       const tool = str(request.name);
       const config = configs.find((entry) => entry.actionName === tool);
+      const agent = callerOf(state, tool);
       return {
         tool,
+        ...(agent ? { agent } : {}),
         args: isRec(request.args) ? request.args : {},
         ...(request.description ? { description: str(request.description) } : {}),
         decisions: list(config?.allowedDecisions).map(str),
@@ -118,7 +127,7 @@ function fromInterrupt(state: MapperState, interrupts: unknown[]): [MapperState,
     ([current, events], interrupt) => {
       const value = isRec(interrupt.value) ? interrupt.value : {};
       const interruptId = str(interrupt.id) || JSON.stringify(value);
-      const requests = toRequests(value);
+      const requests = toRequests(current, value);
       if (current.seenInterrupts.has(interruptId) || requests.length === 0) return [current, events];
       const next = { ...current, seenInterrupts: new Set(current.seenInterrupts).add(interruptId) };
       return [next, [...events, { type: 'approval.required', interruptId, requests }]];

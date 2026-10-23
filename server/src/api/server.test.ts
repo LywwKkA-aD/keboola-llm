@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { Settings } from '../config/settings.ts';
+import { DEFAULT_SETTINGS, type Settings } from '../config/settings.ts';
 import { createEventBus } from './bus.ts';
 import { allowedFor } from './guard.ts';
 import { type RunManager, runError } from './runs.ts';
@@ -26,6 +26,7 @@ function fakeRuns(): RunManager & { started: Array<[string, unknown]> } {
       return { runId: 'run-answer', done: Promise.resolve() };
     },
     pending: () => [],
+    active: () => [],
     isBusy: (threadId) => busy.has(threadId),
     cancel: (threadId) => {
       busy.add(threadId);
@@ -35,7 +36,7 @@ function fakeRuns(): RunManager & { started: Array<[string, unknown]> } {
 }
 
 async function setup(overrides: Partial<ServerDeps> = {}) {
-  let settings: Settings = { language: 'ru' };
+  let settings: Settings = { ...DEFAULT_SETTINGS };
   const runs = fakeRuns();
   const deps: ServerDeps = {
     bus: createEventBus({ historyPerThread: 10 }),
@@ -52,6 +53,18 @@ async function setup(overrides: Partial<ServerDeps> = {}) {
     history: async () => [{ id: 'h', role: 'user', text: 'hi' }],
     deleteThread: async () => {},
     allowed: allowedFor({ port: 4800, devPort: 5173 }),
+    models: async () => ['a/model', 'b/model'],
+    keboolaProjects: async () => [{ alias: 'sandbox', name: 'Sandbox', id: 1, stackUrl: 'https://x', isDefault: true }],
+    memory: async () => '# Shared memory',
+    system: async () => ({
+      app: { ok: true, detail: '0.1.0' },
+      node: { ok: true, detail: 'v24' },
+      omniroute: { ok: true, detail: '2 models' },
+      model: { ok: true, detail: 'a/model' },
+      kbagent: { ok: false, detail: 'not installed' },
+    }),
+    effective: () => ({ model: 'a/model', keboolaProject: 'sandbox' }),
+    version: '0.1.0',
     ...overrides,
   };
   return { app: await createServer(deps), runs, deps };
@@ -133,9 +146,12 @@ describe('createServer', () => {
   it('reads and updates settings', async () => {
     const { app } = await setup();
     close = () => app.close();
-    expect((await app.inject({ url: '/api/settings', headers: HOST })).json()).toEqual({ language: 'ru' });
+    expect((await app.inject({ url: '/api/settings', headers: HOST })).json()).toEqual(DEFAULT_SETTINGS);
     const updated = await app.inject({ method: 'PUT', url: '/api/settings', headers: HOST, payload: { language: 'cs' } });
-    expect(updated.json()).toEqual({ language: 'cs' });
+    expect(updated.json()).toEqual({ ...DEFAULT_SETTINGS, language: 'cs' });
+    const themed = await app.inject({ method: 'PUT', url: '/api/settings', headers: HOST, payload: { theme: 'light', allowSqlByDefault: true } });
+    expect(themed.json()).toMatchObject({ language: 'cs', theme: 'light', allowSqlByDefault: true });
+    expect((await app.inject({ method: 'PUT', url: '/api/settings', headers: HOST, payload: { apiKey: 'x' } })).statusCode).toBe(400);
     expect((await app.inject({ method: 'PUT', url: '/api/settings', headers: HOST, payload: { language: 'de' } })).statusCode).toBe(400);
   });
 
@@ -143,5 +159,55 @@ describe('createServer', () => {
     const { app } = await setup();
     close = () => app.close();
     expect((await app.inject({ url: '/api/team', headers: HOST })).json()).toMatchObject({ lead: 'lead' });
+  });
+
+  it('lets new chats inherit the default SQL permission', async () => {
+    const { app, deps } = await setup();
+    close = () => app.close();
+    deps.settings.set({ allowSqlByDefault: true });
+    const { thread } = (await app.inject({ method: 'POST', url: '/api/threads', headers: HOST, payload: { text: 'a' } })).json();
+    expect(deps.threads.policy(thread.id)).toEqual({ allowSql: true });
+  });
+
+  it('lists pending approvals across chats with the chat title', async () => {
+    const threads = createThreadStore(join(makeTree({}), 'threads.json'));
+    const waiting = threads.create('Fix the orders join');
+    threads.create('Idle chat');
+    const approval = { type: 'approval.required' as const, interruptId: 'i1', requests: [{ tool: 'kbagent_write', agent: 'keboola-expert', args: {}, decisions: ['approve'] }] };
+    const runs = { ...fakeRuns(), pending: (id: string) => (id === waiting.id ? [approval] : []) };
+    const { app } = await setup({ threads, runs });
+    close = () => app.close();
+
+    expect((await app.inject({ url: '/api/approvals', headers: HOST })).json()).toEqual([
+      { threadId: waiting.id, threadTitle: 'Fix the orders join', interruptId: 'i1', requests: approval.requests },
+    ]);
+    expect((await app.inject({ url: '/api/status', headers: HOST })).json()).toEqual({
+      model: 'a/model',
+      keboolaProject: 'sandbox',
+      version: '0.1.0',
+      activeRuns: 0,
+      pendingApprovals: 1,
+    });
+  });
+
+  it('exposes models, Keboola projects, shared memory and system checks', async () => {
+    const { app } = await setup();
+    close = () => app.close();
+    expect((await app.inject({ url: '/api/models', headers: HOST })).json()).toEqual({ models: ['a/model', 'b/model'], current: 'a/model' });
+    expect((await app.inject({ url: '/api/keboola/projects', headers: HOST })).json()).toMatchObject({ current: 'sandbox', projects: [{ alias: 'sandbox' }] });
+    expect((await app.inject({ url: '/api/memory', headers: HOST })).json()).toEqual({ content: '# Shared memory' });
+    expect((await app.inject({ url: '/api/system', headers: HOST })).json()).toMatchObject({ kbagent: { ok: false } });
+  });
+
+  it('answers 502 when OmniRoute or kbagent cannot be reached', async () => {
+    const fail = async () => {
+      throw new Error('OmniRoute answered HTTP 401');
+    };
+    const { app } = await setup({ models: fail, keboolaProjects: fail });
+    close = () => app.close();
+    const models = await app.inject({ url: '/api/models', headers: HOST });
+    expect(models.statusCode).toBe(502);
+    expect(models.json()).toEqual({ error: 'OmniRoute answered HTTP 401' });
+    expect((await app.inject({ url: '/api/keboola/projects', headers: HOST })).statusCode).toBe(502);
   });
 });

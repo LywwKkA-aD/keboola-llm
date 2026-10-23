@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { bootstrap } from './bootstrap.ts';
+import { DEFAULT_SETTINGS } from './config/settings.ts';
 import { agentMd, makeTree } from './test-utils/tree.ts';
 
 const ENV_KEYS = ['OMNIROUTE_API_KEY', 'OMNIROUTE_MODEL', 'OMNIROUTE_BASE_URL', 'KEBOOLA_PROJECT', 'DATA_DIR', 'PORT', 'HOST'];
@@ -48,12 +49,12 @@ describe('bootstrap', () => {
     expect(app.env.dataDir).toBe(join(root, 'data'));
     expect(existsSync(join(root, 'data', 'memories', 'AGENTS.md'))).toBe(true);
     expect(app.settingsFile).toBe(join(root, 'data', 'settings.json'));
-    expect(app.loadSettings()).toEqual({ language: 'ru' });
+    expect(app.loadSettings()).toEqual(DEFAULT_SETTINGS);
   });
 
   it('builds the team graph without calling the model', () => {
     const app = bootstrap(repo());
-    const { spec, graph } = app.buildTeam({ language: 'en' });
+    const { spec, graph, effective } = app.buildTeam({ ...DEFAULT_SETTINGS, language: 'en' });
 
     expect(spec.lead.name).toBe('lead');
     expect(spec.lead.systemPrompt).toContain('English');
@@ -63,6 +64,15 @@ describe('bootstrap', () => {
     expect(spec.subagents[0]?.tools[0]?.description).toContain('sandbox');
     expect(spec.warnings).toEqual(['helper: unknown skill "ghost"']);
     expect(typeof graph.stream).toBe('function');
+    expect(effective).toEqual({ model: 'cc/test', keboolaProject: 'sandbox' });
+  });
+
+  it('lets settings override the model and Keboola project from .env', () => {
+    const app = bootstrap(repo());
+    const { spec, effective } = app.buildTeam({ ...DEFAULT_SETTINGS, model: 'other/model', keboolaProject: 'prod-eu' });
+
+    expect(effective).toEqual({ model: 'other/model', keboolaProject: 'prod-eu' });
+    expect(spec.subagents[0]?.tools[0]?.description).toContain('prod-eu');
   });
 
   it('fails fast without an OmniRoute key', () => {
