@@ -149,9 +149,13 @@ function fromUpdates(state: MapperState, data: Rec): [MapperState, TeamEvent[]] 
   );
 }
 
+// 'messages' mode streams tool results too; only model output is a token.
+const isModelChunk = (chunk: Rec): boolean =>
+  typeof chunk.getType === 'function' ? (chunk.getType as () => string)() === 'ai' : true;
+
 function fromMessages(data: unknown): TeamEvent[] {
   const [chunk, metadata] = list(data);
-  if (!isRec(chunk) || !isRec(metadata)) return [];
+  if (!isRec(chunk) || !isRec(metadata) || !isModelChunk(chunk)) return [];
   const text = textOf(chunk.content);
   const agent = str(metadata.lc_agent_name);
   return text && agent ? [{ type: 'token', agent, text }] : [];

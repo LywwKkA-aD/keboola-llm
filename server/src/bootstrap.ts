@@ -10,11 +10,10 @@ import { discoverSkillSources, loadSkills } from './registry/skills.ts';
 import type { AgentDefinition, LoadError, SkillInfo } from './registry/types.ts';
 import { createBackend } from './runtime/backend.ts';
 import { buildTeamSpec, createTeam, type TeamSpec } from './runtime/team.ts';
-import { createToolResolver, type ToolFactory } from './tools/catalog.ts';
+import { createToolResolver } from './tools/catalog.ts';
+import { createToolFactories } from './tools/registry.ts';
 
 export const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-
-const TOOL_FACTORIES: Readonly<Record<string, ToolFactory>> = {};
 
 export interface App {
   readonly env: AppEnv;
@@ -49,7 +48,7 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
   const checkpointer = SqliteSaver.fromConnString(join(env.dataDir, 'checkpoints.sqlite'));
   const backend = createBackend({ rootDir, dataDir: env.dataDir, skillSources });
   const createModel = createModelFactory(env.omniroute);
-  const resolveTools = createToolResolver(TOOL_FACTORIES);
+  const resolveTools = createToolResolver(createToolFactories({ defaultProject: env.keboolaProject }));
 
   return {
     env,

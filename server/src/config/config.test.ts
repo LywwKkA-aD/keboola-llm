@@ -13,8 +13,13 @@ describe('readAppEnv', () => {
       host: '127.0.0.1',
       port: 4800,
       webDevPort: 5173,
+      keboolaProject: '',
       omniroute: { baseUrl: 'http://127.0.0.1:20128/v1', apiKey: '', model: '' },
     });
+  });
+
+  it('reads the default Keboola project alias', () => {
+    expect(readAppEnv({ KEBOOLA_PROJECT: ' sandbox ' }, '/app').keboolaProject).toBe('sandbox');
   });
 
   it('reads overrides and trims values', () => {

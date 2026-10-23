@@ -85,6 +85,11 @@ describe('mapChunk', () => {
     expect(mapChunk(initialMapperState('lead'), chunk)[1]).toEqual([{ type: 'token', agent: 'lead', text: 'Hel' }]);
   });
 
+  it('does not stream tool results as tokens', () => {
+    const toolChunk = [['tools:1'], 'messages', [new ToolMessage({ content: 'Successfully replaced', tool_call_id: 'c', name: 'edit_file' }), meta('lead')]] as const;
+    expect(mapChunk(initialMapperState('lead'), toolChunk)[1]).toEqual([]);
+  });
+
   it('extracts text from content blocks and skips empty tokens', () => {
     const blocks = [['m'], 'messages', [new AIMessageChunk({ content: [{ type: 'text', text: 'a' }, { type: 'text', text: 'b' }] }), meta('x')]] as const;
     const empty = [['m'], 'messages', [new AIMessageChunk({ content: '' }), meta('x')]] as const;
