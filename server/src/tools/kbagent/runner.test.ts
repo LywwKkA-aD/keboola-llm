@@ -24,6 +24,14 @@ describe('runKbagent', () => {
     expect(result).toEqual({ ok: true, exitCode: 0, output: { status: 'ok', data: { configs: [] } }, truncated: false });
   });
 
+  it('never returns credentials from stdout or stderr', async () => {
+    const ok = await run({ stdout: '{"status":"ok","data":{"workspace_id":7,"password":"s3cret"}}' });
+    expect(ok.output).toEqual({ status: 'ok', data: { workspace_id: 7, password: '[redacted]' } });
+
+    const failed = await run({ exitCode: 1, stdout: '{"status":"error"}', stderr: 'debug {"password": "s3cret"}' });
+    expect(JSON.stringify(failed)).not.toContain('s3cret');
+  });
+
   it('returns plain text when stdout is not JSON', async () => {
     const result = await run({ stdout: 'Usage: kbagent config list\n' });
     expect(result.output).toBe('Usage: kbagent config list');

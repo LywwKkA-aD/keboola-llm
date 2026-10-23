@@ -1,5 +1,6 @@
 /** Run the kbagent CLI as a child process (never through a shell) and shape its output for a model. */
 import { execFile } from 'node:child_process';
+import { redactSecrets } from './redact.ts';
 
 export interface ExecOptions {
   readonly env: NodeJS.ProcessEnv;
@@ -124,9 +125,10 @@ export async function runKbagent(request: RunRequest): Promise<RunResult> {
   });
 
   const ok = outcome.exitCode === 0 && !outcome.timedOut && outcome.spawnError === undefined;
-  const source = outcome.stdout.trim() === '' && !ok ? outcome.stderr : outcome.stdout;
+  const stdout = redactSecrets(outcome.stdout);
+  const stderr = redactSecrets(outcome.stderr).trim();
+  const source = stdout.trim() === '' && !ok ? stderr : stdout;
   const shaped = shapeOutput(source, maxOutputChars);
-  const stderr = outcome.stderr.trim();
   const overflow = outcome.spawnError === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER';
   const hint = hintFor(outcome, timeoutMs);
 
@@ -136,6 +138,6 @@ export async function runKbagent(request: RunRequest): Promise<RunResult> {
     output: shaped.output,
     truncated: shaped.truncated || overflow,
     ...(hint === undefined ? {} : { hint }),
-    ...(!ok && stderr !== '' && source !== outcome.stderr ? { stderr: stderr.slice(-STDERR_TAIL_CHARS) } : {}),
+    ...(!ok && stderr !== '' && source !== stderr ? { stderr: stderr.slice(-STDERR_TAIL_CHARS) } : {}),
   };
 }
