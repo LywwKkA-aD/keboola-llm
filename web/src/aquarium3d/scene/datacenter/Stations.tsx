@@ -1,9 +1,11 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { Color, type Group, type InstancedMesh, type Mesh, type MeshBasicMaterial, type MeshStandardMaterial, Object3D } from 'three';
+import { Color, type Group, type InstancedMesh, type MeshBasicMaterial, Object3D } from 'three';
 import { STATIONS_3D, type StationId } from '../../layout3d.ts';
-import { consoleTexture } from './consoleTexture.ts';
+import { Checkpoint } from './Checkpoint.tsx';
+import { Fabricator } from './Fabricator.tsx';
+import { PipelineConsole } from './PipelineConsole.tsx';
 
 export type StationActivity = Readonly<Record<StationId, boolean>>;
 
@@ -11,8 +13,6 @@ const FLOOR = -0.6;
 const METAL = { color: '#0d1520', metalness: 0.75, roughness: 0.35 } as const;
 const BLUE = new Color('#228dff');
 const CYAN = new Color('#3dd6f5');
-const GREEN = new Color('#2bd47d');
-const AMBER = new Color('#f5b53d');
 
 /** Point `distance` units ahead of a station spot, on the floor, where its equipment stands. */
 function ahead(id: StationId, distance: number): [number, number, number] {
@@ -111,127 +111,25 @@ function StorageRacks({ active, motion }: { active: boolean; motion: boolean }) 
   );
 }
 
-/** A workstation of terminals with SQL scrolling over the screens: where agents work in Keboola. */
-function Terminals({ active, motion }: { active: boolean; motion: boolean }) {
-  const texture = useMemo(() => consoleTexture(), []);
-  const screens = useRef<(MeshBasicMaterial | null)[]>([]);
-  const [x, , z] = ahead('console', 1.8);
-  useFrame((_, delta) => {
-    if (motion) texture.offset.y += delta * (active ? 0.12 : 0.012);
-    screens.current.forEach((material) => {
-      if (material) material.opacity = active ? 0.95 : 0.45;
-    });
-  });
-  return (
-    <group position={[x, 0, z]}>
-      <mesh position={[0.25, 0.45, 0]}>
-        <boxGeometry args={[0.8, 0.9, 4.6]} />
-        <meshStandardMaterial {...METAL} />
-      </mesh>
-      <mesh position={[0.75, 1.1, -2.6]}>
-        <boxGeometry args={[0.7, 2.2, 0.8]} />
-        <meshStandardMaterial {...METAL} />
-      </mesh>
-      {[-1.55, 0, 1.55].map((sz, index) => (
-        <group key={sz} position={[0.1, 1.75, sz]} rotation={[0, -Math.PI / 2 + (index - 1) * -0.22, 0]}>
-          <mesh>
-            <planeGeometry args={[1.4, 0.95]} />
-            <meshBasicMaterial
-              ref={(material) => {
-                screens.current[index] = material;
-              }}
-              map={texture}
-              transparent
-              toneMapped={false}
-            />
-          </mesh>
-          <mesh position={[0, 0, -0.02]}>
-            <boxGeometry args={[1.5, 1.05, 0.03]} />
-            <meshStandardMaterial {...METAL} />
-          </mesh>
-        </group>
-      ))}
-      <Tag text="KEBOOLA" position={[-1.6, 0.1, 0]} />
-    </group>
-  );
-}
-
-/** A build bay: an open rack frame with a holographic blueprint turning inside; green while agents write. */
-function BuildBay({ active, motion }: { active: boolean; motion: boolean }) {
-  const blueprint = useRef<Mesh>(null);
-  const [x, , z] = ahead('forge', 1.7);
-  useFrame((_, delta) => {
-    const mesh = blueprint.current;
-    if (!mesh) return;
-    if (motion) mesh.rotation.y += delta * (active ? 1.1 : 0.15);
-    (mesh.material as MeshBasicMaterial).color.copy(active ? GREEN : BLUE).multiplyScalar(active ? 1.4 : 0.55);
-  });
-  const posts: [number, number][] = [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]];
-  return (
-    <group position={[x, 0, z]} rotation={[0, STATIONS_3D.forge.facing, 0]}>
-      <mesh position={[0, 0.06, 0]}>
-        <boxGeometry args={[1.6, 0.12, 1.6]} />
-        <meshStandardMaterial {...METAL} />
-      </mesh>
-      {posts.map(([px, pz]) => (
-        <mesh key={`${px}${pz}`} position={[px, 1.4, pz]}>
-          <boxGeometry args={[0.07, 2.7, 0.07]} />
-          <meshStandardMaterial {...METAL} />
-        </mesh>
-      ))}
-      <mesh position={[0, 2.75, 0]}>
-        <boxGeometry args={[1.35, 0.07, 1.35]} />
-        <meshStandardMaterial {...METAL} />
-      </mesh>
-      <mesh ref={blueprint} position={[0, 1.45, 0]}>
-        <icosahedronGeometry args={[0.5, 1]} />
-        <meshBasicMaterial wireframe toneMapped={false} />
-      </mesh>
-      <Tag text="BUILD" position={[0, 0.1, 1.4]} />
-    </group>
-  );
-}
-
-/** A status light tower; the amber lamp pulses while someone waits for the user's approval. */
-function StatusTower({ active, motion }: { active: boolean; motion: boolean }) {
-  const amber = useRef<MeshStandardMaterial>(null);
-  const [x, , z] = ahead('beacon', 1.4);
-  useFrame(({ clock }) => {
-    if (!amber.current) return;
-    const pulse = active && motion ? 0.55 + 0.45 * Math.sin(clock.elapsedTime * 5) : 1;
-    amber.current.emissiveIntensity = active ? 3.2 * pulse : 0.12;
-  });
-  return (
-    <group position={[x, 0, z]}>
-      <mesh position={[0, 0.9, 0]}>
-        <cylinderGeometry args={[0.06, 0.12, 1.8, 12]} />
-        <meshStandardMaterial {...METAL} />
-      </mesh>
-      {[
-        { y: 1.95, color: GREEN, ref: undefined, lit: 0.6 },
-        { y: 2.25, color: AMBER, ref: amber, lit: 0 },
-        { y: 2.55, color: new Color('#ff5c5c'), ref: undefined, lit: 0.08 },
-      ].map(({ y, color, ref, lit }) => (
-        <mesh key={y} position={[0, y, 0]}>
-          <cylinderGeometry args={[0.14, 0.14, 0.26, 20]} />
-          <meshStandardMaterial ref={ref} color="#1b1f26" emissive={color} emissiveIntensity={lit} toneMapped={false} />
-        </mesh>
-      ))}
-      {active && <pointLight position={[0, 2.25, 0]} color={AMBER} intensity={5} distance={6} />}
-      <Tag text="APPROVALS" position={[0, 0.1, 1.1]} />
-    </group>
-  );
-}
-
 /** Data-centre equipment that doubles as work stations; equipment in use glows and moves more. */
 export function Stations({ active, motion }: { active: StationActivity; motion: boolean }) {
   return (
     <group>
       <OpsDesk active={active.command} motion={motion} />
       <StorageRacks active={active.archive} motion={motion} />
-      <Terminals active={active.console} motion={motion} />
-      <BuildBay active={active.forge} motion={motion} />
-      <StatusTower active={active.beacon} motion={motion} />
+      <group position={ahead('console', 1.6)}>
+        <PipelineConsole active={active.console} motion={motion} />
+        <Tag text="KEBOOLA" position={[-1.7, 0.1, 0]} />
+      </group>
+      <group position={ahead('forge', 1.6)} rotation={[0, STATIONS_3D.forge.facing + Math.PI * 0.75, 0]}>
+        <Fabricator active={active.forge} motion={motion} />
+        <Tag text="BUILD" position={[0, 0.1, 1.5]} />
+      </group>
+      {/* The gate stands behind the waiting agent, facing the viewer: the agent waits looking at the user. */}
+      <group position={ahead('beacon', -1.3)} rotation={[0, STATIONS_3D.beacon.facing, 0]}>
+        <Checkpoint active={active.beacon} motion={motion} />
+        <Tag text="APPROVALS" position={[0, 0.1, 2.2]} />
+      </group>
     </group>
   );
 }

@@ -13,9 +13,9 @@ export type StationId = 'command' | 'archive' | 'console' | 'forge' | 'beacon';
 export const STATIONS_3D: Readonly<Record<StationId, Spot & { readonly label: string }>> = {
   command: { position: [0, 0.4, 1.2], facing: 0, label: 'command' },
   archive: { position: [-7.6, 0.2, 0.2], facing: -Math.PI / 2, label: 'archive' },
-  console: { position: [7.6, 0.2, 0.2], facing: Math.PI / 2, label: 'console' },
-  forge: { position: [-4.6, 0.2, 5.2], facing: -Math.PI / 4, label: 'forge' },
-  beacon: { position: [4.8, 0.2, 5.0], facing: Math.PI / 4, label: 'beacon' },
+  console: { position: [6.9, 0.2, 0.9], facing: Math.PI / 2, label: 'console' },
+  forge: { position: [-3.9, 0.2, 6.0], facing: -Math.PI / 4, label: 'forge' },
+  beacon: { position: [3.9, 0.2, 6.4], facing: -0.3, label: 'beacon' },
 };
 
 const STATION_FOR: Partial<Record<AgentActivity, StationId>> = {

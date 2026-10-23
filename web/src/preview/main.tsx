@@ -2,24 +2,40 @@
 import '@fontsource/ibm-plex-mono';
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { AgentInfo, TeamInfo } from '../api/types.ts';
+import type { AgentInfo, BusEvent, TeamInfo } from '../api/types.ts';
 import { initialAquarium, reduceAquarium } from '../aquarium/state.ts';
 import { AquariumView, type SceneQuality } from '../aquarium3d/AquariumView.tsx';
 import { demoTick } from '../aquarium3d/demo.ts';
 
 const TICK_MS = 2200;
 
+/** ?demo=busy: a frozen moment with every station in use, for reviewing the scene. */
+const BUSY: BusEvent[] = [
+  { type: 'run.started', runId: 'busy' },
+  { type: 'delegate.start', agent: 'lead', callId: 'd1', to: 'keboola-expert', task: 'Find where customer_id is used' },
+  { type: 'tool.start', agent: 'keboola-expert', callId: 't1', tool: 'kbagent_read', args: { purpose: 'Search configs for customer_id' } },
+  { type: 'tool.start', agent: 'knowledge-keeper', callId: 't2', tool: 'read_file', args: { file_path: '/knowledge/glossary.md' } },
+  { type: 'tool.start', agent: 'kbc-dwh-architect', callId: 't3', tool: 'write_file', args: { file_path: '/agents/data-contracts/AGENT.md' } },
+  { type: 'tool.start', agent: 'agent-builder', callId: 't4', tool: 'write_file', args: { file_path: '/skills/custom/sql-style/SKILL.md' } },
+  { type: 'approval.required', interruptId: 'a1', requests: [{ tool: 'write_file', args: {}, decisions: ['approve', 'reject'] }] },
+];
+
 function Preview() {
   const [team, setTeam] = useState<TeamInfo>();
   const [state, setState] = useState(() => initialAquarium('lead'));
   const [selected, setSelected] = useState<string>();
-  const quality = (new URLSearchParams(location.search).get('quality') ?? 'high') as SceneQuality;
+  const params = new URLSearchParams(location.search);
+  const quality = (params.get('quality') ?? 'high') as SceneQuality;
 
   useEffect(() => {
     fetch('/api/team').then((r) => r.json()).then(setTeam).catch(() => {});
   }, []);
 
   useEffect(() => {
+    if (params.get('demo') === 'busy') {
+      setState((current) => BUSY.reduce((s, event, i) => reduceAquarium(s, { seq: i, threadId: 'busy', event }, Date.now()), current));
+      return undefined;
+    }
     let step = 0;
     const timer = setInterval(() => {
       const envelopes = demoTick(step);
