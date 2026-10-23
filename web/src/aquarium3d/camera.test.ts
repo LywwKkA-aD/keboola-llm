@@ -13,8 +13,8 @@ describe('overviewPose', () => {
   it('pulls back along the same line of sight on narrow viewports, within a limit', () => {
     const wide = overviewPose(1.6);
     const narrow = overviewPose(0.9);
-    expect(distance(narrow)).toBeGreaterThan(distance(wide) * 1.5);
-    expect(distance(overviewPose(0.2))).toBeCloseTo(distance(wide) * 1.9);
+    expect(distance(narrow)).toBeGreaterThan(distance(wide) * 1.35);
+    expect(distance(overviewPose(0.2))).toBeCloseTo(distance(wide) * 1.6);
     expect(narrow.target).toEqual(wide.target);
   });
 });

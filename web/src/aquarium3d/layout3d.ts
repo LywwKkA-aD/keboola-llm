@@ -11,11 +11,11 @@ export type StationId = 'command' | 'archive' | 'console' | 'forge' | 'beacon';
 
 /** Work stations on the seabed. Position is where the first octopus floats; facing turns it to the station. */
 export const STATIONS_3D: Readonly<Record<StationId, Spot & { readonly label: string }>> = {
-  command: { position: [0, 0.5, 1.2], facing: 0, label: 'command' },
-  archive: { position: [-7.6, 0.6, 0.2], facing: -Math.PI / 2, label: 'archive' },
-  console: { position: [7.6, 0.6, 0.2], facing: Math.PI / 2, label: 'console' },
-  forge: { position: [-4.6, 0.55, 5.2], facing: -Math.PI / 4, label: 'forge' },
-  beacon: { position: [4.8, 1.0, 5.0], facing: Math.PI / 4, label: 'beacon' },
+  command: { position: [0, 0.4, 1.2], facing: 0, label: 'command' },
+  archive: { position: [-7.6, 0.2, 0.2], facing: -Math.PI / 2, label: 'archive' },
+  console: { position: [7.6, 0.2, 0.2], facing: Math.PI / 2, label: 'console' },
+  forge: { position: [-4.6, 0.2, 5.2], facing: -Math.PI / 4, label: 'forge' },
+  beacon: { position: [4.8, 0.2, 5.0], facing: Math.PI / 4, label: 'beacon' },
 };
 
 const STATION_FOR: Partial<Record<AgentActivity, StationId>> = {
@@ -30,7 +30,7 @@ const STATION_FOR: Partial<Record<AgentActivity, StationId>> = {
 };
 
 const SLOT_GAP = 1.15;
-const REEF = { radius: 10.5, centerZ: 0.5, y: 0.3, from: Math.PI * 1.14, to: Math.PI * 1.86, rowGap: 1.6 } as const;
+const REEF = { radius: 10.5, centerZ: 0.5, y: 0.08, from: Math.PI * 1.14, to: Math.PI * 1.86, rowGap: 1.6 } as const;
 const PER_ROW = 12;
 
 /** Agents sharing a station line up beside the first one, alternating sides, along the station's tangent. */
