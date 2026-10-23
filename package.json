@@ -22,6 +22,7 @@
     "build": "npm run build -w web"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@vitest/coverage-v8": "^5.0.5",
     "vitest": "^5.0.5"
   },

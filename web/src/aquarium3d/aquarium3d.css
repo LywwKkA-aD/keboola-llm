@@ -1,0 +1,108 @@
+.aquarium-view {
+  background: radial-gradient(ellipse at 50% 30%, #06233d 0%, #020a14 70%);
+  height: 100%;
+  min-height: 320px;
+  position: relative;
+  width: 100%;
+}
+
+.aquarium-view canvas {
+  display: block;
+}
+
+.aquarium-view--fallback {
+  align-items: center;
+  color: #8592a8;
+  display: flex;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+  justify-content: center;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.aquarium-view__loading {
+  animation: aquarium-loading 1.6s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, rgb(34 141 255 / 12%), transparent);
+  height: 100%;
+}
+
+@keyframes aquarium-loading {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.octo-tag {
+  align-items: center;
+  backdrop-filter: blur(4px);
+  background: rgb(4 14 26 / 72%);
+  border: 1px solid rgb(34 141 255 / 45%);
+  border-radius: 3px;
+  color: #e6edf7;
+  display: flex;
+  flex-direction: column;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  gap: 1px;
+  max-width: 190px;
+  padding: 3px 7px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.octo-tag__name {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.octo-tag__caption {
+  color: #7fc8ff;
+  font-size: 9px;
+  max-width: 176px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.octo-tag--idle {
+  border-color: rgb(34 141 255 / 22%);
+  opacity: 0.75;
+}
+
+.octo-tag--hidden {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.octo-tag--waiting {
+  border-color: #f5b53d;
+}
+
+.octo-tag--waiting .octo-tag__caption {
+  color: #f5b53d;
+}
+
+.octo-tag--error {
+  border-color: #ff5c5c;
+}
+
+.octo-tag--selected {
+  border-color: #3dd6f5;
+  box-shadow: 0 0 0 1px rgb(61 214 245 / 40%), 0 0 18px rgb(34 141 255 / 35%);
+}
+
+.station-tag {
+  color: rgb(127 200 255 / 70%);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  user-select: none;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aquarium-view__loading {
+    animation: none;
+  }
+}
