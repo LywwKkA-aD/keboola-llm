@@ -4,8 +4,9 @@ import { createEventBus } from './bus.ts';
 const token = (text: string) => ({ type: 'token', agent: 'lead', text }) as const;
 
 describe('createEventBus', () => {
-  it('delivers events to matching subscribers with increasing sequence numbers', () => {
-    const bus = createEventBus({ historyPerThread: 10 });
+  it('delivers events to matching subscribers with increasing sequence numbers and the publish time', () => {
+    let clock = 1000;
+    const bus = createEventBus({ historyPerThread: 10, now: () => (clock += 500) });
     const seen: unknown[] = [];
     bus.subscribe((envelope) => seen.push(envelope), { threadId: 't1' });
 
@@ -13,9 +14,10 @@ describe('createEventBus', () => {
     bus.publish('t2', token('b'));
     bus.publish('t1', token('c'));
 
+    // The time lets a client that replays the history after a reload show real step durations.
     expect(seen).toEqual([
-      { seq: 1, threadId: 't1', event: token('a') },
-      { seq: 3, threadId: 't1', event: token('c') },
+      { seq: 1, at: 1500, threadId: 't1', event: token('a') },
+      { seq: 3, at: 2500, threadId: 't1', event: token('c') },
     ]);
   });
 

@@ -26,7 +26,7 @@ export function useThreadEvents(threadId: string | undefined, lead: string, onRu
     const source = new EventSource(eventsUrl(threadId));
     source.onmessage = (message: MessageEvent<string>) => {
       const envelope = JSON.parse(message.data) as Envelope;
-      dispatch({ event: envelope.event, at: Date.now() });
+      dispatch({ event: envelope.event, at: envelope.at ?? Date.now() });
       if (RUN_END.has(envelope.event.type)) onRunEndRef.current();
     };
     return () => source.close();

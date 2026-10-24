@@ -53,9 +53,9 @@ export class FakeEventSource {
     FakeEventSource.instances.push(this);
   }
 
-  emit(event: BusEvent, threadId = new URL(this.url, 'http://x').searchParams.get('threadId') ?? 't1'): void {
+  emit(event: BusEvent, threadId = new URL(this.url, 'http://x').searchParams.get('threadId') ?? 't1', at?: number): void {
     this.seq += 1;
-    const envelope: Envelope = { seq: this.seq, threadId, event };
+    const envelope: Envelope = { seq: this.seq, threadId, event, ...(at === undefined ? {} : { at }) };
     this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(envelope) }));
   }
 

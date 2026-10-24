@@ -18,6 +18,8 @@ export const SYSTEM_THREAD = '_system';
 
 export interface Envelope {
   readonly seq: number;
+  /** Publish time (epoch ms), so replayed events keep their real timing. */
+  readonly at: number;
   readonly threadId: string;
   readonly event: BusEvent;
 }
@@ -31,7 +33,7 @@ export interface EventBus {
 }
 
 /** In-process pub/sub with a short per-thread replay buffer for reconnecting clients. */
-export function createEventBus({ historyPerThread }: { historyPerThread: number }): EventBus {
+export function createEventBus({ historyPerThread, now = Date.now }: { historyPerThread: number; now?: () => number }): EventBus {
   let seq = 0;
   const listeners = new Set<{ listener: Listener; threadId?: string }>();
   const recent = new Map<string, readonly Envelope[]>();
@@ -39,7 +41,7 @@ export function createEventBus({ historyPerThread }: { historyPerThread: number 
   return {
     publish(threadId, event) {
       seq += 1;
-      const envelope: Envelope = { seq, threadId, event };
+      const envelope: Envelope = { seq, at: now(), threadId, event };
       recent.set(threadId, [...(recent.get(threadId) ?? []), envelope].slice(-historyPerThread));
       listeners.forEach(({ listener, threadId: only }) => {
         if (only && only !== threadId) return;

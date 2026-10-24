@@ -57,6 +57,16 @@ describe('Chat page', () => {
     expect(screen.queryByText('Команда работает')).toBeNull();
   });
 
+  it('shows real step durations for events the server replays after a reload', async () => {
+    const { source } = await openChat();
+    act(() => {
+      source.emit({ type: 'run.started', runId: 'r1' }, 't1', 1_000);
+      source.emit({ type: 'tool.start', agent: 'keboola-expert', callId: 'c1', tool: 'kbagent_read', args: { purpose: 'List buckets' } }, 't1', 1_000);
+      source.emit({ type: 'tool.end', agent: 'keboola-expert', callId: 'c1', tool: 'kbagent_read', ok: true, preview: 'in.c-shop' }, 't1', 3_500);
+    });
+    expect(screen.getByText('2.5 s')).toBeInTheDocument();
+  });
+
   it('asks for approval and sends the decision', async () => {
     const { source, callsTo } = await openChat({ 'POST /api/threads/t1/approvals': { runId: 'r2' } });
 

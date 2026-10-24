@@ -82,6 +82,8 @@ export const SYSTEM_THREAD = '_system';
 
 export interface Envelope {
   readonly seq: number;
+  /** Publish time on the server (epoch ms); replayed events keep their real timing. */
+  readonly at?: number;
   readonly threadId: string;
   readonly event: BusEvent;
 }
