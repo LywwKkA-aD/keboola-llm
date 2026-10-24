@@ -110,7 +110,8 @@ const stopWatching = watchFolders(
     console.log(`Agent team reloaded: ${team.spec.lead.name} + ${team.spec.subagents.length} subagents`);
     bus.publish(SYSTEM_THREAD, { type: 'team.updated' });
   },
-  { debounceMs: 400 },
+  // pollMs: a safety net for the changes a recursive watcher misses on Linux (watch.ts).
+  { debounceMs: 400, pollMs: 2000 },
 );
 
 // Scheduled routines (routines/*.md) open chats on their own; they start once the server listens.
