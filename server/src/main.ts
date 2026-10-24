@@ -18,6 +18,7 @@ import { kbagentVersion, listKeboolaProjects } from './system/keboola.ts';
 import { listModels } from './system/models.ts';
 import { onboardingStatus } from './system/onboarding.ts';
 import { systemStatus } from './system/status.ts';
+import { createDefinitionVersions } from './versions/tracker.ts';
 
 interface StateReader {
   getState(config: { configurable: { thread_id: string } }): Promise<{ values: { messages?: BaseMessage[] } }>;
@@ -54,10 +55,23 @@ bus.subscribe(({ threadId, event }) => {
   if (event.type === 'run.failed') console.error(`[run] ${threadId}: ${event.error}`);
 });
 
+// Version history of agents/ and skills/ in the data dir: a baseline now, then whatever each reload finds changed.
+const versions = createDefinitionVersions({ rootDir: app.env.rootDir, dir: join(app.env.dataDir, 'history') });
+const syncVersions = (reason: 'start' | 'change') => {
+  try {
+    const recorded = versions.sync(reason);
+    if (reason === 'change') recorded.forEach(({ kind, name, change }) => console.log(`[history] ${kind}/${name}: ${change}`));
+  } catch (error) {
+    console.error(`[history] could not record versions: ${(error as Error).message}`);
+  }
+};
+syncVersions('start');
+
 // agent-builder (or the user) edits agents/ and skills/ on disk: rebuild the team and tell the UI.
 const stopWatching = watchFolders(
   [join(app.env.rootDir, 'agents'), join(app.env.rootDir, 'skills')],
   () => {
+    syncVersions('change');
     app.reloadDefinitions();
     try {
       team = app.buildTeam(settings);
@@ -106,6 +120,7 @@ const server = await createServer({
   onboarding: () =>
     onboardingStatus({ memoriesDir: join(app.env.dataDir, 'memories'), project: team.effective.keboolaProject, projects: () => listKeboolaProjects() }),
   version,
+  versions,
 });
 
 const shutdown = async () => {

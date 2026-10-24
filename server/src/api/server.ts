@@ -7,6 +7,7 @@ import { registerOnboardingRoutes } from './routes/onboarding.ts';
 import { registerPolicyRoutes } from './routes/policies.ts';
 import { registerStaticRoutes } from './routes/static.ts';
 import { registerThreadRoutes } from './routes/threads.ts';
+import { registerVersionRoutes } from './routes/versions.ts';
 import { registerWorkspaceRoutes } from './routes/workspace.ts';
 import type { RunErrorCode } from './runs.ts';
 import type { ServerDeps } from './types.ts';
@@ -37,6 +38,7 @@ export async function createServer(deps: ServerDeps): Promise<FastifyInstance> {
   registerWorkspaceRoutes(app, deps);
   registerOnboardingRoutes(app, deps);
   registerEventRoutes(app, deps);
+  if (deps.versions) registerVersionRoutes(app, deps.versions);
   await registerStaticRoutes(app, deps.staticDir);
   return app;
 }

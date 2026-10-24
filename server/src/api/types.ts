@@ -3,6 +3,7 @@ import type { KeboolaProject } from '../system/keboola.ts';
 import type { OnboardingStatus } from '../system/onboarding.ts';
 import type { SystemStatus } from '../system/status.ts';
 import type { LoadError } from '../registry/types.ts';
+import type { DefinitionVersions } from '../versions/tracker.ts';
 import type { EventBus } from './bus.ts';
 import type { Allowed } from './guard.ts';
 import type { ChatEntry } from './history.ts';
@@ -51,4 +52,6 @@ export interface ServerDeps {
   /** Whether project-scout has profiled the project in use (drives the first-run card on Home). */
   readonly onboarding: () => Promise<OnboardingStatus>;
   readonly version: string;
+  /** Version history and rollback of agents and custom skills; without it the routes are not registered. */
+  readonly versions?: DefinitionVersions;
 }
