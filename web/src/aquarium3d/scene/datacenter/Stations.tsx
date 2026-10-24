@@ -1,8 +1,8 @@
-import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import { Color, type Group, type InstancedMesh, type MeshBasicMaterial, Object3D } from 'three';
 import { APPROVAL_DAIS, BUILD_AHEAD, STATIONS_3D, type StationId } from '../../layout3d.ts';
+import { Label } from '../Label.tsx';
 import { Fabricator } from './Fabricator.tsx';
 import { WaitingArea } from './WaitingArea.tsx';
 import { Workstations } from './Workstations.tsx';
@@ -23,9 +23,9 @@ function ahead(id: StationId, distance: number): [number, number, number] {
 
 function Tag({ text, position }: { text: string; position: [number, number, number] }) {
   return (
-    <Html position={position} center distanceFactor={14} zIndexRange={[10, 0]} pointerEvents="none">
+    <Label position={position} center distanceFactor={14} zIndexRange={[10, 0]} pointerEvents="none">
       <div className="station-tag">{text}</div>
-    </Html>
+    </Label>
   );
 }
 
