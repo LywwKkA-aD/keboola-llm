@@ -2,7 +2,8 @@ import type { ApprovalRequest, TeamEvent } from '../runtime/events.ts';
 
 /** Run lifecycle events published next to the agent events. */
 export type RunEvent =
-  | { readonly type: 'run.started'; readonly runId: string }
+  // resume: the run continues the previous turn (an approval answer) instead of answering a new message.
+  | { readonly type: 'run.started'; readonly runId: string; readonly resume?: true }
   | { readonly type: 'run.waiting'; readonly runId: string }
   | { readonly type: 'run.finished'; readonly runId: string }
   | { readonly type: 'run.failed'; readonly runId: string; readonly error: string }

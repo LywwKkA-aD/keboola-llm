@@ -106,4 +106,30 @@ describe('reduceRun', () => {
     const done = reduceRun(started, { type: 'delegate.end', agent: 'lead', callId: 'd1', to: 'helper', ok: true });
     expect(done.busyAgents).toEqual([]);
   });
+
+  it('groups steps by turn: a new message starts one, an approval answer continues it', () => {
+    const tool = (callId: string): BusEvent => ({ type: 'tool.start', agent: 'helper', callId, tool: 'ls', args: {} });
+    const state = apply([
+      { type: 'run.started', runId: 'r1' },
+      tool('a'),
+      { type: 'run.waiting', runId: 'r1' },
+      { type: 'run.started', runId: 'r2', resume: true },
+      tool('b'),
+      { type: 'run.finished', runId: 'r2' },
+      { type: 'run.started', runId: 'r3' },
+      tool('c'),
+    ]);
+    expect(state.turns).toBe(2);
+    expect(state.activities.map((activity) => [activity.id, activity.turn])).toEqual([
+      ['a', 0],
+      ['b', 0],
+      ['c', 1],
+    ]);
+  });
+
+  it('puts steps that arrive before any run start into a first turn', () => {
+    const state = apply([{ type: 'tool.start', agent: 'helper', callId: 'a', tool: 'ls', args: {} }]);
+    expect(state.turns).toBe(1);
+    expect(state.activities[0]?.turn).toBe(0);
+  });
 });

@@ -4,6 +4,8 @@ export type RunStatus = 'idle' | 'running' | 'waiting' | 'failed';
 
 export interface Activity {
   readonly id: string;
+  /** Which turn of the chat (a user message and the runs answering it, approvals included) the step belongs to. */
+  readonly turn: number;
   /** delegate: task handed to a subagent; tool: a tool call; auto: an approval granted by a chat permission. */
   readonly kind: 'delegate' | 'tool' | 'auto';
   /** Who acts: the delegating agent, or the agent calling the tool. */
@@ -33,6 +35,8 @@ export interface RunState {
   readonly approvals: readonly PendingApproval[];
   readonly usage: { readonly input: number; readonly output: number; readonly cached: number };
   readonly busyAgents: readonly string[];
+  /** Turns seen on this event stream; the steps of turn n carry turn = n. */
+  readonly turns: number;
   readonly error?: string;
 }
 
@@ -46,6 +50,7 @@ export const initialRunState = (lead: string): RunState => ({
   approvals: [],
   usage: { input: 0, output: 0, cached: 0 },
   busyAgents: [],
+  turns: 0,
 });
 
 function labelFor(tool: string, args: Readonly<Record<string, unknown>>): string {
@@ -61,8 +66,12 @@ function busyFrom(activities: readonly Activity[]): string[] {
 
 function withActivities(state: RunState, activities: readonly Activity[]): RunState {
   const capped = activities.slice(-MAX_ACTIVITIES);
-  return { ...state, activities: capped, busyAgents: busyFrom(capped) };
+  // Steps replayed before any run.started still need a turn to sit in.
+  return { ...state, activities: capped, busyAgents: busyFrom(capped), turns: Math.max(state.turns, 1) };
 }
+
+/** The turn new steps belong to. */
+const currentTurn = (state: RunState) => Math.max(state.turns - 1, 0);
 
 const finish = (ok: boolean, at: number, preview?: string) => (activity: Activity): Activity => ({
   ...activity,
@@ -76,7 +85,9 @@ export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
   switch (event.type) {
     case 'run.started': {
       const { error: _previousError, ...rest } = state;
-      return { ...rest, status: 'running', streamingText: '', approvals: [] };
+      // An answered approval continues the turn; anything else answers a new message.
+      const turns = event.resume && state.turns > 0 ? state.turns : state.turns + 1;
+      return { ...rest, status: 'running', streamingText: '', approvals: [], turns };
     }
     case 'run.waiting':
       return { ...state, status: 'waiting' };
@@ -103,6 +114,7 @@ export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
         ...event.requests.map(
           (request, index): Activity => ({
             id: `auto-${event.interruptId}-${index}`,
+            turn: currentTurn(state),
             kind: 'auto',
             agent: 'app',
             target: request.tool,
@@ -116,7 +128,7 @@ export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
     case 'delegate.start':
       return withActivities(state, [
         ...state.activities,
-        { id: event.callId, kind: 'delegate', agent: event.agent, target: event.to, label: event.task, status: 'running', startedAt: at },
+        { id: event.callId, turn: currentTurn(state), kind: 'delegate', agent: event.agent, target: event.to, label: event.task, status: 'running', startedAt: at },
       ]);
     case 'delegate.end':
       // The subagent's run is over: close its delegation and anything it left open.
@@ -133,6 +145,7 @@ export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
         ...state.activities,
         {
           id: event.callId,
+          turn: currentTurn(state),
           kind: 'tool',
           agent: event.agent,
           target: event.tool,

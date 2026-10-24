@@ -53,6 +53,25 @@ describe('Chat page', () => {
     expect(screen.queryByText('Команда работает')).toBeNull();
   });
 
+  it('keeps each turn in order: the question, its steps, then the reply', async () => {
+    let history = [{ id: 'h1', role: 'user', text: 'Где используется customer_id?' }];
+    const { source } = await openChat({ 'GET /api/threads/t1/messages': () => history });
+    act(() => {
+      source.emit({ type: 'run.started', runId: 'r1' });
+      source.emit({ type: 'delegate.start', agent: 'lead', callId: 'd1', to: 'keboola-expert', task: 'Find customer_id usages' });
+      source.emit({ type: 'delegate.end', agent: 'lead', callId: 'd1', to: 'keboola-expert', ok: true });
+    });
+    history = [...history, { id: 'a1', role: 'assistant', text: 'Нашёл две трансформации.' }];
+    act(() => source.emit({ type: 'run.finished', runId: 'r1' }));
+
+    const reply = await screen.findByText('Нашёл две трансформации.');
+    const question = screen.getByText('Где используется customer_id?', { selector: '.message__plain' });
+    const steps = screen.getByText('Find customer_id usages');
+    const follows = (a: Node, b: Node) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(follows(question, steps)).toBe(true);
+    expect(follows(steps, reply)).toBe(true);
+  });
+
   it('shows real step durations for events the server replays after a reload', async () => {
     const { source } = await openChat();
     act(() => {

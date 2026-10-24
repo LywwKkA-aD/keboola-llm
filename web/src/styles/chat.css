@@ -175,9 +175,23 @@
   font-size: var(--text-2xs);
 }
 
+/* The user's own messages: a bubble on the right, like any chat; the agents' replies stay full width. */
 .message--user {
-  border-left: 2px solid var(--color-border-strong);
-  padding-left: var(--space-3);
+  align-self: flex-end;
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-sm) var(--radius-md);
+  max-width: min(75%, 640px);
+  padding: var(--space-2) var(--space-3);
+}
+
+/* "You" stays for screen readers; the bubble's side already says it. */
+.message--user .message__who {
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .message--pending .message__markdown {

@@ -89,7 +89,7 @@ describe('createRunManager', () => {
   });
 
   it('waits for approvals and resumes with the answers', async () => {
-    const { runs, inputs, types } = setup((input) => (input instanceof Command ? [finalMessage] : [interrupt]));
+    const { runs, inputs, types, events } = setup((input) => (input instanceof Command ? [finalMessage] : [interrupt]));
     await runs.start('t1', {}).done;
 
     expect(types()).toEqual(['run.started', 'approval.required', 'run.waiting']);
@@ -99,6 +99,11 @@ describe('createRunManager', () => {
 
     await runs.answer('t1', [{ interruptId: 'int-1', decisions: [{ type: 'approve' }] }]).done;
     expect((inputs[1] as Command).resume).toEqual({ decisions: [{ type: 'approve' }] });
+    // The answer continues the same turn: the UI keeps its steps together.
+    expect(events.filter((envelope) => envelope.event.type === 'run.started').map((envelope) => envelope.event)).toEqual([
+      { type: 'run.started', runId: expect.any(String) },
+      { type: 'run.started', runId: expect.any(String), resume: true },
+    ]);
     expect(runs.pending('t1')).toEqual([]);
     expect(types().at(-1)).toBe('run.finished');
   });

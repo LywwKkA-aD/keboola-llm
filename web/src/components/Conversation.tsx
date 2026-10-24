@@ -10,6 +10,7 @@ import { MessageBubble } from './MessageBubble.tsx';
 import { SqlToggle } from './SqlToggle.tsx';
 import { StepRows } from './StepRows.tsx';
 import { formatClock } from '../lib/format.ts';
+import { timeline } from '../lib/timeline.ts';
 import type { StringKey } from '../i18n/strings.ts';
 import type { RunStatus } from '../state/run-state.ts';
 
@@ -107,10 +108,13 @@ export function Conversation({ threadId, title, updatedAt, onActivity }: {
         </header>
         <div className="conversation__messages">
           {history.length === 0 && !running && <p className="conversation__empty">{t('chat.empty')}</p>}
-          {history.map((entry) => (
-            <MessageBubble key={entry.id} role={entry.role} text={entry.text} />
-          ))}
-          <StepRows steps={run.activities} />
+          {timeline(history, run.activities, run.turns).map((item) =>
+            item.kind === 'entry' ? (
+              <MessageBubble key={item.entry.id} role={item.entry.role} text={item.entry.text} />
+            ) : (
+              <StepRows key={`turn-${item.turn}`} steps={item.steps} />
+            ),
+          )}
           {showStream && <MessageBubble role="assistant" text={run.streamingText} pending />}
           {running && <div className="conversation__status conversation__status--working">{t('chat.working')}</div>}
           {run.status === 'waiting' && <div className="conversation__status">{t('chat.waiting')}</div>}

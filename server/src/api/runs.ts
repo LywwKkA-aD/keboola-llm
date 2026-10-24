@@ -119,9 +119,9 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store }
     return { human, auto };
   }
 
-  async function execute(threadId: string, runId: string, firstInput: unknown, controller: AbortController): Promise<void> {
+  async function execute(threadId: string, runId: string, firstInput: unknown, controller: AbortController, resume: boolean): Promise<void> {
     const mapEvents = createEventMapper(leadName());
-    bus.publish(threadId, { type: 'run.started', runId });
+    bus.publish(threadId, { type: 'run.started', runId, ...(resume ? { resume: true as const } : {}) });
     try {
       let input = firstInput;
       for (let resumes = 0; ; resumes += 1) {
@@ -147,11 +147,11 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store }
     }
   }
 
-  function launch(threadId: string, input: unknown): RunHandle {
+  function launch(threadId: string, input: unknown, resume = false): RunHandle {
     const runId = randomUUID();
     const controller = new AbortController();
     running.set(threadId, controller);
-    return { runId, done: execute(threadId, runId, input, controller) };
+    return { runId, done: execute(threadId, runId, input, controller, resume) };
   }
 
   return {
@@ -175,7 +175,7 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store }
         }
       });
       unpause(threadId);
-      return launch(threadId, new Command({ resume: toResumeValue([...paused.auto, ...answers]) }));
+      return launch(threadId, new Command({ resume: toResumeValue([...paused.auto, ...answers]) }), true);
     },
     pending: (threadId) => waiting.get(threadId)?.human ?? [],
     isBusy: (threadId) => running.has(threadId) || waiting.has(threadId),
