@@ -73,6 +73,13 @@ export const ru: Record<StringKey, string> = {
   'chat.status.running': 'Работает',
   'chat.status.waiting': 'Ждёт подтверждения',
   'chat.status.failed': 'Ошибка',
+  'chat.status.interrupted': 'Прервано',
+  'chat.continue': 'Продолжить',
+  'chat.interrupted': 'Команда остановилась, не закончив ответ, например из-за перезапуска приложения.',
+  'chat.failure.stopped': 'Остановлено. Команда может продолжить с того же места.',
+  'chat.failure.model_unavailable': 'Модель не ответила: она перегружена или недоступна.',
+  'chat.failure.model_rejected': 'Модель отклонила запрос. Проверьте ключ OmniRoute и модель в настройках.',
+  'chat.failure.step_limit': 'Команда исчерпала лимит шагов одного запуска.',
 
   'kind.read': 'Чтение',
   'kind.sql': 'SQL',

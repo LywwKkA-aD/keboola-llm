@@ -7,6 +7,7 @@ import { useTeam } from '../state/team-context.tsx';
 import { ApprovalCard } from './ApprovalCard.tsx';
 import { Composer } from './Composer.tsx';
 import { MessageBubble } from './MessageBubble.tsx';
+import { RunNotice } from './RunNotice.tsx';
 import { SqlToggle } from './SqlToggle.tsx';
 import { StepRows } from './StepRows.tsx';
 import { formatClock } from '../lib/format.ts';
@@ -20,12 +21,17 @@ const STATUS: Record<RunStatus, [StringKey, string]> = {
   waiting: ['chat.status.waiting', 'chip--amber'],
   failed: ['chat.status.failed', 'chip--red'],
 };
+const INTERRUPTED: [StringKey, string] = ['chat.status.interrupted', 'chip--amber'];
 
-/** One chat: header, history, the steps the team took, the live stream of the lead agent, approvals and the composer. */
-export function Conversation({ threadId, title, updatedAt, onActivity }: {
+/**
+ * One chat: header, history, the steps the team took, the live stream of the lead agent, approvals and the composer.
+ * resumable: the server holds an unfinished run for this chat (e.g. one a restart cut off) that can be continued.
+ */
+export function Conversation({ threadId, title, updatedAt, resumable = false, onActivity }: {
   threadId: string;
   title: string;
   updatedAt?: string;
+  resumable?: boolean;
   onActivity: () => void;
 }) {
   const { t, settings } = useSettings();
@@ -85,10 +91,18 @@ export function Conversation({ threadId, title, updatedAt, onActivity }: {
   const answer = (interruptId: string, decisions: Decision[]) =>
     void guard(() => api.answer(threadId, [{ interruptId, decisions }]));
 
+  // The chat list learns the run is no longer unfinished.
+  const resume = () =>
+    void guard(() => api.resume(threadId)).then((resumed) => {
+      if (resumed) onActivity();
+    });
+
   const running = run.status === 'running';
   const showStream = (running || run.status === 'waiting') && run.streamingText;
+  // An unfinished run this page has seen no event of, e.g. one a server restart cut off: offer to continue it.
+  const interrupted = resumable && run.status === 'idle' && run.turns === 0;
 
-  const [statusKey, statusChip] = STATUS[run.status];
+  const [statusKey, statusChip] = interrupted ? INTERRUPTED : STATUS[run.status];
 
   return (
     <div className="conversation">
@@ -121,7 +135,8 @@ export function Conversation({ threadId, title, updatedAt, onActivity }: {
           {run.approvals.map((approval) => (
             <ApprovalCard key={approval.interruptId} approval={approval} busy={busy} onAnswer={(decisions) => answer(approval.interruptId, decisions)} />
           ))}
-          {run.status === 'failed' && <div className="conversation__status conversation__status--error">{t('chat.failed')}: {run.error}</div>}
+          {run.status === 'failed' && <RunNotice failure={run.failure ?? 'error'} detail={run.error} busy={busy} onContinue={resume} />}
+          {interrupted && <RunNotice busy={busy} onContinue={resume} />}
           {error && <div className="conversation__status conversation__status--error">{error}</div>}
           <div ref={endRef} />
         </div>

@@ -71,6 +71,13 @@ export const en = {
   'chat.status.running': 'Working',
   'chat.status.waiting': 'Waiting for approval',
   'chat.status.failed': 'Failed',
+  'chat.status.interrupted': 'Interrupted',
+  'chat.continue': 'Continue',
+  'chat.interrupted': 'The team stopped before finishing this answer, for example because the app restarted.',
+  'chat.failure.stopped': 'Stopped. The team can pick up where it left off.',
+  'chat.failure.model_unavailable': 'The model did not answer: it is overloaded or unreachable.',
+  'chat.failure.model_rejected': 'The model refused the request. Check the OmniRoute key and the model in Settings.',
+  'chat.failure.step_limit': 'The team reached the step limit of one run.',
 
   'kind.read': 'Read',
   'kind.sql': 'SQL',

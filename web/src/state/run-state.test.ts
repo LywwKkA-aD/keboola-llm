@@ -69,10 +69,43 @@ describe('reduceRun', () => {
     expect(resumed.streamingText).toBe('');
   });
 
-  it('finishes and fails runs', () => {
+  it('finishes and fails runs, keeping why', () => {
     expect(apply([{ type: 'run.started', runId: 'r' }, { type: 'run.finished', runId: 'r' }]).status).toBe('idle');
     const failed = apply([{ type: 'run.failed', runId: 'r', error: 'model down' }]);
-    expect(failed).toMatchObject({ status: 'failed', error: 'model down' });
+    expect(failed).toMatchObject({ status: 'failed', error: 'model down', failure: 'error' });
+    const unavailable = apply([{ type: 'run.failed', runId: 'r', reason: 'model_unavailable', error: '503' }]);
+    expect(unavailable.failure).toBe('model_unavailable');
+    const again = reduceRun(unavailable, { type: 'run.started', runId: 'r2', resume: true });
+    expect(again).not.toHaveProperty('failure');
+    expect(again).not.toHaveProperty('error');
+  });
+
+  it('stops the steps a failed run left open, and closes them when the run continues', () => {
+    const failed = apply(
+      [
+        { type: 'run.started', runId: 'r1' },
+        { type: 'delegate.start', agent: 'lead', callId: 'd1', to: 'helper', task: 'Look it up' },
+        { type: 'tool.start', agent: 'helper', callId: 't1', tool: 'ls', args: {} },
+        { type: 'tool.end', agent: 'helper', callId: 't1', tool: 'ls', ok: true, preview: '' },
+        { type: 'run.failed', runId: 'r1', reason: 'model_unavailable', error: '503' },
+      ],
+      initialRunState(lead),
+    );
+    expect(failed.activities.map((activity) => activity.status)).toEqual(['failed', 'done']);
+    expect(failed.busyAgents).toEqual([]);
+
+    const continued = apply(
+      [
+        { type: 'run.started', runId: 'r2', resume: true },
+        { type: 'delegate.end', agent: 'lead', callId: 'd1', to: 'helper', ok: true },
+        { type: 'run.finished', runId: 'r2' },
+      ],
+      failed,
+    );
+    expect(continued.activities.map((activity) => [activity.id, activity.status, activity.turn])).toEqual([
+      ['d1', 'done', 0],
+      ['t1', 'done', 0],
+    ]);
   });
 
   it('sums token usage per run', () => {

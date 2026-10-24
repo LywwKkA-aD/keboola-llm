@@ -1,4 +1,4 @@
-import type { ApprovalRequest, BusEvent } from '../api/types.ts';
+import type { ApprovalRequest, BusEvent, FailureReason } from '../api/types.ts';
 
 export type RunStatus = 'idle' | 'running' | 'waiting' | 'failed';
 
@@ -38,6 +38,8 @@ export interface RunState {
   /** Turns seen on this event stream; the steps of turn n carry turn = n. */
   readonly turns: number;
   readonly error?: string;
+  /** Why the last run failed; with it the chat offers to continue. */
+  readonly failure?: FailureReason;
 }
 
 const MAX_ACTIVITIES = 300;
@@ -98,8 +100,8 @@ const finish = (ok: boolean, at: number, preview?: string) => (activity: Activit
 export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
   switch (event.type) {
     case 'run.started': {
-      const { error: _previousError, ...rest } = state;
-      // An answered approval continues the turn; anything else answers a new message.
+      const { error: _previousError, failure: _previousFailure, ...rest } = state;
+      // An answered approval or Continue after a failure continues the turn; anything else answers a new message.
       const turns = event.resume && state.turns > 0 ? state.turns : state.turns + 1;
       return { ...rest, status: 'running', streamingText: '', approvals: [], turns };
     }
@@ -107,8 +109,14 @@ export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
       return { ...state, status: 'waiting' };
     case 'run.finished':
       return { ...state, status: 'idle' };
-    case 'run.failed':
-      return { ...state, status: 'failed', error: event.error };
+    case 'run.failed': {
+      // Steps the failure cut short are not running any more; continuing the run closes them for real.
+      const open = state.activities.some((activity) => activity.status === 'running');
+      const stopped = open
+        ? withActivities(state, state.activities.map((activity) => (activity.status === 'running' ? finish(false, at)(activity) : activity)))
+        : state;
+      return { ...stopped, status: 'failed', error: event.error, failure: event.reason ?? 'error' };
+    }
     case 'token':
       return event.agent === state.lead ? { ...state, streamingText: state.streamingText + event.text } : state;
     case 'usage':

@@ -50,6 +50,7 @@ export function ChatPage() {
           threadId={threadId}
           title={current?.title ?? ''}
           {...(current ? { updatedAt: current.updatedAt } : {})}
+          resumable={current?.resumable === true}
           onActivity={refresh}
         />
       ) : (

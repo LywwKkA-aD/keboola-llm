@@ -73,6 +73,13 @@ export const cs: Record<StringKey, string> = {
   'chat.status.running': 'Pracuje',
   'chat.status.waiting': 'Čeká na schválení',
   'chat.status.failed': 'Chyba',
+  'chat.status.interrupted': 'Přerušeno',
+  'chat.continue': 'Pokračovat',
+  'chat.interrupted': 'Tým skončil dřív, než odpověď dokončil, například kvůli restartu aplikace.',
+  'chat.failure.stopped': 'Zastaveno. Tým může pokračovat tam, kde skončil.',
+  'chat.failure.model_unavailable': 'Model neodpověděl: je přetížený nebo nedostupný.',
+  'chat.failure.model_rejected': 'Model požadavek odmítl. Zkontrolujte klíč OmniRoute a model v Nastavení.',
+  'chat.failure.step_limit': 'Tým vyčerpal limit kroků jednoho běhu.',
 
   'kind.read': 'Čtení',
   'kind.sql': 'SQL',

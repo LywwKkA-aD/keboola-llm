@@ -1,6 +1,6 @@
 /**
- * API contract with the server. Keep in sync with server/src/runtime/events.ts,
- * server/src/api/bus.ts, server/src/api/threads.ts, server/src/api/history.ts and server/src/api/types.ts.
+ * API contract with the server. Keep in sync with server/src/runtime/events.ts, server/src/api/bus.ts,
+ * server/src/api/failure.ts, server/src/api/threads.ts, server/src/api/history.ts and server/src/api/types.ts.
  */
 
 export type Language = 'ru' | 'en' | 'cs';
@@ -36,6 +36,8 @@ export interface Thread {
   readonly title: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  /** The last run stopped before it finished (failed, stopped, cut off by a restart): it can be continued. */
+  readonly resumable?: boolean;
 }
 
 export interface ChatEntry {
@@ -62,12 +64,16 @@ export type TeamEvent =
   | { readonly type: 'approval.required'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] }
   | { readonly type: 'usage'; readonly agent: string; readonly input: number; readonly output: number; readonly cached: number };
 
+/** Why a run ended before the team finished (server/src/api/failure.ts). */
+export type FailureReason = 'stopped' | 'model_unavailable' | 'model_rejected' | 'step_limit' | 'error';
+
 export type RunEvent =
-  // resume: the run continues the previous turn (an approval answer) instead of answering a new message.
+  // resume: the run continues the previous turn (an approval answer, or Continue after a failure)
+  // instead of answering a new message.
   | { readonly type: 'run.started'; readonly runId: string; readonly resume?: true }
   | { readonly type: 'run.waiting'; readonly runId: string }
   | { readonly type: 'run.finished'; readonly runId: string }
-  | { readonly type: 'run.failed'; readonly runId: string; readonly error: string }
+  | { readonly type: 'run.failed'; readonly runId: string; readonly error: string; readonly reason?: FailureReason }
   | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] };
 /** App-wide news, published on SYSTEM_THREAD. */
 export type SystemEvent = { readonly type: 'team.updated' };

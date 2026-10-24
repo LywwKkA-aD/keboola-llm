@@ -147,7 +147,9 @@ describe('Chat page', () => {
   it('shows why a run failed', async () => {
     const { source } = await openChat();
     act(() => source.emit({ type: 'run.failed', runId: 'r1', error: 'model down' }));
-    expect(screen.getByText(/Ошибка выполнения: model down/)).toBeInTheDocument();
+    const notice = screen.getByRole('alert');
+    expect(notice).toHaveTextContent('Ошибка выполнения');
+    expect(notice).toHaveTextContent('model down');
   });
 
   it('stops a running chat', async () => {
