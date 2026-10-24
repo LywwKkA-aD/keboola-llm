@@ -123,4 +123,34 @@ describe('runSetupChecks', () => {
     );
     expect(JSON.stringify(result)).not.toContain(key);
   });
+
+  describe('Keboola access', () => {
+    const access = (overrides = {}) => ({ project: 'sandbox', backend: 'snowflake', role: 'admin', session: 'live', mergeRequests: false, protectedProduction: false, changePath: 'promote' as const, sql: true, ...overrides });
+
+    it('adds what the analyst may do in Keboola once the project is set', async () => {
+      const result = await runSetupChecks(input({ keboolaAccess: async () => access() }));
+      expect(step(result.steps, 'access')).toEqual({ id: 'access', status: 'ok', detail: 'admin · snowflake · changes: promotion in the app' });
+      expect(result.complete).toBe(true);
+
+      const readOnly = await runSetupChecks(input({ keboolaAccess: async () => access({ role: 'readOnly', changePath: 'read-only', sql: false }) }));
+      expect(step(readOnly.steps, 'access')).toMatchObject({ status: 'ok', detail: 'readOnly · snowflake · changes: read-only' });
+    });
+
+    it('fails on an expired kbagent sign-in or an unreadable project', async () => {
+      const expired = await runSetupChecks(input({ keboolaAccess: async () => access({ session: 'expired' }) }));
+      expect(step(expired.steps, 'access')).toEqual({ id: 'access', status: 'fail', reason: 'sessionExpired', detail: 'kbagent session expired' });
+      expect(expired.complete).toBe(false);
+
+      const broken = await runSetupChecks(input({ keboolaAccess: async () => Promise.reject(new Error('kbagent could not read the project')) }));
+      expect(step(broken.steps, 'access')).toMatchObject({ status: 'fail', reason: 'accessUnreadable', detail: 'kbagent could not read the project' });
+    });
+
+    it('waits for a project before reading the access', async () => {
+      const keboolaAccess = vi.fn(async () => access());
+      const { steps } = await runSetupChecks(input({ keboolaProjects: async () => [], keboolaAccess }));
+      expect(step(steps, 'access')).toMatchObject({ status: 'blocked' });
+      expect(keboolaAccess).not.toHaveBeenCalled();
+    });
+  });
 });
+

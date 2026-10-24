@@ -20,10 +20,13 @@ const SUBAGENT_BASE = `You are a specialist agent on a team led by an orchestrat
 - Do not change anything outside your task.
 - For Keboola work, read the project's profile in /memories/projects/ first if one exists: it maps the layers, pipelines and ids.`;
 
-export function buildOrchestratorPrompt({ agentPrompt, language }: { agentPrompt: string; language: LanguageCode }): string {
-  return [ORCHESTRATOR_BASE, agentPrompt, languageInstruction(language)].filter(Boolean).join('\n\n');
+/** What the analyst may do in Keboola (system/keboola-access.ts), when the app has read it. */
+const accessSection = (access: string | undefined) => (access ? `## Keboola access\n${access}` : '');
+
+export function buildOrchestratorPrompt({ agentPrompt, language, access }: { agentPrompt: string; language: LanguageCode; access?: string }): string {
+  return [ORCHESTRATOR_BASE, agentPrompt, accessSection(access), languageInstruction(language)].filter(Boolean).join('\n\n');
 }
 
-export function buildSubagentPrompt({ agentPrompt }: { agentPrompt: string }): string {
-  return [SUBAGENT_BASE, agentPrompt].filter(Boolean).join('\n\n');
+export function buildSubagentPrompt({ agentPrompt, access }: { agentPrompt: string; access?: string }): string {
+  return [SUBAGENT_BASE, agentPrompt, accessSection(access)].filter(Boolean).join('\n\n');
 }

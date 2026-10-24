@@ -5,6 +5,7 @@
 import { createHash } from 'node:crypto';
 import type { OmniRouteConfig } from '../config/env.ts';
 import type { KeboolaProject } from '../system/keboola.ts';
+import type { KeboolaAccess } from '../system/keboola-access.ts';
 import { runSetupChecks, type SetupChecks } from './checks.ts';
 import { writeEnvValues } from './env-file.ts';
 import { type ModelTestResult, probeOmniRoute, testModel } from './omniroute.ts';
@@ -43,6 +44,8 @@ export interface SetupServiceDeps {
   readonly current: () => { readonly omniroute: OmniRouteConfig; readonly model: string; readonly keboolaProject: string };
   readonly kbagentVersion: () => Promise<string>;
   readonly keboolaProjects: () => Promise<readonly KeboolaProject[]>;
+  /** The analyst's access in the chosen project; adds the access step to the checklist. */
+  readonly keboolaAccess?: () => Promise<KeboolaAccess>;
   /** Start using new OmniRoute settings: rebuild the model factory and the team. */
   readonly apply: (omniroute: OmniRouteConfig) => void;
   readonly fetchImpl?: typeof fetch;
@@ -101,6 +104,7 @@ export function createSetupService(deps: SetupServiceDeps): SetupService {
         testModel: () => remembered() ?? startTest(config),
         kbagentVersion: deps.kbagentVersion,
         keboolaProjects: deps.keboolaProjects,
+        ...(deps.keboolaAccess ? { keboolaAccess: deps.keboolaAccess } : {}),
       });
       return { ...checks, omniroute: state(), effective: { model: config.model, keboolaProject } };
     },

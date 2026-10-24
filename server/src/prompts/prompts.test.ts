@@ -32,4 +32,11 @@ describe('prompt composition', () => {
     expect(buildSubagentPrompt({ agentPrompt: '' })).toContain('/memories/projects/');
     expect(buildOrchestratorPrompt({ agentPrompt: '', language: 'en' })).toContain('/memories/projects/');
   });
+
+  it('tells every agent what the analyst may do in Keboola, when the app knows it', () => {
+    const access = '- Changes: read-only.';
+    expect(buildOrchestratorPrompt({ agentPrompt: 'Lead.', language: 'en', access })).toContain('## Keboola access\n- Changes: read-only.');
+    expect(buildSubagentPrompt({ agentPrompt: 'Helper.', access })).toContain('## Keboola access\n- Changes: read-only.');
+    expect(buildSubagentPrompt({ agentPrompt: 'Helper.' })).not.toContain('Keboola access');
+  });
 });

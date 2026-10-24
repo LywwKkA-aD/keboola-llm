@@ -60,5 +60,15 @@ describe('kbagent-sql tool id', () => {
     // A read-only agent asking for it gets nothing.
     expect(factories['kbagent-promote']?.(agent({ access: 'read' })).tools).toEqual([]);
   });
+
+  it('offers the promotion only where the access allows promoting from the app', () => {
+    const write = agent({ access: 'write' });
+    const names = (changePath: 'promote' | 'merge-request' | 'keboola-ui' | 'read-only') =>
+      createToolFactories({ defaultProject: 'sandbox', changePath })['kbagent-promote']?.(write).tools.map((tool) => tool.name);
+    expect(names('promote')).toEqual(['kbagent_promote']);
+    expect(names('merge-request')).toEqual([]);
+    expect(names('keboola-ui')).toEqual([]);
+    expect(names('read-only')).toEqual([]);
+  });
 });
 

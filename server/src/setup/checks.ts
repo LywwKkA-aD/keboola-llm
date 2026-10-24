@@ -4,10 +4,11 @@
  * Details are short English facts for the terminal; they never carry the OmniRoute key.
  */
 import type { OmniRouteConfig } from '../config/env.ts';
+import { type KeboolaAccess, shortAccess } from '../system/keboola-access.ts';
 import type { KeboolaProject } from '../system/keboola.ts';
 import { type ModelTestResult, type OmniRouteProbe, redactSecret } from './omniroute.ts';
 
-export type SetupStepId = 'omniroute' | 'apiKey' | 'model' | 'kbagent' | 'projects' | 'project';
+export type SetupStepId = 'omniroute' | 'apiKey' | 'model' | 'kbagent' | 'projects' | 'project' | 'access';
 export type SetupStatus = 'ok' | 'fail' | 'blocked';
 export type SetupReason =
   | 'unreachable'
@@ -20,7 +21,9 @@ export type SetupReason =
   | 'projectsNone'
   | 'projectsFailed'
   | 'projectMissing'
-  | 'projectUnknown';
+  | 'projectUnknown'
+  | 'sessionExpired'
+  | 'accessUnreadable';
 
 export interface SetupStep {
   readonly id: SetupStepId;
@@ -38,6 +41,8 @@ export interface SetupInput {
   readonly testModel: () => Promise<ModelTestResult>;
   readonly kbagentVersion: () => Promise<string>;
   readonly keboolaProjects: () => Promise<readonly KeboolaProject[]>;
+  /** What the analyst may do in the project; without it the checklist has no access step (e.g. doctor). */
+  readonly keboolaAccess?: () => Promise<KeboolaAccess>;
 }
 
 export interface SetupChecks {
@@ -57,7 +62,20 @@ export const STEP_LABELS: Readonly<Record<SetupStepId, string>> = {
   kbagent: 'kbagent',
   projects: 'Keboola projects',
   project: 'Keboola project',
+  access: 'Keboola access',
 };
+
+const EXPIRED_SESSIONS = new Set(['expired', 'missing']);
+
+/** Read only once the project is known: an expired sign-in fails here, the rest says what changes are possible. */
+async function accessStep(project: SetupStep, read: () => Promise<KeboolaAccess>): Promise<SetupStep> {
+  if (project.status !== 'ok') return blocked('access', 'waiting for a project');
+  const access = await settle(read());
+  if (access.status === 'rejected') return fail('access', 'accessUnreadable', message(access.reason));
+  const { session } = access.value;
+  if (session && EXPIRED_SESSIONS.has(session)) return fail('access', 'sessionExpired', `kbagent session ${session}`);
+  return ok('access', shortAccess(access.value));
+}
 
 const AUTH_STATUSES = new Set([401, 403]);
 
@@ -123,7 +141,10 @@ export async function runSetupChecks(input: SetupInput): Promise<SetupChecks> {
   const [probe, version, listed] = await Promise.all([input.probeOmniRoute(), settle(input.kbagentVersion()), settle(input.keboolaProjects())]);
   const [router, key] = omniRouteSteps(input.omniroute, probe);
   const model = await modelStep(input, router.status === 'ok' && key.status === 'ok');
-  const steps = [router, key, model, ...keboolaSteps(version, listed, input.keboolaProject)].map((entry) => ({
+  const keboola = keboolaSteps(version, listed, input.keboolaProject);
+  const project = keboola.at(-1) as SetupStep;
+  const access = input.keboolaAccess ? [await accessStep(project, input.keboolaAccess)] : [];
+  const steps = [router, key, model, ...keboola, ...access].map((entry) => ({
     ...entry,
     detail: redactSecret(entry.detail, input.omniroute.apiKey),
   }));

@@ -23,7 +23,11 @@ function scopeOf(agent: AgentDefinition, defaultProject: string) {
 }
 
 /** Every tool id an AGENT.md may list in `tools`, mapped to its factory. */
-export function createToolFactories({ defaultProject }: { defaultProject: string }): Readonly<Record<string, ToolFactory>> {
+export function createToolFactories({ defaultProject, changePath }: {
+  defaultProject: string;
+  /** How changes reach production for this analyst (system/keboola-access.ts); unknown until read. */
+  changePath?: 'promote' | 'merge-request' | 'keboola-ui' | 'read-only';
+}): Readonly<Record<string, ToolFactory>> {
   return {
     kbagent: (agent) => {
       const access = agent.keboola?.access ?? 'read';
@@ -36,7 +40,7 @@ export function createToolFactories({ defaultProject }: { defaultProject: string
     }),
     // The only way to production: the user approves each promotion after seeing it; never auto-approved.
     'kbagent-promote': (agent) =>
-      agent.keboola?.access === 'write'
+      agent.keboola?.access === 'write' && (changePath === undefined || changePath === 'promote')
         ? { tools: [createKbagentPromoteTool(scopeOf(agent, defaultProject))], interruptOn: { [PROMOTE_TOOL]: { allowedDecisions: ['approve', 'reject'] } } }
         : { tools: [], interruptOn: NO_APPROVALS },
     // Never auto-approved: agreeing a plan is the user's decision.

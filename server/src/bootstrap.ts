@@ -10,6 +10,7 @@ import { discoverSkillSources, loadSkills } from './registry/skills.ts';
 import type { AgentDefinition, LoadError, SkillInfo } from './registry/types.ts';
 import { createBackend } from './runtime/backend.ts';
 import { buildTeamSpec, createTeam, type TeamSpec } from './runtime/team.ts';
+import { accessSummary, type KeboolaAccess } from './system/keboola-access.ts';
 import { createToolResolver } from './tools/catalog.ts';
 import { createToolFactories } from './tools/registry.ts';
 
@@ -30,6 +31,8 @@ export interface App {
   readonly envFile: string;
   /** Use new OmniRoute settings from now on (the setup wizard's key form); the next buildTeam uses them. */
   readonly setOmniRoute: (omniroute: OmniRouteConfig) => void;
+  /** What the analyst may do in Keboola, read from kbagent; the next buildTeam tells the agents and picks tools. */
+  readonly setKeboolaAccess: (access: KeboolaAccess | undefined) => void;
 }
 
 /** Model and Keboola project actually in use: settings override .env, empty means .env. */
@@ -62,6 +65,7 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
   const skillSources = discoverSkillSources(rootDir);
   const readDefinitions = () => ({ agents: loadAgents(rootDir), skills: loadSkills(skillSources) });
   let definitions = readDefinitions();
+  let access: KeboolaAccess | undefined;
   const settingsFile = join(env.dataDir, 'settings.json');
 
   const checkpointer = SqliteSaver.fromConnString(join(env.dataDir, 'checkpoints.sqlite'));
@@ -92,11 +96,22 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
     reloadDefinitions: () => {
       definitions = readDefinitions();
     },
+    setKeboolaAccess: (next) => {
+      access = next;
+    },
     buildTeam: (settings) => {
       const { agents, skills } = definitions;
       const effective = { model: settings.model || env.omniroute.model, keboolaProject: settings.keboolaProject || env.keboolaProject };
-      const resolveTools = createToolResolver(createToolFactories({ defaultProject: effective.keboolaProject }));
-      const spec = buildTeamSpec({ agents: agents.items, skills: skills.items, language: settings.language, resolveTools });
+      const resolveTools = createToolResolver(
+        createToolFactories({ defaultProject: effective.keboolaProject, ...(access ? { changePath: access.changePath } : {}) }),
+      );
+      const spec = buildTeamSpec({
+        agents: agents.items,
+        skills: skills.items,
+        language: settings.language,
+        resolveTools,
+        ...(access ? { access: accessSummary(access) } : {}),
+      });
       // Agents without their own model use the effective default instead of the .env one.
       const modelFor = (modelId?: string) => createModel(modelId ?? effective.model);
       return { spec, graph: createTeam({ spec, createModel: modelFor, backend, checkpointer }), effective };

@@ -38,7 +38,10 @@ export function commandFor(reason: SetupReason, os: Os): string | undefined {
     case 'kbagentMissing':
       return os === 'windows' ? KBAGENT_INSTALL.windows : KBAGENT_INSTALL.unix;
     case 'projectsFailed':
+    case 'accessUnreadable':
       return 'kbagent doctor';
+    case 'sessionExpired':
+      return 'kbagent auth login';
     default:
       return undefined;
   }

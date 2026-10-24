@@ -30,13 +30,15 @@ interface SpecInput {
   readonly agents: readonly AgentDefinition[];
   readonly skills: readonly SkillInfo[];
   readonly language: LanguageCode;
+  /** What the analyst may do in Keboola, for every agent's prompt; absent until the app has read it. */
+  readonly access?: string;
   readonly resolveTools: ToolResolver;
 }
 
 const APPROVAL: InterruptOnConfig = { allowedDecisions: ['approve', 'reject'] };
 
 /** Pure description of the team: prompts, tools, skills, permissions and approvals for every agent. */
-export function buildTeamSpec({ agents, skills, language, resolveTools }: SpecInput): TeamSpec {
+export function buildTeamSpec({ agents, skills, language, resolveTools, access }: SpecInput): TeamSpec {
   const lead = agents.find((agent) => agent.enabled && agent.role === 'orchestrator');
   if (!lead) throw new Error('No enabled orchestrator agent found in agents/');
 
@@ -64,10 +66,10 @@ export function buildTeamSpec({ agents, skills, language, resolveTools }: SpecIn
     return { spec, warnings };
   };
 
-  const leadResult = toSpec(lead, buildOrchestratorPrompt({ agentPrompt: lead.prompt, language }));
+  const leadResult = toSpec(lead, buildOrchestratorPrompt({ agentPrompt: lead.prompt, language, ...(access ? { access } : {}) }));
   const subResults = agents
     .filter((agent) => agent.enabled && agent.role === 'subagent')
-    .map((agent) => toSpec(agent, buildSubagentPrompt({ agentPrompt: agent.prompt })));
+    .map((agent) => toSpec(agent, buildSubagentPrompt({ agentPrompt: agent.prompt, ...(access ? { access } : {}) })));
 
   return {
     lead: leadResult.spec,

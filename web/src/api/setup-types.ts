@@ -1,7 +1,7 @@
 /** First-run setup contract. Keep in sync with server/src/setup/checks.ts and server/src/setup/service.ts. */
 import type { KeboolaProject } from './types.ts';
 
-export type SetupStepId = 'omniroute' | 'apiKey' | 'model' | 'kbagent' | 'projects' | 'project';
+export type SetupStepId = 'omniroute' | 'apiKey' | 'model' | 'kbagent' | 'projects' | 'project' | 'access';
 export type SetupStatus = 'ok' | 'fail' | 'blocked';
 export type SetupReason =
   | 'unreachable'
@@ -14,7 +14,9 @@ export type SetupReason =
   | 'projectsNone'
   | 'projectsFailed'
   | 'projectMissing'
-  | 'projectUnknown';
+  | 'projectUnknown'
+  | 'sessionExpired'
+  | 'accessUnreadable';
 
 export interface SetupStep {
   readonly id: SetupStepId;

@@ -1,6 +1,7 @@
 // The runner and env only, not the agent tools: `npm run doctor` loads this file without LangChain.
 import { buildChildEnv } from '../tools/kbagent/env.ts';
 import { type ExecFn, runKbagent } from '../tools/kbagent/runner.ts';
+import { type KeboolaAccess, readKeboolaAccess } from './keboola-access.ts';
 
 export interface KeboolaProject {
   readonly alias: string;
@@ -45,4 +46,9 @@ export async function kbagentVersion(options: Options = {}): Promise<string> {
   // No exit code: the process never ran (or was killed), almost always because kbagent is not installed.
   if (!result.ok) throw new Error(result.exitCode === null ? 'not installed or not on PATH' : `kbagent --version failed (exit ${result.exitCode})`);
   return String(result.output).trim();
+}
+
+/** What the analyst may do in the project (role, features, how changes reach production); read-only calls. */
+export function keboolaAccess(project: string | undefined, options: Options = {}): Promise<KeboolaAccess> {
+  return readKeboolaAccess({ run: (argv) => run(argv, options), ...(project ? { project } : {}) });
 }

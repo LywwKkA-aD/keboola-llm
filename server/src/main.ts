@@ -24,7 +24,8 @@ import { createRoutines } from './routines/service.ts';
 import { createNoteStore, MAX_MEMORY_BYTES } from './knowledge/store.ts';
 import { watchFolders } from './runtime/watch.ts';
 import { createSetupService } from './setup/service.ts';
-import { kbagentVersion, listKeboolaProjects } from './system/keboola.ts';
+import { kbagentVersion, keboolaAccess, listKeboolaProjects } from './system/keboola.ts';
+import { accessSummary, type KeboolaAccess, shortAccess } from './system/keboola-access.ts';
 import { listModels } from './system/models.ts';
 import { onboardingStatus } from './system/onboarding.ts';
 import { previewPromotion } from './system/promotion.ts';
@@ -110,6 +111,27 @@ const stopWatching = watchFolders(
 // Scheduled routines (routines/*.md) open chats on their own; they start once the server listens.
 const routines = createRoutines({ rootDir: app.env.rootDir, dataDir: app.env.dataDir, threads, runs });
 
+// What the analyst may do in Keboola (role, project features). Rebuild the team only when it changes what the agents
+// are told or which tools they get; a failed read keeps the last known access.
+const ACCESS_REFRESH_MS = 15 * 60_000;
+let accessKey = '';
+async function refreshAccess(): Promise<void> {
+  let next: KeboolaAccess;
+  try {
+    next = await keboolaAccess(team.effective.keboolaProject || undefined);
+  } catch (error) {
+    console.warn(`[access] could not read the Keboola access: ${(error as Error).message}`);
+    return;
+  }
+  const key = `${next.changePath}\n${accessSummary(next)}`;
+  if (key === accessKey) return;
+  accessKey = key;
+  app.setKeboolaAccess(next);
+  team = app.buildTeam(settings);
+  console.log(`Keboola access: ${shortAccess(next)}`);
+  bus.publish(SYSTEM_THREAD, { type: 'team.updated' });
+}
+
 const server = await createServer({
   bus,
   runs,
@@ -119,9 +141,11 @@ const server = await createServer({
   settings: {
     get: () => settings,
     set: (patch) => {
+      const project = settings.keboolaProject;
       settings = saveSettings(app.settingsFile, settings, patch);
       // Language, model and Keboola project all live in the agents prompts or tools: rebuild the team.
       team = app.buildTeam(settings);
+      if (settings.keboolaProject !== project) void refreshAccess();
       return settings;
     },
   },
@@ -158,6 +182,7 @@ const server = await createServer({
     current: () => ({ omniroute: app.env.omniroute, ...team.effective }),
     kbagentVersion: () => kbagentVersion(),
     keboolaProjects: () => listKeboolaProjects(),
+    keboolaAccess: () => keboolaAccess(team.effective.keboolaProject || undefined),
     apply: (omniroute) => {
       // The key form in the setup wizard: new models for the next runs, no restart.
       app.setOmniRoute(omniroute);
@@ -177,6 +202,9 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 await server.listen({ host: app.env.host, port: app.env.port });
+// The analyst's access decides how changes reach production; read it now and again every quarter of an hour.
+void refreshAccess();
+setInterval(() => void refreshAccess(), ACCESS_REFRESH_MS).unref();
 console.log(`Agent team: ${team.spec.lead.name} + ${team.spec.subagents.length} subagents`);
 console.log(`Listening on http://${app.env.host}:${app.env.port}`);
 routines.start();

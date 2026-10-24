@@ -118,4 +118,15 @@ describe('bootstrap', () => {
     expect(app.env.keboolaProject).toBe('sandbox');
     expect(app.buildTeam(DEFAULT_SETTINGS).effective.model).toBe('cc/test');
   });
+
+  it('builds the team for the analyst Keboola access once the app has read it', () => {
+    const app = bootstrap(repo());
+    expect(app.buildTeam(DEFAULT_SETTINGS).spec.lead.systemPrompt).not.toContain('Keboola access');
+    app.setKeboolaAccess({ project: 'sandbox', backend: 'snowflake', role: 'readOnly', mergeRequests: false, protectedProduction: false, changePath: 'read-only', sql: false });
+    const { spec } = app.buildTeam(DEFAULT_SETTINGS);
+    expect(spec.lead.systemPrompt).toContain('## Keboola access');
+    expect(spec.lead.systemPrompt).toMatch(/read-only/);
+    expect(spec.subagents[0]?.systemPrompt).toContain('## Keboola access');
+  });
 });
+
