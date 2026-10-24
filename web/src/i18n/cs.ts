@@ -88,6 +88,7 @@ export const cs: Record<StringKey, string> = {
   'approval.title': 'Je potřeba schválení',
   'approval.approve': 'Schválit',
   'approval.reject': 'Zamítnout',
+  'approval.plan': 'Plán změn',
   'approvals.label': 'Schválení',
   'approvals.title': 'Akce agentů čekají na rozhodnutí',
   'approvals.pending': 'Čeká na rozhodnutí',

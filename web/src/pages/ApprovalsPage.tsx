@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { RequestDetails } from '../components/approvals/RequestDetails.tsx';
+import { RequestDetails, requestLabel } from '../components/approvals/RequestDetails.tsx';
 import { useAnswer } from '../components/approvals/useAnswer.ts';
 import { shortName } from '../components/home/mood.ts';
 import { useLive } from '../live/live-context.tsx';
@@ -74,7 +74,7 @@ export function ApprovalsPage() {
               <span className="label">{t('approvals.params')}</span>
               {selected.requests.map((request, index) => (
                 <div key={`${selected.interruptId}-${index}`} className="approval-detail__request">
-                  <div className="mono">{request.tool}</div>
+                  <div className="mono">{requestLabel(request, t)}</div>
                   <RequestDetails request={request} />
                 </div>
               ))}

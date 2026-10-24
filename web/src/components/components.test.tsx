@@ -58,6 +58,25 @@ describe('ApprovalCard', () => {
     expect(onAnswer.mock.lastCall?.[0][0].type).toBe('reject');
   });
 
+  it('shows a plan the lead asks to approve as readable Markdown under a plain title', () => {
+    const plan = {
+      interruptId: 'p',
+      requests: [
+        {
+          tool: 'request_plan_approval',
+          agent: 'lead',
+          args: { title: 'Fix the shipping fan-out', plan: '1. Create a **dev branch**\n2. Edit Shop 02' },
+          decisions: ['approve', 'reject'],
+        },
+      ],
+    };
+    render(<ApprovalCard approval={plan} onAnswer={() => {}} busy={false} />);
+    expect(screen.getByText('План изменений')).toBeInTheDocument();
+    expect(screen.queryByText('request_plan_approval')).toBeNull();
+    expect(screen.getByText('Fix the shipping fan-out')).toBeInTheDocument();
+    expect(screen.getByText('dev branch').tagName).toBe('STRONG');
+  });
+
   it('falls back to raw JSON for other tools', () => {
     render(<ApprovalCard approval={{ interruptId: 'i', requests: [{ tool: 'other', args: { a: 1 }, decisions: [] }] }} onAnswer={() => {}} busy />);
     expect(screen.getByText(/"a": 1/)).toBeInTheDocument();

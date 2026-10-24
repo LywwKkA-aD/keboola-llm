@@ -88,6 +88,7 @@ export const ru: Record<StringKey, string> = {
   'approval.title': 'Нужно подтверждение',
   'approval.approve': 'Разрешить',
   'approval.reject': 'Отклонить',
+  'approval.plan': 'План изменений',
   'approvals.label': 'Подтверждения',
   'approvals.title': 'Действия агентов ждут решения',
   'approvals.pending': 'Ожидают решения',

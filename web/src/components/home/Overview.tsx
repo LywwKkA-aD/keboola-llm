@@ -5,7 +5,7 @@ import type { Thread } from '../../api/types.ts';
 import { formatTokens } from '../../lib/format.ts';
 import { useLive } from '../../live/live-context.tsx';
 import { useSettings } from '../../state/settings-context.tsx';
-import { RequestDetails } from '../approvals/RequestDetails.tsx';
+import { RequestDetails, requestLabel } from '../approvals/RequestDetails.tsx';
 import { useAnswer } from '../approvals/useAnswer.ts';
 import { FeedList } from './FeedList.tsx';
 import { OnboardingCard } from './OnboardingCard.tsx';
@@ -76,7 +76,7 @@ export function Overview({ enabledAgents }: { enabledAgents: number }) {
           approvals.map((entry) => (
             <article key={entry.interruptId} className="mini-approval">
               <div className="mini-approval__head">
-                <span className="chip chip--amber">{entry.requests[0]?.tool}</span>
+                <span className="chip chip--amber">{entry.requests[0] ? requestLabel(entry.requests[0], t) : ''}</span>
                 {entry.requests[0]?.agent && <span className="muted">{shortName(entry.requests[0].agent)}</span>}
               </div>
               <Link className="mini-approval__chat" to={`/chat/${entry.threadId}`}>

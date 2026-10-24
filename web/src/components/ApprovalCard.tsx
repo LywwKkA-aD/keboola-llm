@@ -1,7 +1,7 @@
 import type { Decision } from '../api/types.ts';
 import type { PendingApproval } from '../state/run-state.ts';
 import { useSettings } from '../state/settings-context.tsx';
-import { RequestDetails } from './approvals/RequestDetails.tsx';
+import { RequestDetails, requestLabel } from './approvals/RequestDetails.tsx';
 import { shortName } from './home/mood.ts';
 
 export function ApprovalCard({ approval, onAnswer, busy }: {
@@ -19,7 +19,7 @@ export function ApprovalCard({ approval, onAnswer, busy }: {
       {approval.requests.map((request, index) => (
         <div className="approval__request" key={`${approval.interruptId}-${index}`}>
           <div className="approval__tool mono">
-            {request.tool}
+            {requestLabel(request, t)}
             {request.agent && <span className="muted"> · {shortName(request.agent)}</span>}
           </div>
           <RequestDetails request={request} />

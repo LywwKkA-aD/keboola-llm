@@ -86,6 +86,7 @@ export const en = {
   'approval.title': 'Approval needed',
   'approval.approve': 'Approve',
   'approval.reject': 'Reject',
+  'approval.plan': 'Plan of changes',
   'approvals.label': 'Approvals',
   'approvals.title': 'Agent actions waiting for your decision',
   'approvals.pending': 'Pending',

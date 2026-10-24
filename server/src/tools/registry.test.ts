@@ -43,4 +43,13 @@ describe('kbagent-sql tool id', () => {
     const [sql] = factories['kbagent-sql']?.(agent({ access: 'read', project: 'other' })).tools ?? [];
     expect(sql?.description).toContain('"other"');
   });
+
+  it('offers the plan approval as a tool that always waits for the user', async () => {
+    const bundle = factories['plan-approval']?.(agent());
+    expect(bundle?.tools.map((tool) => tool.name)).toEqual(['request_plan_approval']);
+    expect(bundle?.interruptOn).toEqual({ request_plan_approval: { allowedDecisions: ['approve', 'reject'] } });
+    // It only runs once the user approved, so its answer says exactly that.
+    const result = await bundle?.tools[0]?.invoke({ title: 'Fix the shipping fan-out', plan: '1. Branch\n2. Edit' });
+    expect(String(result)).toMatch(/approved/i);
+  });
 });

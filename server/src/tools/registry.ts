@@ -2,6 +2,7 @@ import type { InterruptOnConfig } from 'langchain';
 import type { AgentDefinition } from '../registry/types.ts';
 import type { ToolFactory } from './catalog.ts';
 import { createKbagentSqlTool, createKbagentTools } from './kbagent/index.ts';
+import { createPlanApprovalTool, PLAN_TOOL } from './plan.ts';
 
 const NO_APPROVALS: Readonly<Record<string, InterruptOnConfig>> = {};
 const WRITE_APPROVAL: Readonly<Record<string, InterruptOnConfig>> = {
@@ -32,6 +33,11 @@ export function createToolFactories({ defaultProject }: { defaultProject: string
     'kbagent-sql': (agent) => ({
       tools: [createKbagentSqlTool(scopeOf(agent, defaultProject))],
       interruptOn: SQL_APPROVAL,
+    }),
+    // Never auto-approved: agreeing a plan is the user's decision.
+    'plan-approval': () => ({
+      tools: [createPlanApprovalTool()],
+      interruptOn: { [PLAN_TOOL]: { allowedDecisions: ['approve', 'reject'] } },
     }),
   };
 }
