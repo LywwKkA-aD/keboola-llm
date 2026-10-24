@@ -43,16 +43,18 @@ enabled: true
     expect(items[1]).toMatchObject({ title: 'Weekly refresh', schedule: '0 7 * * MON', timezone: 'Europe/Prague', enabled: true });
   });
 
-  it('ships the morning check and the weekly profile refresh, both switched off', () => {
+  it('ships the morning check, the weekly profile refresh and the memory tidy-up, all switched off', () => {
     const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
     const { items, errors } = loadRoutines(repoRoot);
 
     expect(errors).toEqual([]);
     expect(items.map(({ name, schedule, enabled }) => ({ name, schedule, enabled }))).toEqual([
+      { name: 'memory-tidy', schedule: '0 17 * * 5', enabled: false },
       { name: 'morning-check', schedule: '0 8 * * 1-5', enabled: false },
       { name: 'profile-refresh', schedule: '0 7 * * 1', enabled: false },
     ]);
-    expect(items[1]?.prompt).toContain('project-scout');
+    expect(items[2]?.prompt).toContain('project-scout');
+    expect(items[0]?.prompt).toContain('/memories/AGENTS.md');
   });
 
   it('has no routines and no errors without a routines folder', () => {
