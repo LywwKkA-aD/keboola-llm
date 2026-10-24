@@ -239,14 +239,8 @@
   gap: var(--space-4);
 }
 
-.memory {
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  margin: 0;
-  max-height: 360px;
-  overflow: auto;
-  padding: var(--space-3);
-  white-space: pre-wrap;
+.settings__memory-link {
+  align-self: flex-start;
 }
 
 .checks {

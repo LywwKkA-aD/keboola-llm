@@ -18,3 +18,14 @@ export function formatTokens(count: number): string {
 export function formatClock(at: number | Date, language: string): string {
   return new Date(at).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' });
 }
+
+/** Local date and time, "Oct 24, 2026, 12:00". */
+export function formatDateTime(at: string | number | Date, language: string): string {
+  return new Date(at).toLocaleString(language, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+/** A file size in kilobytes, "1.5 kB"; anything not empty shows at least 0.1. */
+export function formatSize(bytes: number, language: string): string {
+  const kilobytes = bytes > 0 ? Math.max(bytes / 1024, 0.1) : 0;
+  return new Intl.NumberFormat(language, { style: 'unit', unit: 'kilobyte', maximumFractionDigits: 1 }).format(kilobytes);
+}

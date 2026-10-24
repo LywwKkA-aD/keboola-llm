@@ -12,6 +12,7 @@ import './styles/shell.css';
 import './styles/home.css';
 import './styles/chat.css';
 import './styles/pages.css';
+import './styles/knowledge.css';
 
 const root = document.getElementById('root');
 if (root) {

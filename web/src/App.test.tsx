@@ -28,7 +28,6 @@ const SYSTEM = {
 const settingsRoutes = {
   'GET /api/models': { models: ['a/model', 'b/model'], current: 'a/model' },
   'GET /api/keboola/projects': { projects: [{ alias: 'sandbox', name: 'Sandbox', id: 6487, stackUrl: 'https://x', isDefault: true }], current: 'sandbox' },
-  'GET /api/memory': { content: '# Shared memory\n- Backend is BigQuery' },
   'GET /api/system': SYSTEM,
 };
 
@@ -104,7 +103,7 @@ describe('Settings page', () => {
     expect(callsTo('PUT', '/api/settings')[2]?.body).toEqual({ quality: 'low' });
   });
 
-  it('picks the model and Keboola project, toggles default SQL and shows memory and system checks', async () => {
+  it('picks the model and Keboola project, toggles default SQL, links to the memory and shows system checks', async () => {
     const { callsTo } = stubApi({
       ...baseRoutes,
       ...settingsRoutes,
@@ -124,7 +123,7 @@ describe('Settings page', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Разрешать SQL в новых чатах по умолчанию' }));
     expect(callsTo('PUT', '/api/settings')[2]?.body).toEqual({ allowSqlByDefault: true });
 
-    expect(screen.getByText(/Backend is BigQuery/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Открыть на странице «Знания»' })).toHaveAttribute('href', '/knowledge?tab=memory');
     expect(await screen.findByText('not installed')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Обновить' }));
     expect(callsTo('GET', '/api/system')).toHaveLength(2);
@@ -135,7 +134,6 @@ describe('Settings page', () => {
       ...baseRoutes,
       'GET /api/models': () => errorResponse(502, 'down'),
       'GET /api/keboola/projects': () => errorResponse(502, 'down'),
-      'GET /api/memory': { content: '' },
       'GET /api/system': () => errorResponse(500, 'Internal error'),
       'PUT /api/settings': () => errorResponse(400, 'Invalid request'),
     });
@@ -144,7 +142,6 @@ describe('Settings page', () => {
 
     expect(await screen.findByText('OmniRoute недоступен')).toBeInTheDocument();
     expect(await screen.findByText('kbagent недоступен')).toBeInTheDocument();
-    expect(screen.getByText('Пока ничего не запомнено.')).toBeInTheDocument();
     expect(await screen.findByText('Internal error')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('radio', { name: 'Светлая' }));
     expect(await screen.findByText('Invalid request')).toBeInTheDocument();

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import { api } from '../api/client.ts';
 import type { KeboolaProject, Language, Quality, ReduceMotion, Settings, Theme } from '../api/types.ts';
 import { EnvSelect, Segmented, SelectField, SettingsSection } from '../components/settings/fields.tsx';
@@ -17,12 +18,10 @@ export function SettingsPage() {
   const [modelsFailed, setModelsFailed] = useState(false);
   const [projects, setProjects] = useState<readonly KeboolaProject[]>([]);
   const [projectsFailed, setProjectsFailed] = useState(false);
-  const [memory, setMemory] = useState<string>();
 
   useEffect(() => {
     api.models().then((result) => setModels(result.models), () => setModelsFailed(true));
     api.keboolaProjects().then((result) => setProjects(result.projects), () => setProjectsFailed(true));
-    api.memory().then((result) => setMemory(result.content), () => setMemory(''));
   }, []);
 
   const save = async (patch: Partial<Settings>) => {
@@ -120,7 +119,9 @@ export function SettingsPage() {
       <RoutinesSection />
 
       <SettingsSection title={t('settings.memory')} hint={t('settings.memoryHint')}>
-        {memory ? <pre className="memory">{memory}</pre> : <p className="empty">{memory === undefined ? '…' : t('settings.memoryEmpty')}</p>}
+        <Link className="btn settings__memory-link" to="/knowledge?tab=memory">
+          {t('settings.memoryOpen')}
+        </Link>
       </SettingsSection>
 
       <SettingsSection title={t('settings.system')}>

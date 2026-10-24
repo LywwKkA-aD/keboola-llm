@@ -9,6 +9,7 @@ const NAV: readonly (readonly [string, StringKey, boolean])[] = [
   ['/', 'nav.home', true],
   ['/chat', 'nav.chats', false],
   ['/agents', 'nav.agents', false],
+  ['/knowledge', 'nav.knowledge', false],
   ['/approvals', 'nav.approvals', false],
   ['/settings', 'nav.settings', false],
 ];
