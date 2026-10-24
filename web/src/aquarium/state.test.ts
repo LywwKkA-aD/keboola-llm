@@ -43,6 +43,20 @@ describe('reduceAquarium', () => {
     expect(after.agents['keboola-expert']?.activity).toBe('thinking');
   });
 
+  it('remembers the station of the task while the agent thinks between tool calls', () => {
+    const state = play([
+      env({ type: 'delegate.start', agent: 'lead', callId: 'd', to: 'keboola-expert', task: 'Find tables' }),
+      env({ type: 'tool.start', agent: 'keboola-expert', callId: 't', tool: 'kbagent_read', args: {} }),
+      env({ type: 'tool.end', agent: 'keboola-expert', callId: 't', tool: 'kbagent_read', ok: true, preview: '' }),
+      env({ type: 'token', agent: 'keboola-expert', text: 'Found two' }),
+    ]);
+    expect(state.agents['keboola-expert']).toMatchObject({ activity: 'thinking', work: 'computing' });
+
+    const done = reduceAquarium(state, env({ type: 'delegate.end', agent: 'lead', callId: 'd', to: 'keboola-expert', ok: true }), at);
+    expect(done.agents['keboola-expert']?.activity).toBe('idle');
+    expect(done.agents['keboola-expert']?.work).toBeUndefined();
+  });
+
   it('lets a finished subagent rest and the lead think again', () => {
     const state = play([
       env({ type: 'delegate.start', agent: 'lead', callId: 'd', to: 'helper', task: 'x' }),

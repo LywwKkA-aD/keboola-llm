@@ -1,7 +1,11 @@
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { AdditiveBlending, Color, type Group, type MeshBasicMaterial } from 'three';
-import { APPROVAL_DAIS, STATIONS_3D, stationSlots } from '../../layout3d.ts';
+import { STATIONS_3D, stationSlots } from '../../layout3d.ts';
+import type { Vec3 } from '../../mascot.ts';
+
+/** The checkpoint dais stands this far ahead of the middle pad, where the waiting agents look. */
+const DAIS_AHEAD = 1.8;
 
 const FLOOR = -0.6;
 const METAL = { color: '#0d1520', metalness: 0.75, roughness: 0.35 } as const;
@@ -21,7 +25,8 @@ export function WaitingArea({ waiting, motion }: { waiting: number; motion: bool
   const column = useRef<MeshBasicMaterial>(null);
   const color = useMemo(() => new Color(), []);
   const { facing } = STATIONS_3D.beacon;
-  const center: [number, number, number] = [APPROVAL_DAIS[0], FLOOR, APPROVAL_DAIS[2]];
+  const [mx, , mz] = (pads[Math.floor(pads.length / 2)] ?? STATIONS_3D.beacon.position) as Vec3;
+  const center: [number, number, number] = [mx + Math.sin(facing) * DAIS_AHEAD, FLOOR, mz + Math.cos(facing) * DAIS_AHEAD];
   const active = waiting > 0;
 
   useFrame(({ clock }, delta) => {

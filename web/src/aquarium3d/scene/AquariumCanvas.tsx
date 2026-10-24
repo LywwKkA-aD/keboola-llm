@@ -8,7 +8,6 @@ import { CameraRig, OVERVIEW } from './CameraRig.tsx';
 import { Effects } from './Effects.tsx';
 import { Links } from './Links.tsx';
 import { Octopus3D } from './Octopus3D.tsx';
-import { Docks } from './datacenter/Docks.tsx';
 import { Hall } from './datacenter/Hall.tsx';
 import { Stations } from './datacenter/Stations.tsx';
 import { Sparks } from './Sparks.tsx';
@@ -67,7 +66,6 @@ export default function AquariumCanvas({ agents, lead, state, now, selected, onS
       <Hall particles={PARTICLES[quality]} motion={motion} />
       <Lights />
       <Stations active={model.stations} occupancy={model.occupancy} motion={motion} />
-      <Docks count={Math.max(0, agents.length - 1)} />
       {agents.map((agent) => {
         const spot = model.spots[agent.name];
         if (!spot) return null;

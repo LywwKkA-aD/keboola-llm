@@ -21,6 +21,11 @@ export interface AgentState {
   readonly threadId: string;
   /** For a delegating lead: whom it is talking to. */
   readonly partner?: string;
+  /**
+   * What the agent's current task has it doing at a station (e.g. computing in Keboola). Kept while it thinks between
+   * tool calls, so it stays at that station instead of walking back to rest after every call.
+   */
+  readonly work?: AgentActivity;
 }
 
 export interface AquariumState {
@@ -37,6 +42,9 @@ export const initialAquarium = (lead: string): AquariumState => ({ lead, agents:
 const READ_TOOLS = new Set(['read_file', 'ls', 'glob', 'grep']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
 
+/** Activities that put an agent at a station for the rest of its task (planning only does for the lead). */
+const STATION_WORK: ReadonlySet<AgentActivity> = new Set(['reading', 'writing', 'computing', 'querying', 'working']);
+
 export function activityForTool(tool: string, _args: Readonly<Record<string, unknown>>): AgentActivity {
   if (READ_TOOLS.has(tool)) return 'reading';
   if (WRITE_TOOLS.has(tool)) return 'writing';
@@ -45,6 +53,8 @@ export function activityForTool(tool: string, _args: Readonly<Record<string, unk
   if (tool === 'write_todos') return 'planning';
   return 'working';
 }
+
+const workOf = (agent: AgentState | undefined) => (agent?.work ? { work: agent.work } : {});
 
 const labelOf = (tool: string, args: Readonly<Record<string, unknown>>) => {
   const hint = [args.purpose, args.file_path, args.path, args.pattern].find((value) => typeof value === 'string');
@@ -74,17 +84,21 @@ export function reduceAquarium(state: AquariumState, { threadId, event }: Envelo
     case 'run.failed':
       return settleThread(state, threadId, 'error', now);
     case 'token': {
-      if (state.agents[event.agent]?.activity === 'waiting') return state;
-      return set(state, event.agent, { activity: 'thinking', label: state.agents[event.agent]?.label ?? '', threadId }, now);
+      const current = state.agents[event.agent];
+      if (current?.activity === 'waiting') return state;
+      return set(state, event.agent, { activity: 'thinking', label: current?.label ?? '', threadId, ...workOf(current) }, now);
     }
     case 'tool.start': {
-      const next = set(state, event.agent, { activity: activityForTool(event.tool, event.args), label: labelOf(event.tool, event.args), threadId }, now);
+      const activity = activityForTool(event.tool, event.args);
+      const work = STATION_WORK.has(activity) ? { work: activity } : workOf(state.agents[event.agent]);
+      const next = set(state, event.agent, { activity, label: labelOf(event.tool, event.args), threadId, ...work }, now);
       return { ...next, lastToolUser: { ...next.lastToolUser, [event.tool]: event.agent } };
     }
     case 'tool.end':
-      return set(state, event.agent, { activity: 'thinking', label: '', threadId }, now);
+      return set(state, event.agent, { activity: 'thinking', label: '', threadId, ...workOf(state.agents[event.agent]) }, now);
     case 'delegate.start': {
       const lead = set(state, event.agent, { activity: 'delegating', label: event.task, threadId, partner: event.to }, now);
+      // A new task: the delegate starts it from wherever it rests.
       return set(lead, event.to, { activity: 'thinking', label: event.task, threadId }, now);
     }
     case 'delegate.end': {
@@ -94,7 +108,7 @@ export function reduceAquarium(state: AquariumState, { threadId, event }: Envelo
     case 'approval.required':
       return event.requests.reduce((current, request) => {
         const agent = current.lastToolUser[request.tool] ?? current.lead;
-        return set(current, agent, { activity: 'waiting', label: request.tool, threadId }, now);
+        return set(current, agent, { activity: 'waiting', label: request.tool, threadId, ...workOf(current.agents[agent]) }, now);
       }, state);
     default:
       return state;

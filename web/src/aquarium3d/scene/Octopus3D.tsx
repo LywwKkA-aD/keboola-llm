@@ -3,11 +3,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CatmullRomCurve3, Color, DoubleSide, type Group, LatheGeometry, type Mesh, type MeshBasicMaterial, MathUtils, SphereGeometry, TubeGeometry, Vector2, Vector3 } from 'three';
 import type { AgentActivity } from '../../aquarium/state.ts';
 import { dampAngle } from '../angles.ts';
+import { route } from '../floorplan.ts';
 import type { Spot } from '../layout3d.ts';
-import { BRAND_BLUE, HEAD, headProfile, TENTACLES, tentaclePath } from '../mascot.ts';
+import { BRAND_BLUE, HEAD, headProfile, TENTACLES, tentaclePath, type Vec3 } from '../mascot.ts';
 import { auraFor } from '../status.ts';
 import { Label } from './Label.tsx';
 import { skinMaterial, tentacleMaterial, withAlongAttribute } from './tentacleMaterial.ts';
+
+/** Walking pace along the aisles (scene units per second). */
+const WALK_SPEED = 2.6;
 
 const headGeometry = new LatheGeometry(headProfile().map(([r, y]) => new Vector2(r, y)), 56);
 const eyeGeometry = new SphereGeometry(0.085, 20, 16);
@@ -59,9 +63,12 @@ export function Octopus3D({ name, caption, mood, spot, selected, motion, onSelec
 
   useEffect(() => {
     if (root.current) root.current.position.set(...spot.position);
-    // Only on mount: afterwards the octopus swims to new spots.
+    // Only on mount: afterwards the octopus walks to new spots.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The way to the current spot along the aisles; recomputed whenever the spot changes.
+  const walk = useRef<{ key: string; points: Vector3[]; next: number; speed: number }>({ key: '', points: [], next: 0, speed: 0 });
 
   useEffect(() => {
     document.body.style.cursor = hovered ? 'pointer' : '';
@@ -75,17 +82,36 @@ export function Octopus3D({ name, caption, mood, spot, selected, motion, onSelec
     if (!group) return;
     const t = motion ? clock.elapsedTime : 0;
     const dt = Math.min(delta, 0.05);
-    const [tx, ty, tz] = spot.position;
-    const before = group.position.clone();
-    const lambda = motion ? 1.4 : 20;
-    group.position.x = MathUtils.damp(group.position.x, tx, lambda, dt);
-    group.position.z = MathUtils.damp(group.position.z, tz, lambda, dt);
-    group.position.y = MathUtils.damp(group.position.y, ty, lambda, dt);
-    const speed = before.distanceTo(group.position) / Math.max(dt, 1e-3);
-    const swimming = speed > 0.4;
-
-    const heading = swimming ? Math.atan2(tx - before.x, tz - before.z) : spot.facing;
-    group.rotation.y = dampAngle(group.rotation.y, heading, 3, dt);
+    const key = spot.position.join(',');
+    const way = walk.current;
+    if (way.key !== key) {
+      const from: Vec3 = [group.position.x, spot.position[1], group.position.z];
+      way.key = key;
+      way.points = route(from, spot.position).slice(1).map((point) => new Vector3(...point));
+      way.next = 0;
+    }
+    if (!motion) {
+      group.position.set(...spot.position);
+      way.next = way.points.length;
+    }
+    const target = way.points[way.next];
+    // Ease into a walking pace and out of it at the last point; corners keep the pace.
+    const remaining = target ? group.position.distanceTo(target) + way.points.slice(way.next + 1).reduce((sum, p, i) => sum + p.distanceTo(way.points[way.next + i] as Vector3), 0) : 0;
+    const pace = target ? Math.min(WALK_SPEED, 0.6 + remaining * 1.4) : 0;
+    way.speed = MathUtils.damp(way.speed, pace, 4, dt);
+    const heading = target ? Math.atan2(target.x - group.position.x, target.z - group.position.z) : spot.facing;
+    if (target) {
+      const step = way.speed * dt;
+      const gap = group.position.distanceTo(target);
+      if (gap <= Math.max(step, 0.02)) {
+        group.position.copy(target);
+        way.next += 1;
+      } else {
+        group.position.addScaledVector(target.clone().sub(group.position).normalize(), step);
+      }
+    }
+    const swimming = way.speed > 0.4;
+    group.rotation.y = dampAngle(group.rotation.y, heading, swimming ? 6 : 3, dt);
     if (body.current) {
       body.current.position.y = Math.sin(t * 0.9 + seed) * 0.09;
       body.current.rotation.x = MathUtils.damp(body.current.rotation.x, swimming ? 0.35 : 0, 3, dt);

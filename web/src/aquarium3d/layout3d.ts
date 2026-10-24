@@ -1,45 +1,15 @@
 import type { AgentActivity } from '../aquarium/state.ts';
+import { IDLE_SPOTS, type Spot, STATION_FACING, STATION_SPOTS, type StationId } from './floorplan.ts';
 import type { Vec3 } from './mascot.ts';
 
-export interface Spot {
-  readonly position: Vec3;
-  /** Yaw (radians) the octopus turns to; 0 faces the camera side (+z). */
-  readonly facing: number;
-}
+export type { Spot, StationId } from './floorplan.ts';
 
-export type StationId = 'command' | 'archive' | 'console' | 'forge' | 'beacon';
+const IDS: readonly StationId[] = ['command', 'archive', 'console', 'forge', 'beacon'];
 
-const FORGE: Spot = { position: [-3.9, 0.2, 6.0], facing: -Math.PI / 4 };
-
-/** How far ahead of the build agent the fabricator stands. */
-export const BUILD_AHEAD = 1.6;
-
-/** The approvals dais mirrors the build fabricator across the hall's centre line (x = 0). */
-export const APPROVAL_DAIS: Vec3 = [
-  -(FORGE.position[0] + Math.sin(FORGE.facing) * BUILD_AHEAD),
-  -0.6,
-  FORGE.position[2] + Math.cos(FORGE.facing) * BUILD_AHEAD,
-];
-
-/** Waiting agents stand this far from the dais, looking toward the centre of the hall. */
-export const WAIT_GAP = 1.7;
-// A diagonal column: straight down the line of sight the waiting agents would hide each other.
-const WAIT_FACING = -1.2;
-
-/** Work stations on the floor. Position is where the first agent stands; facing turns it to the station. */
-export const STATIONS_3D: Readonly<Record<StationId, Spot & { readonly label: string }>> = {
-  command: { position: [0, 0.4, 1.2], facing: 0, label: 'command' },
-  archive: { position: [-7.6, 0.2, 0.2], facing: -Math.PI / 2, label: 'archive' },
-  // Mirror of the knowledge archive on the right side.
-  console: { position: [7.6, 0.2, 0.2], facing: Math.PI / 2, label: 'console' },
-  forge: { ...FORGE, label: 'forge' },
-  // Three pads in a column left of the dais; waiting agents look toward the centre of the hall.
-  beacon: {
-    position: [APPROVAL_DAIS[0] + Math.sin(WAIT_FACING) * WAIT_GAP, 0.2, APPROVAL_DAIS[2] + Math.cos(WAIT_FACING) * WAIT_GAP],
-    facing: WAIT_FACING,
-    label: 'beacon',
-  },
-};
+/** The first place of every station and the way agents there face. */
+export const STATIONS_3D: Readonly<Record<StationId, Spot>> = Object.fromEntries(
+  IDS.map((id) => [id, { position: STATION_SPOTS[id][0] as Vec3, facing: STATION_FACING[id] }]),
+) as Record<StationId, Spot>;
 
 const STATION_FOR: Partial<Record<AgentActivity, StationId>> = {
   reading: 'archive',
@@ -52,78 +22,52 @@ const STATION_FOR: Partial<Record<AgentActivity, StationId>> = {
   delegating: 'command',
 };
 
-const SLOT_GAP = 1.15;
-const REEF = { radius: 10.5, centerZ: 0.5, y: 0.08, from: Math.PI * 1.14, to: Math.PI * 1.86, rowGap: 1.6 } as const;
-const PER_ROW = 12;
+/** The station an activity takes an agent to, if any. */
+export const stationFor = (activity: AgentActivity): StationId | undefined => STATION_FOR[activity];
 
-/** Agents sharing a station line up beside the first one, alternating sides, along the station's tangent. */
-function slotAt(station: Spot, slot: number): Vec3 {
-  if (slot === 0) return station.position;
-  const side = slot % 2 === 1 ? 1 : -1;
-  const offset = Math.ceil(slot / 2) * SLOT_GAP * side;
-  const [x, y, z] = station.position;
-  return [x + Math.cos(station.facing) * offset, y, z - Math.sin(station.facing) * offset];
+/** When every place of a station is taken, later agents queue behind them, this far apart. */
+const QUEUE_GAP = 1.1;
+
+/** The fixed places of a station (desks, pads), where the scene draws a desk or pad for each. */
+export function stationSlots(id: StationId): readonly Vec3[] {
+  return STATION_SPOTS[id];
 }
 
-/** Stations with fixed places (desks, pads), as offsets along the station's tangent; the first is the station spot. */
-const SLOT_OFFSETS: Partial<Record<StationId, readonly number[]>> = {
-  console: [0, -1.9, 1.9],
-  // Extends back toward the centre, so nearer agents never hide farther ones and nothing leaves the frame.
-  beacon: [0, -1.55, -3.1],
-};
-const QUEUE_GAP = 1.2;
-
-const alongTangent = (station: Spot, offset: number, back: number): Vec3 => {
-  const [x, y, z] = station.position;
-  return [
-    x + Math.cos(station.facing) * offset - Math.sin(station.facing) * back,
-    y,
-    z - Math.sin(station.facing) * offset - Math.cos(station.facing) * back,
-  ];
-};
-
-/** The fixed places of a station (e.g. the Keboola desks), where the scene draws a desk or pad for each. */
-export function stationSlots(id: StationId): Vec3[] {
-  return (SLOT_OFFSETS[id] ?? [0]).map((offset) => alongTangent(STATIONS_3D[id], offset, 0));
-}
-
-/** Where the n-th agent at a station stands: its own place, or a queue behind the places when all are taken. */
+/** Where the n-th agent at a station stands: its own place, or in a queue behind the places. */
 function placeAt(id: StationId, slot: number): Vec3 {
-  const offsets = SLOT_OFFSETS[id];
-  if (!offsets) return slotAt(STATIONS_3D[id], slot);
-  const offset = offsets[slot % offsets.length] ?? 0;
-  return alongTangent(STATIONS_3D[id], offset, Math.floor(slot / offsets.length) * QUEUE_GAP);
+  const places = STATION_SPOTS[id];
+  const [x, y, z] = places[slot % places.length] as Vec3;
+  const back = Math.floor(slot / places.length) * QUEUE_GAP;
+  const facing = STATION_FACING[id];
+  return [x - Math.sin(facing) * back, y, z - Math.cos(facing) * back];
 }
 
-/** Resting places: an arc of pods behind the stations, a second arc further out when crowded. */
-export function reefSpot(index: number): Spot {
-  const row = Math.floor(index / PER_ROW);
-  const column = index % PER_ROW;
-  const t = (column + 0.5 + (row % 2) * 0.5) / PER_ROW;
-  const angle = REEF.from + (REEF.to - REEF.from) * t;
-  const radius = REEF.radius + row * REEF.rowGap;
-  const position: Vec3 = [Math.cos(angle) * radius, REEF.y + row * 0.4, REEF.centerZ + Math.sin(angle) * radius];
-  // Face the middle of the scene.
-  return { position, facing: Math.atan2(-position[0], -position[2]) };
+/** Resting places in the aisles; past the last one, agents share an aisle spot a step to the side. */
+export function restSpot(index: number): Spot {
+  const spot = IDLE_SPOTS[index % IDLE_SPOTS.length] as Spot;
+  const lap = Math.floor(index / IDLE_SPOTS.length);
+  if (lap === 0) return spot;
+  const [x, y, z] = spot.position;
+  return { position: [x, y, z + (lap % 2 === 1 ? 0.9 : -0.9) * Math.ceil(lap / 2)], facing: spot.facing };
 }
 
-/** Where every octopus should be for the current moods. Pure and deterministic. */
+/** Where every octopus should be for the activities it is placed by. Pure and deterministic. */
 export function layout3d({ names, lead, moods }: {
   names: readonly string[];
   lead: string;
   moods: Readonly<Record<string, AgentActivity>>;
 }): Record<string, Spot> {
   const others = names.filter((name) => name !== lead);
-  const home = (name: string): Spot => (name === lead ? STATIONS_3D.command : reefSpot(others.indexOf(name)));
+  const home = (name: string): Spot => (name === lead ? STATIONS_3D.command : restSpot(others.indexOf(name)));
   const used = new Map<StationId, number>();
 
   return Object.fromEntries(
     [lead, ...others].filter((name) => names.includes(name)).map((name) => {
       const stationId = STATION_FOR[moods[name] ?? 'idle'];
-      if (!stationId || (stationId === 'command' && name === lead)) return [name, home(name)];
+      if (!stationId || stationId === 'command') return [name, home(name)];
       const slot = used.get(stationId) ?? 0;
       used.set(stationId, slot + 1);
-      return [name, { position: placeAt(stationId, slot), facing: STATIONS_3D[stationId].facing }];
+      return [name, { position: placeAt(stationId, slot), facing: STATION_FACING[stationId] }];
     }),
   );
 }

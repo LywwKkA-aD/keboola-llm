@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentInfo, Envelope } from '../api/types.ts';
 import { initialAquarium, reduceAquarium } from '../aquarium/state.ts';
+import { STATION_SPOTS } from './floorplan.ts';
 import { STATIONS_3D } from './layout3d.ts';
 import { buildSceneModel } from './sceneModel.ts';
 
@@ -59,5 +60,26 @@ describe('buildSceneModel', () => {
     const later = buildSceneModel({ agents, lead: 'lead', state, now: 60_000 });
     expect(later.moods['kbc-sql-reviewer']).toBe('idle');
     expect(later.captions['kbc-sql-reviewer']).toBe('');
+  });
+
+  it('keeps a busy agent at its station while it thinks between tool calls, not walking back and forth', () => {
+    const state = play([
+      { type: 'delegate.start', agent: 'lead', callId: 'd', to: 'keboola-expert', task: 'Find tables' },
+      { type: 'tool.start', agent: 'keboola-expert', callId: 't', tool: 'kbagent_read', args: {} },
+      { type: 'tool.end', agent: 'keboola-expert', callId: 't', tool: 'kbagent_read', ok: true, preview: '' },
+    ]);
+    const model = buildSceneModel({ agents, lead: 'lead', state, now: 0 });
+    expect(model.moods['keboola-expert']).toBe('thinking');
+    expect(model.spots['keboola-expert']?.position).toEqual(STATION_SPOTS.console[0]);
+  });
+
+  it('never sends a subagent planning its own task to the lead desk', () => {
+    const state = play([
+      { type: 'delegate.start', agent: 'lead', callId: 'd', to: 'knowledge-keeper', task: 'Organize notes' },
+      { type: 'tool.start', agent: 'knowledge-keeper', callId: 'p', tool: 'write_todos', args: { todos: [] } },
+    ]);
+    const model = buildSceneModel({ agents, lead: 'lead', state, now: 0 });
+    expect(model.spots['knowledge-keeper']?.position).not.toEqual(STATION_SPOTS.command[0]);
+    expect(model.occupancy.command).toBe(1);
   });
 });
