@@ -21,7 +21,7 @@ const STATUS: Record<RunStatus, [StringKey, string]> = {
   waiting: ['chat.status.waiting', 'chip--amber'],
   failed: ['chat.status.failed', 'chip--red'],
 };
-const INTERRUPTED: [StringKey, string] = ['chat.status.interrupted', 'chip--amber'];
+const INTERRUPTED: [StringKey, string] = ['chat.status.interrupted', 'chip--red'];
 
 /**
  * One chat: header, history, the steps the team took, the live stream of the lead agent, approvals and the composer.
