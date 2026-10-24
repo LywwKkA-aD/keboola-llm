@@ -1,6 +1,6 @@
 /**
- * Start the stub LLM and the real app server against it: a fresh data dir, port 4900, a fake key and
- * no kbagent on PATH, so nothing reaches OmniRoute or Keboola. The returned function tears it all down.
+ * Start the stub LLM and the real app server against it: a fresh data dir (holding the app's .env), port 4900, a
+ * fake key and no kbagent on PATH, so nothing reaches OmniRoute or Keboola. The returned function tears it all down.
  */
 import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
@@ -33,8 +33,13 @@ function appEnv(stubUrl: string, dataDir: string): NodeJS.ProcessEnv {
     OMNIROUTE_API_KEY: 'e2e-fake-key',
     OMNIROUTE_MODEL: MODEL_ID,
     KEBOOLA_PROJECT: '',
+    // The setup wizard saves the OmniRoute key here, never to the checkout's own .env.
+    ENV_FILE: envFileIn(dataDir),
   };
 }
+
+/** The .env the app reads and the setup wizard writes; specs find it through E2E_ENV_FILE. */
+const envFileIn = (dataDir: string) => join(dataDir, 'app.env');
 
 async function waitForHealth(app: ChildProcess, output: () => string): Promise<void> {
   const deadline = Date.now() + STARTUP_TIMEOUT_MS;
@@ -69,6 +74,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
   removeE2eSkill();
   const dataDir = mkdtempSync(join(tmpdir(), 'keboola-llm-e2e-'));
+  process.env.E2E_ENV_FILE = envFileIn(dataDir);
   const stub = await startStubLlm();
   const app = spawn(process.execPath, [join('server', 'src', 'main.ts')], {
     cwd: ROOT,
