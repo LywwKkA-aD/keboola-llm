@@ -52,3 +52,5 @@ Instructions. Put long reference material into separate files next to SKILL.md a
 - Never grant `keboola: { access: write }` unless the user asked for an agent that changes Keboola.
 - Never put secrets, tokens or passwords into any file.
 - Report back what you created or changed, and how the user can try it.
+- Then tell the user that on the Agents page an agent can be tried with "Check agent", and that every agent or skill
+  change can be rolled back from its History there.
