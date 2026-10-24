@@ -68,12 +68,17 @@ export type RunEvent =
   | { readonly type: 'run.finished'; readonly runId: string }
   | { readonly type: 'run.failed'; readonly runId: string; readonly error: string }
   | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] };
+/** App-wide news, published on SYSTEM_THREAD. */
+export type SystemEvent = { readonly type: 'team.updated' };
 
 export interface ThreadPolicy {
   readonly allowSql: boolean;
 }
 
-export type BusEvent = TeamEvent | RunEvent;
+export type BusEvent = TeamEvent | RunEvent | SystemEvent;
+
+/** Thread id for events that belong to no chat. */
+export const SYSTEM_THREAD = '_system';
 
 export interface Envelope {
   readonly seq: number;

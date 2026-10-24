@@ -8,8 +8,13 @@ export type RunEvent =
   | { readonly type: 'run.failed'; readonly runId: string; readonly error: string }
   // An approval the app granted on the user's standing permission (e.g. SQL allowed for the chat).
   | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] };
+/** App-wide news, published on SYSTEM_THREAD. */
+export type SystemEvent = { readonly type: 'team.updated' };
 
-export type BusEvent = TeamEvent | RunEvent;
+export type BusEvent = TeamEvent | RunEvent | SystemEvent;
+
+/** Thread id for events that belong to no chat. */
+export const SYSTEM_THREAD = '_system';
 
 export interface Envelope {
   readonly seq: number;

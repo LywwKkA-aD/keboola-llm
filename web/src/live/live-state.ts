@@ -23,6 +23,8 @@ export interface LiveState {
   readonly usage: { readonly input: number; readonly output: number; readonly cached: number };
   /** Bumped whenever the list of pending approvals may have changed: refetch it. */
   readonly approvalsVersion: number;
+  /** Bumped when agents or skills changed on disk: refetch the team. */
+  readonly teamVersion: number;
 }
 
 const FEED_LIMIT = 80;
@@ -33,6 +35,7 @@ export const initialLive = (): LiveState => ({
   feed: [],
   usage: { input: 0, output: 0, cached: 0 },
   approvalsVersion: 0,
+  teamVersion: 0,
 });
 
 const without = (list: readonly string[], id: string) => list.filter((entry) => entry !== id);
@@ -86,6 +89,8 @@ export function reduceLive(state: LiveState, { seq, threadId, event }: Envelope,
         ...state,
         usage: { input: state.usage.input + event.input, output: state.usage.output + event.output, cached: state.usage.cached + event.cached },
       };
+    case 'team.updated':
+      return { ...state, teamVersion: state.teamVersion + 1 };
     default:
       return state;
   }

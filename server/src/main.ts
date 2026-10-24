@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { BaseMessage } from '@langchain/core/messages';
 import { createAutoApprover } from './api/auto-approve.ts';
-import { createEventBus } from './api/bus.ts';
+import { createEventBus, SYSTEM_THREAD } from './api/bus.ts';
 import { allowedFor } from './api/guard.ts';
 import { toChatHistory } from './api/history.ts';
 import { createRunManager } from './api/runs.ts';
@@ -11,6 +11,7 @@ import { describeTeam } from './api/team-info.ts';
 import { createThreadStore } from './api/threads.ts';
 import { bootstrap } from './bootstrap.ts';
 import { saveSettings } from './config/settings.ts';
+import { watchFolders } from './runtime/watch.ts';
 import { kbagentVersion, listKeboolaProjects } from './system/keboola.ts';
 import { listModels } from './system/models.ts';
 import { systemStatus } from './system/status.ts';
@@ -40,6 +41,26 @@ bus.subscribe(({ threadId, event }) => {
   if (event.type === 'run.finished' || event.type === 'run.waiting') threads.touch(threadId);
   if (event.type === 'run.failed') console.error(`[run] ${threadId}: ${event.error}`);
 });
+
+// agent-builder (or the user) edits agents/ and skills/ on disk: rebuild the team and tell the UI.
+const stopWatching = watchFolders(
+  [join(app.env.rootDir, 'agents'), join(app.env.rootDir, 'skills')],
+  () => {
+    app.reloadDefinitions();
+    try {
+      team = app.buildTeam(settings);
+    } catch (error) {
+      // A half-written or broken definition must not take the server down: keep the running team.
+      console.error(`[team] reload failed, keeping the previous team: ${(error as Error).message}`);
+      return;
+    }
+    app.loadErrors.forEach((error) => console.warn(`[load] ${error.file}: ${error.message}`));
+    team.spec.warnings.forEach((warning) => console.warn(`[team] ${warning}`));
+    console.log(`Agent team reloaded: ${team.spec.lead.name} + ${team.spec.subagents.length} subagents`);
+    bus.publish(SYSTEM_THREAD, { type: 'team.updated' });
+  },
+  { debounceMs: 400 },
+);
 
 const server = await createServer({
   bus,
@@ -74,6 +95,7 @@ const server = await createServer({
 });
 
 const shutdown = async () => {
+  stopWatching();
   await server.close();
   process.exit(0);
 };

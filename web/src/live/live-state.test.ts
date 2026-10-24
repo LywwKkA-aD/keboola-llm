@@ -57,6 +57,12 @@ describe('reduceLive', () => {
     expect(state.approvalsVersion).toBe(1);
   });
 
+  it('bumps the team version when agents or skills changed on disk', () => {
+    const state = play([env({ type: 'team.updated' }, '_system'), env({ type: 'team.updated' }, '_system')]);
+    expect(state.teamVersion).toBe(2);
+    expect(state.feed).toEqual([]);
+  });
+
   it('returns the same state for events that change nothing', () => {
     const start = initialLive();
     expect(reduceLive(start, env({ type: 'token', agent: 'lead', text: 'x' }), 1)).toBe(start);

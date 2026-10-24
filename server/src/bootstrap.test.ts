@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { bootstrap } from './bootstrap.ts';
@@ -73,6 +73,25 @@ describe('bootstrap', () => {
 
     expect(effective).toEqual({ model: 'other/model', keboolaProject: 'prod-eu' });
     expect(spec.subagents[0]?.tools[0]?.description).toContain('prod-eu');
+  });
+
+  it('reloads agents and skills from disk so new definitions join the team without a restart', () => {
+    const root = repo();
+    const app = bootstrap(root);
+    mkdirSync(join(root, 'agents', 'scout'), { recursive: true });
+    writeFileSync(join(root, 'agents', 'scout', 'AGENT.md'), agentMd('name: scout\ndescription: Scouts new data sources.\nskills: [ghost]'));
+    mkdirSync(join(root, 'skills', 'ghost'), { recursive: true });
+    writeFileSync(join(root, 'skills', 'ghost', 'SKILL.md'), '---\nname: ghost\ndescription: Haunts old tables politely.\n---\nBoo.');
+    rmSync(join(root, 'agents', 'broken'), { recursive: true });
+
+    app.reloadDefinitions();
+
+    expect(app.agents.map((agent) => agent.name)).toEqual(['helper', 'lead', 'scout']);
+    expect(app.skills.map((skill) => skill.name)).toEqual(['ghost', 'house-style']);
+    expect(app.loadErrors).toEqual([]);
+    const { spec } = app.buildTeam(DEFAULT_SETTINGS);
+    expect(spec.subagents.map((agent) => agent.name)).toEqual(['helper', 'scout']);
+    expect(spec.warnings).toEqual([]);
   });
 
   it('fails fast without an OmniRoute key', () => {

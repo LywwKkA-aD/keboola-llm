@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App.tsx';
 import { DEFAULT_SETTINGS } from './api/types.ts';
 import { errorResponse, FakeEventSource, stubApi, stubEventSource } from './test-utils/fake-api.ts';
-import { baseRoutes } from './test-utils/fixtures.ts';
+import { baseRoutes, TEAM } from './test-utils/fixtures.ts';
 
 const visit = (path: string) => window.history.pushState({}, '', path);
 
@@ -178,6 +178,20 @@ describe('Agents page', () => {
     expect(within(drawer).getByText('vendor/keboola/cli/plugins/kbagent/agents/keboola-expert.md')).toBeInTheDocument();
     await userEvent.click(within(drawer).getByRole('button', { name: 'Закрыть' }));
     expect(screen.queryByRole('complementary', { name: 'keboola-expert' })).toBeNull();
+  });
+
+  it('refetches the team when agents change on disk, without a page reload', async () => {
+    let team = TEAM;
+    const api = stubApi({ ...baseRoutes, 'GET /api/team': () => team });
+    visit('/agents');
+    render(<App />);
+    await screen.findByRole('button', { name: /keboola-expert/ });
+    expect(screen.queryByRole('button', { name: /scout/ })).toBeNull();
+
+    team = { ...TEAM, agents: [...TEAM.agents, { name: 'scout', description: 'Scouts sources.', role: 'subagent', enabled: true, skills: [], tools: [] }] };
+    act(() => FakeEventSource.global().emit({ type: 'team.updated' }, '_system'));
+    expect(await screen.findByRole('button', { name: /scout/ })).toBeInTheDocument();
+    expect(api.callsTo('GET', '/api/team')).toHaveLength(2);
   });
 
   it('still renders when the team cannot be loaded', async () => {

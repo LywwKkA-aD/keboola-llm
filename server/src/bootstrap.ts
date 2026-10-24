@@ -24,6 +24,8 @@ export interface App {
   readonly loadErrors: readonly LoadError[];
   readonly loadSettings: () => Settings;
   readonly buildTeam: (settings: Settings) => Team;
+  /** Re-read agents and skills from disk; the next buildTeam uses them. */
+  readonly reloadDefinitions: () => void;
 }
 
 /** Model and Keboola project actually in use: settings override .env, empty means .env. */
@@ -52,9 +54,9 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
   const env = readAppEnv(process.env, rootDir);
   mkdirSync(env.dataDir, { recursive: true });
 
-  const agents = loadAgents(rootDir);
   const skillSources = discoverSkillSources(rootDir);
-  const skills = loadSkills(skillSources);
+  const readDefinitions = () => ({ agents: loadAgents(rootDir), skills: loadSkills(skillSources) });
+  let definitions = readDefinitions();
   const settingsFile = join(env.dataDir, 'settings.json');
 
   const checkpointer = SqliteSaver.fromConnString(join(env.dataDir, 'checkpoints.sqlite'));
@@ -65,11 +67,21 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
     env,
     checkpointer,
     settingsFile,
-    agents: agents.items,
-    skills: skills.items,
-    loadErrors: [...agents.errors, ...skills.errors],
+    get agents() {
+      return definitions.agents.items;
+    },
+    get skills() {
+      return definitions.skills.items;
+    },
+    get loadErrors() {
+      return [...definitions.agents.errors, ...definitions.skills.errors];
+    },
     loadSettings: () => loadSettings(settingsFile),
+    reloadDefinitions: () => {
+      definitions = readDefinitions();
+    },
     buildTeam: (settings) => {
+      const { agents, skills } = definitions;
       const effective = { model: settings.model || env.omniroute.model, keboolaProject: settings.keboolaProject || env.keboolaProject };
       const resolveTools = createToolResolver(createToolFactories({ defaultProject: effective.keboolaProject }));
       const spec = buildTeamSpec({ agents: agents.items, skills: skills.items, language: settings.language, resolveTools });

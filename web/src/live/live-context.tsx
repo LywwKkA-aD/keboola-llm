@@ -4,7 +4,7 @@ import type { AppStatus, PendingApprovalEntry } from '../api/types.ts';
 import { type AquariumEvents, useAquariumEvents } from '../aquarium/useAquariumEvents.ts';
 import { initialAquarium } from '../aquarium/state.ts';
 import { useSettings } from '../state/settings-context.tsx';
-import { useTeam } from '../state/team-context.tsx';
+import { useRefreshTeam, useTeam } from '../state/team-context.tsx';
 import { initialLive } from './live-state.ts';
 
 export interface LiveValue extends AquariumEvents {
@@ -27,6 +27,7 @@ const LiveContext = createContext<LiveValue>({
 /** One event stream for the whole app, plus the pending approvals and the status line it implies. */
 export function LiveProvider({ children }: { children: ReactNode }) {
   const team = useTeam();
+  const refreshTeam = useRefreshTeam();
   const { settings } = useSettings();
   const events = useAquariumEvents(team.lead);
   const [approvals, setApprovals] = useState<readonly PendingApprovalEntry[]>([]);
@@ -36,8 +37,11 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     api.allApprovals().then(setApprovals).catch(() => {});
   }, []);
 
-  const { approvalsVersion, running, waiting } = events.live;
+  const { approvalsVersion, teamVersion, running, waiting } = events.live;
   useEffect(refreshApprovals, [refreshApprovals, approvalsVersion]);
+  useEffect(() => {
+    if (teamVersion > 0) refreshTeam();
+  }, [refreshTeam, teamVersion]);
 
   const runsKey = `${running.join(',')}|${waiting.join(',')}|${settings.model}|${settings.keboolaProject}`;
   useEffect(() => {
