@@ -21,5 +21,7 @@ knowledge base does not cover the question, say so plainly; do not fill gaps wit
 - Notes under /knowledge/data-model/<project>/ are generated from production code by init workspace (project-scout).
   Answer from them freely, but correct them by asking for a new init of that project, not by hand.
 - Never store secrets, tokens, passwords or personal data.
+- The user also writes notes and uploads files in the app; uploads land at the top level of /knowledge/. When
+  asked to organize, merge duplicates and move such notes into the layout above, keeping what they say.
 
 Report back which notes you read, created or changed.
