@@ -45,6 +45,7 @@ function setup(
   script: (input: unknown) => unknown[] | Error,
   autoApprove?: (threadId: string, request: ApprovalRequest) => boolean,
   store?: PendingStore,
+  resumable?: readonly string[],
 ) {
   const bus = createEventBus({ historyPerThread: 100 });
   const events: Envelope[] = [];
@@ -56,6 +57,7 @@ function setup(
     leadName: () => 'lead',
     ...(autoApprove ? { autoApprove } : {}),
     ...(store ? { store } : {}),
+    ...(resumable ? { resumable } : {}),
   });
   const types = () => events.map((envelope) => envelope.event.type);
   return { runs, events, inputs, types };
@@ -117,10 +119,10 @@ describe('createRunManager', () => {
     expect(() => runs.answer('t2', [])).toThrow(/No pending/);
   });
 
-  it('reports failures without throwing', async () => {
+  it('reports failures without throwing, with the reason', async () => {
     const { runs, events } = setup(() => new Error('model down'));
     await runs.start('t1', {}).done;
-    expect(events.at(-1)?.event).toMatchObject({ type: 'run.failed', error: 'model down' });
+    expect(events.at(-1)?.event).toMatchObject({ type: 'run.failed', error: 'model down', reason: 'error' });
     expect(runs.isBusy('t1')).toBe(false);
   });
 
@@ -251,5 +253,84 @@ describe('createRunManager with auto-approval', () => {
     expect(calls).toBe(MAX_AUTO_RESUMES + 1);
     expect(events.at(-1)?.event).toMatchObject({ type: 'run.failed', error: expect.stringMatching(/automatic approvals/) });
     expect(runs.isBusy('t1')).toBe(false);
+  });
+});
+
+describe('createRunManager resume', () => {
+  const unavailable = Object.assign(new Error('503 upstream overloaded'), { status: 503 });
+
+  it('continues a failed run from its checkpoint, in the same turn', async () => {
+    const { runs, inputs, events, types } = setup((input) => (input === null ? [finalMessage] : unavailable));
+    await runs.start('t1', { messages: [] }).done;
+    expect(events.at(-1)?.event).toMatchObject({ type: 'run.failed', reason: 'model_unavailable', error: '503 upstream overloaded' });
+    expect(runs.resumable()).toEqual(['t1']);
+
+    const { runId, done } = runs.resume('t1');
+    expect(runs.resumable()).toEqual([]);
+    await done;
+
+    // LangGraph continues from the last checkpoint when streamed with a null input on the same thread.
+    expect(inputs[1]).toBeNull();
+    expect(events.filter((envelope) => envelope.event.type === 'run.started').at(-1)?.event).toEqual({ type: 'run.started', runId, resume: true });
+    expect(types().slice(-3)).toEqual(['run.started', 'message', 'run.finished']);
+    expect(runs.resumable()).toEqual([]);
+  });
+
+  it('continues a run the user stopped', async () => {
+    const bus = createEventBus({ historyPerThread: 10 });
+    const events: Envelope[] = [];
+    bus.subscribe((envelope) => events.push(envelope));
+    const graph: StreamingGraph = {
+      async stream(input, options) {
+        return (async function* () {
+          if (input !== null) {
+            await new Promise((_resolve, reject) => {
+              const abort = () => reject(new Error('This operation was aborted'));
+              if (options.signal?.aborted) abort();
+              options.signal?.addEventListener('abort', abort);
+            });
+          }
+          yield finalMessage;
+        })();
+      },
+    };
+    const runs = createRunManager({ bus, getGraph: () => graph, leadName: () => 'lead' });
+    const { done } = runs.start('t1', {});
+    runs.cancel('t1');
+    await done;
+    expect(events.at(-1)?.event).toMatchObject({ type: 'run.failed', reason: 'stopped' });
+    expect(runs.resumable()).toEqual(['t1']);
+
+    await runs.resume('t1').done;
+    expect(events.at(-1)?.event).toMatchObject({ type: 'run.finished' });
+  });
+
+  it('refuses to continue a busy chat, one waiting for approval, or one with nothing left to do', async () => {
+    const { runs } = setup((input) => (input === null ? [interrupt] : unavailable));
+    expect(() => runs.resume('t1')).toThrow(/Nothing to continue/);
+    await runs.start('t1', {}).done;
+
+    const resumed = runs.resume('t1');
+    expect(() => runs.resume('t1')).toThrow(/busy/);
+    await resumed.done;
+    expect(runs.pending('t1')).toHaveLength(1);
+    expect(() => runs.resume('t1')).toThrow(/approval/);
+  });
+
+  it('takes chats cut off by a restart as resumable until one of their runs starts', async () => {
+    const { runs, inputs } = setup(() => [finalMessage], undefined, undefined, ['t1', 't2']);
+    expect(runs.resumable()).toEqual(['t1', 't2']);
+
+    await runs.resume('t1').done;
+    expect(inputs).toEqual([null]);
+    // A new message starts over instead.
+    await runs.start('t2', { messages: [] }).done;
+    expect(runs.resumable()).toEqual([]);
+  });
+
+  it('forgets an unfinished run when the chat is discarded', () => {
+    const { runs } = setup(() => [finalMessage], undefined, undefined, ['t1']);
+    runs.discard('t1');
+    expect(runs.resumable()).toEqual([]);
   });
 });

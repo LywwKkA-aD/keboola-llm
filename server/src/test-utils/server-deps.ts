@@ -14,13 +14,18 @@ export const TEST_HOST = { host: '127.0.0.1:4800' };
 const idleRuns: RunManager = {
   start: () => ({ runId: 'run', done: Promise.resolve() }),
   answer: () => ({ runId: 'run', done: Promise.resolve() }),
+  resume: () => ({ runId: 'run', done: Promise.resolve() }),
   pending: () => [],
   isBusy: () => false,
   cancel: () => false,
   active: () => [],
   waitingThreads: () => [],
+  resumable: () => [],
   discard: () => {},
 };
+
+/** Idle runs with some methods replaced, for route tests. */
+export const runsWith = (overrides: Partial<RunManager>): RunManager => ({ ...idleRuns, ...overrides });
 
 /** Complete ServerDeps for route tests: idle runs, empty temp folders, nothing reachable upstream. */
 export function testDeps(overrides: Partial<ServerDeps> = {}): ServerDeps {

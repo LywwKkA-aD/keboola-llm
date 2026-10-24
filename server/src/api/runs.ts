@@ -3,6 +3,7 @@ import { Command } from '@langchain/langgraph';
 import { type InterruptAnswer, toResumeValue } from '../runtime/approvals.ts';
 import { type ApprovalRequest, createEventMapper, type TeamEvent } from '../runtime/events.ts';
 import type { EventBus } from './bus.ts';
+import { describeFailure } from './failure.ts';
 
 export type PendingApproval = Extract<TeamEvent, { type: 'approval.required' }>;
 
@@ -43,6 +44,8 @@ export interface RunHandle {
 export interface RunManager {
   start(threadId: string, input: unknown): RunHandle;
   answer(threadId: string, answers: readonly InterruptAnswer[]): RunHandle;
+  /** Continue a run that stopped before it finished, from the last checkpoint, as the same turn. */
+  resume(threadId: string): RunHandle;
   pending(threadId: string): readonly PendingApproval[];
   isBusy(threadId: string): boolean;
   cancel(threadId: string): boolean;
@@ -50,7 +53,9 @@ export interface RunManager {
   active(): readonly string[];
   /** Threads paused for approval, including ones restored after a restart. */
   waitingThreads(): readonly string[];
-  /** Forget a paused run without resuming it (its chat was deleted or its interrupts are gone). */
+  /** Threads whose last run stopped before it finished (failed, stopped by the user, cut off by a restart). */
+  resumable(): readonly string[];
+  /** Forget a paused or unfinished run without resuming it (its chat was deleted or its interrupts are gone). */
   discard(threadId: string): void;
 }
 
@@ -66,16 +71,20 @@ export const runError = (code: RunErrorCode, message: string): Error & { code: R
  * Runs agent turns in the background, one per thread, publishing every event to the bus.
  * With autoApprove, interrupts whose every request it accepts are answered without the user
  * (announced as approval.auto) and the run continues under the same run id.
+ * A run that fails or is stopped stays resumable: resume streams a null input on the thread, which
+ * LangGraph takes as "continue from the last checkpoint". resumable seeds the chats a restart cut off.
  */
-export function createRunManager({ bus, getGraph, leadName, autoApprove, store }: {
+export function createRunManager({ bus, getGraph, leadName, autoApprove, store, resumable = [] }: {
   bus: EventBus;
   getGraph: () => StreamingGraph;
   leadName: () => string;
   autoApprove?: AutoApprove;
   store?: PendingStore;
+  resumable?: readonly string[];
 }): RunManager {
   const running = new Map<string, AbortController>();
   const waiting = new Map<string, Waiting>(store?.load());
+  const unfinished = new Set(resumable);
   const pause = (threadId: string, paused: Waiting) => {
     waiting.set(threadId, paused);
     store?.save(waiting);
@@ -141,7 +150,9 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store }
         input = new Command({ resume: toResumeValue(paused.auto) });
       }
     } catch (error) {
-      bus.publish(threadId, { type: 'run.failed', runId, error: error instanceof Error ? error.message : String(error) });
+      // Resumable before anyone hears of the failure: the UI refetches the chats on run.failed.
+      unfinished.add(threadId);
+      bus.publish(threadId, { type: 'run.failed', runId, ...describeFailure(error, { stopped: controller.signal.aborted }) });
     } finally {
       running.delete(threadId);
     }
@@ -151,6 +162,7 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store }
     const runId = randomUUID();
     const controller = new AbortController();
     running.set(threadId, controller);
+    unfinished.delete(threadId);
     return { runId, done: execute(threadId, runId, input, controller, resume) };
   }
 
@@ -177,11 +189,21 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store }
       unpause(threadId);
       return launch(threadId, new Command({ resume: toResumeValue([...paused.auto, ...answers]) }), true);
     },
+    resume(threadId) {
+      if (running.has(threadId)) throw runError('RUN_CONFLICT', 'Thread is busy with another run');
+      if (waiting.has(threadId)) throw runError('RUN_CONFLICT', 'Thread is waiting for an approval');
+      if (!unfinished.has(threadId)) throw runError('RUN_CONFLICT', 'Nothing to continue in this chat');
+      return launch(threadId, null, true);
+    },
     pending: (threadId) => waiting.get(threadId)?.human ?? [],
     isBusy: (threadId) => running.has(threadId) || waiting.has(threadId),
     active: () => [...running.keys()],
     waitingThreads: () => [...waiting.keys()],
-    discard: unpause,
+    resumable: () => [...unfinished],
+    discard(threadId) {
+      unfinished.delete(threadId);
+      unpause(threadId);
+    },
     cancel(threadId) {
       const controller = running.get(threadId);
       controller?.abort();

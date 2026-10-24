@@ -6,7 +6,14 @@ import { createEventBus, SYSTEM_THREAD } from './api/bus.ts';
 import { allowedFor } from './api/guard.ts';
 import { toChatHistory } from './api/history.ts';
 import { createPendingStore } from './api/pending-store.ts';
-import { dropStaleApprovals, type InterruptReader, pendingInterruptIds } from './api/restore.ts';
+import {
+  dropStaleApprovals,
+  findUnfinishedRuns,
+  hasUnfinishedRun,
+  type InterruptReader,
+  pendingInterruptIds,
+  type ProgressReader,
+} from './api/restore.ts';
 import { createRunManager } from './api/runs.ts';
 import { createServer } from './api/server.ts';
 import { describeTeam } from './api/team-info.ts';
@@ -38,12 +45,19 @@ team.spec.warnings.forEach((warning) => console.warn(`[team] ${warning}`));
 
 const bus = createEventBus({ historyPerThread: 5000 });
 const threads = createThreadStore(join(app.env.dataDir, 'threads.json'));
+// Runs a restart (or a failure before it) left midway: offered to continue, never resumed on their own.
+const unfinished = await findUnfinishedRuns({
+  threadIds: threads.list().map((thread) => thread.id),
+  isUnfinished: (threadId) => hasUnfinishedRun(team.graph as unknown as ProgressReader, threadId),
+});
+if (unfinished.length > 0) console.log(`${unfinished.length} chat(s) stopped midway; they can be continued`);
 const runs = createRunManager({
   bus,
   getGraph: () => team.graph,
   leadName: () => team.spec.lead.name,
   autoApprove: createAutoApprover({ isSqlAllowed: (threadId) => threads.policy(threadId)?.allowSql === true }),
   store: createPendingStore(join(app.env.dataDir, 'pending-approvals.json')),
+  resumable: unfinished,
 });
 // Approvals pending before a restart come back from disk; keep only those the checkpointer still waits on.
 const dropped = await dropStaleApprovals({
@@ -55,7 +69,7 @@ dropped.forEach((threadId) => console.warn(`[approvals] dropped stale pending ap
 if (runs.waitingThreads().length > 0) console.log(`Restored pending approvals in ${runs.waitingThreads().length} chat(s)`);
 bus.subscribe(({ threadId, event }) => {
   if (event.type === 'run.finished' || event.type === 'run.waiting') threads.touch(threadId);
-  if (event.type === 'run.failed') console.error(`[run] ${threadId}: ${event.error}`);
+  if (event.type === 'run.failed') console.error(`[run] ${threadId}: ${event.reason}: ${event.error}`);
 });
 
 // Version history of agents/ and skills/ in the data dir: a baseline now, then whatever each reload finds changed.

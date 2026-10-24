@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dropStaleApprovals, pendingInterruptIds } from './restore.ts';
+import { dropStaleApprovals, findUnfinishedRuns, hasUnfinishedRun, pendingInterruptIds } from './restore.ts';
 
 const approval = (interruptId: string) => ({ type: 'approval.required' as const, interruptId, requests: [] });
 
@@ -39,5 +39,33 @@ describe('dropStaleApprovals', () => {
 
     expect(runs.discarded).toEqual(['answered', 'deleted', 'broken']);
     expect(dropped).toEqual(['answered', 'deleted', 'broken']);
+  });
+});
+
+describe('hasUnfinishedRun', () => {
+  const graphWith = (next: string[], interrupts: object[] = []) => ({
+    getState: async () => ({ next, tasks: next.map(() => ({ interrupts })) }),
+  });
+
+  it('is true when the checkpoint still has work and no approval waits', async () => {
+    expect(await hasUnfinishedRun(graphWith(['model_request']), 't1')).toBe(true);
+  });
+
+  it('is false for a finished run, a new chat and a run waiting for approval', async () => {
+    expect(await hasUnfinishedRun(graphWith([]), 't1')).toBe(false);
+    expect(await hasUnfinishedRun(graphWith(['tools'], [{ id: 'i1' }]), 't1')).toBe(false);
+  });
+});
+
+describe('findUnfinishedRuns', () => {
+  it('lists the chats cut off mid-run and skips ones it cannot read', async () => {
+    const found = await findUnfinishedRuns({
+      threadIds: ['done', 'cut', 'broken', 'cut-too'],
+      isUnfinished: async (threadId) => {
+        if (threadId === 'broken') throw new Error('database is locked');
+        return threadId.startsWith('cut');
+      },
+    });
+    expect(found).toEqual(['cut', 'cut-too']);
   });
 });

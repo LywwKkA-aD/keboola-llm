@@ -29,9 +29,11 @@ function fakeRuns(): RunManager & { started: Array<[string, unknown]>; discarded
       started.push([threadId, answers]);
       return { runId: 'run-answer', done: Promise.resolve() };
     },
+    resume: () => ({ runId: 'run-resume', done: Promise.resolve() }),
     pending: () => [],
     active: () => [],
     waitingThreads: () => [],
+    resumable: () => [],
     discard: (threadId) => {
       discarded.push(threadId);
     },

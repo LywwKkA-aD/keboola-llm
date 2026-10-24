@@ -1,12 +1,14 @@
 import type { ApprovalRequest, TeamEvent } from '../runtime/events.ts';
+import type { FailureReason } from './failure.ts';
 
 /** Run lifecycle events published next to the agent events. */
 export type RunEvent =
-  // resume: the run continues the previous turn (an approval answer) instead of answering a new message.
+  // resume: the run continues the previous turn (an approval answer, or Continue after a failure)
+  // instead of answering a new message.
   | { readonly type: 'run.started'; readonly runId: string; readonly resume?: true }
   | { readonly type: 'run.waiting'; readonly runId: string }
   | { readonly type: 'run.finished'; readonly runId: string }
-  | { readonly type: 'run.failed'; readonly runId: string; readonly error: string }
+  | { readonly type: 'run.failed'; readonly runId: string; readonly reason: FailureReason; readonly error: string }
   // An approval the app granted on the user's standing permission (e.g. SQL allowed for the chat).
   | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] };
 /** App-wide news, published on SYSTEM_THREAD. */

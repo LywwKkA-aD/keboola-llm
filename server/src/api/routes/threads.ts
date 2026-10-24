@@ -11,7 +11,11 @@ export function registerThreadRoutes(app: FastifyInstance, { runs, threads, hist
     return thread;
   };
 
-  app.get('/api/threads', async () => threads.list());
+  // resumable: the chat's last run stopped before it finished (failed, stopped, cut off by a restart).
+  app.get('/api/threads', async () => {
+    const unfinished = new Set(runs.resumable());
+    return threads.list().map((thread) => (unfinished.has(thread.id) ? { ...thread, resumable: true } : thread));
+  });
 
   app.post('/api/threads', async (request, reply) => {
     const { text } = messageBody.parse(request.body);
@@ -43,6 +47,13 @@ export function registerThreadRoutes(app: FastifyInstance, { runs, threads, hist
     if (!findThread(request.params.id, reply)) return reply;
     const { answers } = approvalsBody.parse(request.body);
     const { runId } = runs.answer(request.params.id, answers);
+    return reply.code(202).send({ runId });
+  });
+
+  // Continue a run that stopped before it finished, from its last step (409 while busy, waiting or done).
+  app.post<{ Params: { id: string } }>('/api/threads/:id/resume', async (request, reply) => {
+    if (!findThread(request.params.id, reply)) return reply;
+    const { runId } = runs.resume(request.params.id);
     return reply.code(202).send({ runId });
   });
 
