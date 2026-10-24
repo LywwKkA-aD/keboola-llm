@@ -1,8 +1,13 @@
 import { z } from 'zod';
 import { NAME_RE } from '../registry/types.ts';
 import { DEFINITION_KINDS } from '../versions/types.ts';
+import { commandSchema } from './commands.ts';
 
-export const messageBody = z.object({ text: z.string().trim().min(1).max(20_000) });
+export const textBody = z.object({ text: z.string().trim().min(1).max(20_000) });
+
+// A chat message. A command may come without text (/skill applies the skill on its own); whether that is enough is up to the
+// command (commands.ts commandError).
+export const messageBody = z.object({ text: z.string().trim().max(20_000), command: commandSchema.optional() });
 
 export const titleBody = z.object({ title: z.string().trim().min(1).max(200) });
 

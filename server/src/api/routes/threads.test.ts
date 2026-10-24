@@ -59,6 +59,69 @@ describe('resume route', () => {
   });
 });
 
+describe('messages with a command', () => {
+  const team = () => ({
+    lead: 'lead',
+    agents: [
+      { name: 'lead', description: '', role: 'orchestrator' as const, enabled: true, skills: [], tools: [] },
+      { name: 'keboola-developer', description: '', role: 'subagent' as const, enabled: true, skills: [], tools: [] },
+    ],
+    skills: [{ name: 'keboola-change', description: '', source: 'custom', path: '/skills/custom/keboola-change/' }],
+    warnings: [],
+    loadErrors: [],
+  });
+
+  async function commandSetup() {
+    const started: { threadId: string; input: unknown }[] = [];
+    const deps = testDeps({
+      team,
+      runs: runsWith({
+        start: (threadId, input) => {
+          started.push({ threadId, input });
+          return { runId: 'run', done: Promise.resolve() };
+        },
+      }),
+    });
+    const app = await createServer(deps);
+    close = () => app.close();
+    return { app, threads: deps.threads, started };
+  }
+
+  const post = (app: Awaited<ReturnType<typeof commandSetup>>['app'], url: string, payload: object) =>
+    app.inject({ method: 'POST', url, headers: TEST_HOST, payload });
+
+  it('starts a chat with the command turned into an instruction, titled with what the user typed', async () => {
+    const { app, started } = await commandSetup();
+    const response = await post(app, '/api/threads', { text: 'Fix the join', command: { name: 'agent', arg: 'keboola-developer' } });
+    expect(response.statusCode).toBe(201);
+    expect((response.json() as { thread: { title: string } }).thread.title).toBe('Fix the join');
+    const message = (started[0]?.input as { messages: { content: string; additional_kwargs: unknown }[] }).messages[0];
+    expect(message?.content).toContain('"keboola-developer"');
+    expect(message?.additional_kwargs).toEqual({ studio: { text: 'Fix the join', command: { name: 'agent', arg: 'keboola-developer' } } });
+  });
+
+  it('titles a chat started by a command alone with the command', async () => {
+    const { app } = await commandSetup();
+    const response = await post(app, '/api/threads', { text: '', command: { name: 'skill', arg: 'keboola-change' } });
+    expect((response.json() as { thread: { title: string } }).thread.title).toBe('/skill keboola-change');
+  });
+
+  it('sends a command in an existing chat and refuses one the team cannot follow', async () => {
+    const { app, threads, started } = await commandSetup();
+    const thread = threads.create('Orders');
+    const sent = await post(app, `/api/threads/${thread.id}/messages`, { text: 'Rebuild it', command: { name: 'plan' } });
+    expect(sent.statusCode).toBe(202);
+    expect(JSON.stringify(started.at(-1)?.input)).toContain('request_plan_approval');
+
+    const unknown = await post(app, `/api/threads/${thread.id}/messages`, { text: 'Go', command: { name: 'skill', arg: 'ghost' } });
+    expect(unknown.statusCode).toBe(400);
+    expect(unknown.json()).toEqual({ error: 'No skill "ghost" in this team' });
+    expect((await post(app, '/api/threads', { text: '  ' })).statusCode).toBe(400);
+    expect((await post(app, '/api/threads', { text: 'x', command: { name: 'rm' } })).statusCode).toBe(400);
+    expect(started).toHaveLength(1);
+  });
+});
+
 describe('thread list', () => {
   it('marks the chats whose run stopped before it finished', async () => {
     const { app, threads, unfinished } = await setup();

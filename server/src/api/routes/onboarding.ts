@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { messageBody } from '../schemas.ts';
+import { textBody } from '../schemas.ts';
 import type { ServerDeps } from '../types.ts';
 
 /** First run: has project-scout profiled the project, and one survey chat at a time to do it. */
@@ -18,7 +18,7 @@ export function registerOnboardingRoutes(app: FastifyInstance, { runs, threads, 
   });
 
   app.post('/api/onboarding/start', async (request, reply) => {
-    const { text } = messageBody.parse(request.body);
+    const { text } = textBody.parse(request.body);
     const { project } = await onboarding();
     if (!project) return reply.code(409).send({ error: 'No Keboola project is set up in kbagent' });
     const running = surveyOf(project);

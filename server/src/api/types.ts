@@ -30,7 +30,8 @@ export interface AgentInfo {
 export interface TeamInfo {
   readonly lead: string;
   readonly agents: readonly AgentInfo[];
-  readonly skills: readonly { readonly name: string; readonly description: string; readonly source: string }[];
+  /** path: where the agents see the skill's folder (/skills/<source>/<folder>/). */
+  readonly skills: readonly { readonly name: string; readonly description: string; readonly source: string; readonly path: string }[];
   readonly warnings: readonly string[];
   readonly loadErrors: readonly LoadError[];
 }

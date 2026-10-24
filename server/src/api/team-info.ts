@@ -1,4 +1,5 @@
 import type { AgentDefinition, LoadError, SkillInfo } from '../registry/types.ts';
+import { skillPath } from '../runtime/paths.ts';
 import type { AgentInfo, TeamInfo } from './types.ts';
 
 const toAgentInfo = (agent: AgentDefinition): AgentInfo => ({
@@ -24,7 +25,7 @@ export function describeTeam({ lead, agents, skills, warnings, loadErrors }: {
   return {
     lead,
     agents: agents.map(toAgentInfo),
-    skills: skills.map((skill) => ({ name: skill.name, description: skill.description, source: skill.sourceId })),
+    skills: skills.map((skill) => ({ name: skill.name, description: skill.description, source: skill.sourceId, path: skillPath(skill) })),
     warnings,
     loadErrors,
   };
