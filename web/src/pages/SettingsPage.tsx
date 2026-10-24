@@ -5,6 +5,7 @@ import type { KeboolaProject, Language, Quality, ReduceMotion, Settings, Theme }
 import { EnvSelect, Segmented, SelectField, SettingsSection } from '../components/settings/fields.tsx';
 import { RoutinesSection } from '../components/settings/RoutinesSection.tsx';
 import { SystemChecks } from '../components/settings/SystemChecks.tsx';
+import { SetupSection } from '../components/setup/SetupPanels.tsx';
 import { LANGUAGE_NAMES } from '../i18n/strings.ts';
 import { useSettings } from '../state/settings-context.tsx';
 
@@ -47,6 +48,8 @@ export function SettingsPage() {
         </span>
       </header>
       {error && <div className="error-banner">{error}</div>}
+
+      <SetupSection />
 
       <SettingsSection title={t('settings.interface')}>
         <SelectField<Language>

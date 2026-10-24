@@ -4,9 +4,19 @@ import { api } from '../../api/client.ts';
 import type { OnboardingStatus } from '../../api/types.ts';
 import { useLive } from '../../live/live-context.tsx';
 import { useSettings } from '../../state/settings-context.tsx';
+import { SetupCard } from '../setup/SetupPanels.tsx';
+import { useSetup } from '../setup/useSetup.ts';
 
-/** First run: offer "init workspace" (map + documentation of production) for a project the team does not know yet. */
+/** First run on Home: the setup checklist while a step fails, then the offer to init the workspace. */
 export function OnboardingCard() {
+  const setup = useSetup();
+  // Nothing until the first check is back: a set-up app should not flash the checklist.
+  if (!setup.report) return setup.error === undefined ? null : <SetupCard setup={setup} />;
+  return setup.report.complete ? <SurveyCard /> : <SetupCard setup={setup} />;
+}
+
+/** Offer "init workspace" (map + documentation of production) for a project the team does not know yet. */
+function SurveyCard() {
   const { t } = useSettings();
   const { live } = useLive();
   const [status, setStatus] = useState<OnboardingStatus>();

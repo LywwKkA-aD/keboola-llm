@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../App.tsx';
 import { errorResponse, FakeEventSource, stubApi, stubEventSource } from '../test-utils/fake-api.ts';
 import { baseRoutes } from '../test-utils/fixtures.ts';
+import { SETUP_COMPLETE, setupReport } from '../test-utils/setup-fixtures.ts';
 
 const APPROVAL = {
   threadId: 't1',
@@ -53,6 +54,34 @@ describe('Home page', () => {
     status = { project: 'sandbox', profiled: true, running: false, updatedAt: '2026-10-24T10:00:00Z' };
     act(() => FakeEventSource.global().emit({ type: 'run.finished', runId: 'r' }, 't9'));
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Инициализация проекта' })).toBeNull());
+  });
+
+  it('shows the setup checklist in place of the survey offer until every step passes', async () => {
+    let setup = setupReport({
+      kbagent: { status: 'fail', reason: 'kbagentMissing', detail: 'not installed or not on PATH' },
+      projects: { status: 'blocked', detail: 'waiting for kbagent' },
+      project: { status: 'blocked', detail: 'waiting for kbagent' },
+    });
+    await openHome({ 'GET /api/setup': () => setup, 'GET /api/onboarding': { project: 'sandbox', profiled: false, running: false } });
+
+    const card = await screen.findByRole('region', { name: 'Завершите настройку' });
+    expect(within(card).getByText('4. kbagent установлен')).toBeInTheDocument();
+    expect(within(card).getByText('not installed or not on PATH')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Знакомство с проектом' })).toBeNull();
+    // Above the stats, where the survey offer goes.
+    expect(card.compareDocumentPosition(screen.getByText('Сейчас ничего не выполняется.')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    setup = SETUP_COMPLETE;
+    await userEvent.click(within(card).getByRole('button', { name: 'Проверить снова' }));
+    expect(await screen.findByRole('region', { name: 'Знакомство с проектом' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Завершите настройку' })).toBeNull();
+  });
+
+  it('shows the checklist when the setup cannot be checked at all', async () => {
+    await openHome({ 'GET /api/setup': () => errorResponse(500, 'Internal error'), 'GET /api/onboarding': { project: 'sandbox', profiled: false, running: false } });
+    const card = await screen.findByRole('region', { name: 'Завершите настройку' });
+    expect(within(card).getByText('Не удалось проверить настройку: Internal error')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Знакомство с проектом' })).toBeNull();
   });
 
   it('offers no survey without a Keboola project or once the project is profiled', async () => {
