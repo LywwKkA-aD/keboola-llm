@@ -33,6 +33,7 @@ import { productionBranchOf, runnerFor } from './tools/kbagent/index.ts';
 import { systemStatus } from './system/status.ts';
 import { createDefinitionVersions } from './versions/tracker.ts';
 import { createUsageStore, trackUsage } from './usage/store.ts';
+import { createActivityLog } from './api/activity.ts';
 
 interface StateReader {
   getState(config: { configurable: { thread_id: string } }): Promise<{ values: { messages?: BaseMessage[] } }>;
@@ -50,6 +51,7 @@ team.spec.warnings.forEach((warning) => console.warn(`[team] ${warning}`));
 const bus = createEventBus({ historyPerThread: 5000 });
 const threads = createThreadStore(join(app.env.dataDir, 'threads.json'));
 const usage = createUsageStore({ file: join(app.env.dataDir, 'usage.json') });
+const activity = createActivityLog(bus);
 trackUsage(bus, usage);
 // Runs a restart (or a failure before it) left midway: offered to continue, never resumed on their own.
 const unfinished = await findUnfinishedRuns({
@@ -174,6 +176,7 @@ const server = await createServer({
   knowledge: createNoteStore(join(app.env.dataDir, 'knowledge')),
   memories: createNoteStore(join(app.env.dataDir, 'memories'), { maxBytes: MAX_MEMORY_BYTES }),
   usage: () => usage.report(),
+  activity: () => activity.list(),
   promotionPreview: (query) => {
     const project = team.effective.keboolaProject || undefined;
     const options = { access: 'read' as const, ...(project ? { project } : {}) };

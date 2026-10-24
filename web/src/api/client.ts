@@ -2,6 +2,7 @@ import type {
   AppStatus,
   ChatCommand,
   ChatEntry,
+  Envelope,
   InterruptAnswer,
   KeboolaProject,
   OnboardingStatus,
@@ -65,6 +66,7 @@ export const api = {
   memory: () => request<{ content: string }>('/api/memory'),
   system: () => request<SystemStatus>('/api/system'),
   usage: () => request<UsageReport>('/api/usage'),
+  activity: () => request<Envelope[]>('/api/activity'),
 };
 
 export const eventsUrl = (threadId?: string) =>

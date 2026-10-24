@@ -45,7 +45,8 @@ function sqlOf(list: readonly string[] | undefined): string | undefined {
 
 const purposeOf = (args: Readonly<Record<string, unknown>>) => (str(args.purpose) ? { purpose: str(args.purpose) as string } : {});
 
-function toolView(tool: string, args: Readonly<Record<string, unknown>>): ActionView {
+/** What the detail of a tool call shows, from its name and arguments. */
+export function toolView(tool: string, args: Readonly<Record<string, unknown>>): ActionView {
   const path = str(args.file_path);
   if (path !== undefined && str(args.old_string) !== undefined && str(args.new_string) !== undefined) {
     return { type: 'diff', path, before: str(args.old_string) as string, after: str(args.new_string) as string };
@@ -135,4 +136,10 @@ export function actionBadge(item: FeedItem): { readonly key: StringKey; readonly
   if (item.kind === 'approval') return { key: 'kind.approval', tone: 'amber' };
   const kind = kindOf({ kind: item.kind === 'delegate' || item.kind === 'auto' ? item.kind : 'tool', target: item.target });
   return { key: `kind.${kind}` as StringKey, tone: KIND_TONE[kind] };
+}
+
+/** What an expanded chat step shows: the same views as the agent card; a delegation shows its whole task. */
+export function stepView(step: { readonly kind: string; readonly agent: string; readonly target: string; readonly label: string; readonly args?: Readonly<Record<string, unknown>> }): ActionView {
+  if (step.kind === 'delegate') return { type: 'delegation', from: step.agent, to: step.target, task: step.label };
+  return toolView(step.target, step.args ?? {});
 }

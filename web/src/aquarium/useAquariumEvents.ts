@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { eventsUrl } from '../api/client.ts';
+import { api, eventsUrl } from '../api/client.ts';
 import type { Envelope } from '../api/types.ts';
-import { initialLive, type LiveState, reduceLive } from '../live/live-state.ts';
+import { initialLive, type LiveState, reduceLive, seedFeed } from '../live/live-state.ts';
 import { type AquariumState, initialAquarium, reduceAquarium } from './state.ts';
 
 const TICK_MS = 1000;
@@ -37,8 +37,17 @@ export function useAquariumEvents(lead: string): AquariumEvents {
       setState((current) => reduceAquarium(current, envelope, at));
       setLive((current) => reduceLive(current, envelope, at));
     };
+    // What the team did before this page loaded, so agent cards are not empty after a reload.
+    let alive = true;
+    api
+      .activity()
+      .then((entries) => {
+        if (alive) setLive((current) => seedFeed(current, entries));
+      })
+      .catch(() => {});
     const timer = setInterval(() => setNow(Date.now()), TICK_MS);
     return () => {
+      alive = false;
       source.close();
       clearInterval(timer);
     };

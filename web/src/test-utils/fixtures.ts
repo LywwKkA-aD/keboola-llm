@@ -53,4 +53,5 @@ export const baseRoutes = {
   'GET /api/routines': { routines: [], loadErrors: [] },
   'GET /api/setup': SETUP_COMPLETE,
   'GET /api/usage': usageReport(),
+  'GET /api/activity': [],
 };

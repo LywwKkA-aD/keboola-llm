@@ -171,6 +171,22 @@ describe('Home page', () => {
     expect(await screen.findByRole('dialog', { name: 'Чат' })).toBeInTheDocument();
   });
 
+  it('shows what an agent did before the page was loaded, from the server', async () => {
+    await openHome({
+      'GET /api/activity': [
+        { seq: 5, at: Date.UTC(2026, 9, 24, 10, 0), threadId: 't1', event: { type: 'tool.start', agent: 'keboola-expert', callId: 'e1', tool: 'edit_file', args: { file_path: '/knowledge/tables.md', old_string: 'old line', new_string: 'new line' } } },
+        { seq: 6, at: Date.UTC(2026, 9, 24, 10, 1), threadId: 't1', event: { type: 'tool.end', agent: 'keboola-expert', callId: 'e1', tool: 'edit_file', ok: true, preview: 'Updated file' } },
+      ],
+    });
+    const team = await openTeam();
+    await userEvent.click(within(team).getByRole('button', { name: /keboola-expert/ }));
+    const card = screen.getByRole('complementary', { name: 'keboola-expert' });
+    const actions = await within(card).findByRole('list', { name: 'Последние действия агента' });
+    await userEvent.click(within(actions).getByRole('button', { name: /Правка/ }));
+    const diff = within(card).getByRole('list', { name: 'Изменение' });
+    expect(within(diff).getAllByRole('listitem').map((line) => line.textContent)).toEqual(['-old line', '+new line']);
+  });
+
   it('counts runs and approvals, and shows today\'s tokens with the cache share from the server', async () => {
     let report = usageReport({ calls: 3, input: 12_000, cached: 10_200, output: 300 });
     const api = await openHome({ 'GET /api/approvals': [APPROVAL], 'GET /api/usage': () => report });

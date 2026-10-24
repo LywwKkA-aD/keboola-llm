@@ -9,7 +9,7 @@ import type { LoadError } from '../registry/types.ts';
 import type { DefinitionVersions } from '../versions/tracker.ts';
 import type { RoutinesApi } from '../routines/types.ts';
 import type { UsageReport } from '../usage/ledger.ts';
-import type { EventBus } from './bus.ts';
+import type { Envelope, EventBus } from './bus.ts';
 import type { Allowed } from './guard.ts';
 import type { ChatEntry } from './history.ts';
 import type { RunManager } from './runs.ts';
@@ -68,6 +68,8 @@ export interface ServerDeps {
   readonly promotionPreview?: PromotionPreviewFn;
   /** First-run setup wizard (/api/setup); without it those routes do not exist. */
   readonly setup?: SetupService;
+  /** The team's recent actions in any chat, for the agent cards after a page reload; [] without it. */
+  readonly activity?: () => readonly Envelope[];
   /** Tokens by day and agent (DATA_DIR/usage.json); without it /api/usage does not exist. */
   readonly usage?: () => UsageReport;
 }

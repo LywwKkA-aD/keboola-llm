@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BusEvent, Envelope } from '../api/types.ts';
-import { initialLive, reduceLive } from './live-state.ts';
+import { initialLive, reduceLive, seedFeed } from './live-state.ts';
 
 let seq = 0;
 const env = (event: BusEvent, threadId = 't1'): Envelope => ({ seq: ++seq, threadId, event });
@@ -102,5 +102,26 @@ describe('reduceLive', () => {
   it('returns the same state for events that change nothing', () => {
     const start = initialLive();
     expect(reduceLive(start, env({ type: 'token', agent: 'lead', text: 'x' }), 1)).toBe(start);
+  });
+});
+
+describe('seedFeed', () => {
+  const at = (envelope: Envelope, time: number): Envelope => ({ ...envelope, at: time });
+
+  it('rebuilds the feed from the server activity behind the live items, with results and without duplicates', () => {
+    const start = at(env({ type: 'tool.start', agent: 'keboola-expert', callId: 'e1', tool: 'edit_file', args: { file_path: '/k.md', old_string: 'a', new_string: 'b' } }), 10);
+    const end = at(env({ type: 'tool.end', agent: 'keboola-expert', callId: 'e1', tool: 'edit_file', ok: true, preview: 'Updated' }), 11);
+    const later = env({ type: 'tool.start', agent: 'lead', callId: 'l1', tool: 'ls', args: {} });
+    const live = play([later]);
+    const seeded = seedFeed(live, [start, end, later]);
+    expect(seeded.feed.map((item) => item.target)).toEqual(['ls', 'edit_file']);
+    expect(seeded.feed[1]).toMatchObject({ at: 10, result: { ok: true, preview: 'Updated' }, args: { file_path: '/k.md' } });
+  });
+
+  it('touches nothing but the feed', () => {
+    const approval = env({ type: 'approval.required', interruptId: 'i', requests: [{ tool: 'kbagent_write', args: {}, decisions: ['approve'] }] });
+    const seeded = seedFeed(initialLive(), [approval, env({ type: 'run.started', runId: 'r' })]);
+    expect(seeded.feed).toHaveLength(1);
+    expect(seeded).toMatchObject({ running: [], approvalsVersion: 0, signals: [] });
   });
 });

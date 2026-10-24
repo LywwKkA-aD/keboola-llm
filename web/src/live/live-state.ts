@@ -147,3 +147,13 @@ function reduceEvent(state: LiveState, { seq, threadId, event }: Envelope, at: n
       return state;
   }
 }
+
+/**
+ * The feed rebuilt from the server's recent activity (after a page reload), behind what the live stream already
+ * brought. Only the feed: running chats, approvals and notifications stay as the live stream has them. Pure.
+ */
+export function seedFeed(state: LiveState, envelopes: readonly Envelope[]): LiveState {
+  const replayed = envelopes.reduce((current, envelope) => reduceEvent(current, envelope, envelope.at ?? 0), initialLive());
+  const known = new Set(state.feed.map((item) => item.id));
+  return { ...state, feed: [...state.feed, ...replayed.feed.filter((item) => !known.has(item.id))].slice(0, FEED_LIMIT) };
+}

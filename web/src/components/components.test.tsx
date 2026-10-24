@@ -154,15 +154,30 @@ describe('StepRows', () => {
     expect(rows[2]).toHaveTextContent('Идёт');
   });
 
-  it('expands a step into its arguments and result', async () => {
+  it('expands a step into what it did, like the agent card: the command and its result, not raw JSON', async () => {
     render(<StepRows steps={run.activities} />);
     const [, toolRow] = screen.getAllByRole('button');
     await userEvent.click(toolRow as HTMLElement);
     expect(toolRow).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText(/"list"/)).toBeInTheDocument();
+    expect(screen.getByText('kbagent config list')).toBeInTheDocument();
+    expect(screen.queryByText(/"args"/)).toBeNull();
     expect(screen.getByText('[{"id":"1"}]')).toBeInTheDocument();
     await userEvent.click(toolRow as HTMLElement);
-    expect(screen.queryByText(/"list"/)).toBeNull();
+    expect(screen.queryByText('kbagent config list')).toBeNull();
+  });
+
+  it('shows an edit as a diff and a delegation with its whole task', async () => {
+    const state = [
+      { type: 'delegate.start', agent: 'lead', callId: 'd', to: 'knowledge-keeper', task: 'Record the grain of fct_orders in the data model notes' },
+      { type: 'tool.start', agent: 'knowledge-keeper', callId: 'e', tool: 'edit_file', args: { file_path: '/knowledge/orders.md', old_string: 'old line', new_string: 'new line' } },
+    ].reduce((current, event, i) => reduceRun(current, event as never, i), initialRunState('lead'));
+    render(<StepRows steps={state.activities} />);
+    const [delegation, edit] = screen.getAllByRole('button');
+    await userEvent.click(edit as HTMLElement);
+    expect(within(screen.getByRole('list', { name: 'Изменение' })).getAllByRole('listitem').map((line) => line.textContent)).toEqual(['-old line', '+new line']);
+    await userEvent.click(delegation as HTMLElement);
+    expect(screen.getByText('Record the grain of fct_orders in the data model notes', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.queryByText('Ответ')).toBeNull();
   });
 
   it('shows an agent plan as a checklist with its progress', async () => {
