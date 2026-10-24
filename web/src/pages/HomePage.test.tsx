@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../App.tsx';
 import { errorResponse, FakeEventSource, stubApi, stubEventSource } from '../test-utils/fake-api.ts';
 import { baseRoutes } from '../test-utils/fixtures.ts';
@@ -24,10 +24,6 @@ const team = () => screen.getByRole('navigation', { name: 'Команда' });
 
 beforeEach(() => {
   stubEventSource();
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
 });
 
 describe('Home page', () => {

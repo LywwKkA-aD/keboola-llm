@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App.tsx';
 import { DEFAULT_SETTINGS } from './api/types.ts';
 import { errorResponse, FakeEventSource, stubApi, stubEventSource } from './test-utils/fake-api.ts';
@@ -37,7 +37,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.unstubAllGlobals();
   delete document.documentElement.dataset.theme;
 });
 

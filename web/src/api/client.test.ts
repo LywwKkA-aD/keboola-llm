@@ -1,10 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { errorResponse, stubApi } from '../test-utils/fake-api.ts';
 import { ApiError, api, eventsUrl } from './client.ts';
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
 
 describe('api client', () => {
   it('sends GETs without a body or content type', async () => {
