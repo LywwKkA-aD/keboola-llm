@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildInvocation } from './policy.ts';
-import { isAutoApprovableSqlCall, SQL_OPERATIONS, sqlInvocation } from './sql.ts';
+import { isAutoApprovableSqlCall, isReadOnlySqlCall, SQL_OPERATIONS, sqlInvocation } from './sql.ts';
 
 const reasonOf = (result: ReturnType<typeof buildInvocation>) => {
   if (result.ok) throw new Error(`expected rejection, got argv: ${result.argv.join(' ')}`);
@@ -68,6 +68,18 @@ describe('isAutoApprovableSqlCall', () => {
     expect(isAutoApprovableSqlCall(['workspace', 'delete', '--workspace-id', '7'])).toBe(false);
     expect(isAutoApprovableSqlCall(['workspace', 'load', '--workspace-id', '7', '--tables', 't', '--force'])).toBe(false);
     expect(isAutoApprovableSqlCall('workspace query' as never)).toBe(false);
+  });
+});
+
+describe('isReadOnlySqlCall', () => {
+  it('accepts only the workspace calls kbagent classifies as reads', () => {
+    expect(isReadOnlySqlCall(['workspace', 'list'])).toBe(true);
+    expect(isReadOnlySqlCall(['workspace', 'detail', '--workspace-id', '7'])).toBe(true);
+    expect(isReadOnlySqlCall(['workspace', 'create', '--name', 'agent-ws'])).toBe(false);
+    expect(isReadOnlySqlCall(['workspace', 'query', '--workspace-id', '7', '--sql', 'SELECT 1'])).toBe(false);
+    expect(isReadOnlySqlCall(['workspace', 'delete', '--workspace-id', '7'])).toBe(false);
+    expect(isReadOnlySqlCall(['storage', 'buckets'])).toBe(false);
+    expect(isReadOnlySqlCall('workspace list' as never)).toBe(false);
   });
 });
 

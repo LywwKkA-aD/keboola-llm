@@ -13,6 +13,12 @@ describe('createAutoApprover', () => {
 
   it('asks the user in chats where SQL is not allowed', () => {
     expect(approve('other', sql(['workspace', 'query', '--workspace-id', '7', '--sql', 'SELECT 1']))).toBe(false);
+    expect(approve('other', sql(['workspace', 'create', '--name', 'agent-ws']))).toBe(false);
+  });
+
+  it('never asks about listing or inspecting workspaces: kbagent classifies those as reads', () => {
+    expect(approve('other', sql(['workspace', 'list']))).toBe(true);
+    expect(approve('other', sql(['workspace', 'detail', '--workspace-id', '7']))).toBe(true);
   });
 
   it('never approves other tools, other operations or malformed args', () => {

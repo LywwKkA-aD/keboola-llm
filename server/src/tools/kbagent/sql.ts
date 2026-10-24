@@ -22,10 +22,20 @@ export function sqlInvocation(request: Omit<InvocationRequest, 'access' | 'opera
   return buildInvocation({ ...request, access: 'write', operations: SQL_OPERATIONS });
 }
 
+function routineInvocation(args: unknown): InvocationResult | undefined {
+  if (!Array.isArray(args) || !args.every((token) => typeof token === 'string')) return undefined;
+  if (args.some((token) => NEEDS_HUMAN_FLAGS.has(token.split('=', 1)[0] ?? token))) return undefined;
+  return sqlInvocation({ args });
+}
+
 /** True when a kbagent_sql call may run without asking, given the user allowed SQL for the chat. */
 export function isAutoApprovableSqlCall(args: unknown): boolean {
-  if (!Array.isArray(args) || !args.every((token) => typeof token === 'string')) return false;
-  if (args.some((token) => NEEDS_HUMAN_FLAGS.has(token.split('=', 1)[0] ?? token))) return false;
-  const result = sqlInvocation({ args });
-  return result.ok && SQL_OPERATIONS.has(result.operation);
+  const result = routineInvocation(args);
+  return result?.ok === true && SQL_OPERATIONS.has(result.operation);
+}
+
+/** True for kbagent_sql calls kbagent itself classifies as reads (listing or inspecting workspaces). */
+export function isReadOnlySqlCall(args: unknown): boolean {
+  const result = routineInvocation(args);
+  return result?.ok === true && result.category === 'read';
 }

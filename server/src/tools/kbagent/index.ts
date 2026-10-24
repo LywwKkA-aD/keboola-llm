@@ -5,7 +5,7 @@ export type { InvocationRequest } from './policy.ts';
 export { redactSecrets } from './redact.ts';
 export { defaultExec, runKbagent } from './runner.ts';
 export type { ExecFn, ExecOptions, ExecOutcome, RunRequest, RunResult } from './runner.ts';
-export { isAutoApprovableSqlCall, SQL_OPERATIONS, sqlInvocation } from './sql.ts';
+export { isAutoApprovableSqlCall, isReadOnlySqlCall, SQL_OPERATIONS, sqlInvocation } from './sql.ts';
 export { createKbagentSqlTool, createKbagentTools } from './tools.ts';
 export type { KbagentCallArtifact, KbagentToolsOptions } from './tools.ts';
 export type { Access, Category, InvocationResult } from './types.ts';
