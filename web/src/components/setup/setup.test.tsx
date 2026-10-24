@@ -28,12 +28,14 @@ function setupServer(initial: SetupReport) {
   return { state, route };
 }
 
+/** Settings with the setup checklist open: a complete one starts folded into its summary, so unfold it. */
 async function openSetup(report: SetupReport, routes: Record<string, unknown> = {}) {
   const server = setupServer(report);
   const api = stubApi({ ...baseRoutes, ...pageRoutes, 'GET /api/setup': server.route, ...routes });
   window.history.pushState({}, '', '/settings');
   render(<App />);
   const section = await screen.findByRole('region', { name: 'Setup' });
+  if (report.complete) await userEvent.click(await within(section).findByRole('button', { name: 'Show the steps' }));
   await within(section).findByRole('list', { name: 'Setup' });
   return { api, server, section };
 }
@@ -53,6 +55,29 @@ afterEach(() => {
 });
 
 describe('setup checklist', () => {
+  it('folds a complete checklist into one summary line that opens the steps', async () => {
+    stubApi({ ...baseRoutes, ...pageRoutes, 'GET /api/setup': SETUP_COMPLETE });
+    window.history.pushState({}, '', '/settings');
+    render(<App />);
+    const section = await screen.findByRole('region', { name: 'Setup' });
+    expect(await within(section).findByText('All set · 6 of 6')).toBeInTheDocument();
+    expect(within(section).queryByRole('list', { name: 'Setup' })).toBeNull();
+
+    const toggle = within(section).getByRole('button', { name: 'Show the steps' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(toggle);
+    const list = within(section).getByRole('list', { name: 'Setup' });
+    expect(within(section).getByRole('button', { name: 'Hide the steps' })).toHaveAttribute('aria-controls', list.id);
+    await userEvent.click(within(section).getByRole('button', { name: 'Hide the steps' }));
+    expect(within(section).queryByRole('list', { name: 'Setup' })).toBeNull();
+  });
+
+  it('keeps the steps open, without a summary, while one still fails', async () => {
+    const { section } = await openSetup(setupReport({ model: { status: 'fail', reason: 'modelFailed', detail: 'a/model: timeout' } }));
+    expect(within(section).queryByText(/All set/)).toBeNull();
+    expect(within(section).queryByRole('button', { name: 'Show the steps' })).toBeNull();
+  });
+
   it('lists every step with its status, what it is for and the facts from the server', async () => {
     const { server, section } = await openSetup(SETUP_COMPLETE);
 
@@ -61,10 +86,32 @@ describe('setup checklist', () => {
     expect(within(kbagent).getByText('Done')).toBeInTheDocument();
     expect(within(kbagent).getByText('The Keboola command-line tool the agents work through.')).toBeInTheDocument();
     expect(within(kbagent).getByText('kbagent v0.100.2')).toBeInTheDocument();
-    expect(within(section).getByText('Everything is set up.')).toBeInTheDocument();
+    expect(stepItem(section, '1. OmniRoute is running').querySelector('.setup-step__detail')).toHaveTextContent('Models: 2 · http://127.0.0.1:20128/v1');
+    // Technical values are set off as code, the words around them are not.
+    expect(within(stepItem(section, '6. Project for the team')).getByText('sandbox').tagName).toBe('CODE');
 
     await userEvent.click(within(section).getByRole('button', { name: 'Check again' }));
     await waitFor(() => expect(server.state.retests).toBe(1));
+  });
+
+  it('words the facts in the user\'s language', async () => {
+    const access = { status: 'ok' as const, detail: 'admin · bigquery · changes: promotion in the app', facts: { kind: 'access' as const, role: 'admin', backend: 'bigquery', changePath: 'promote' as const, protectedProduction: false } };
+    const report = setupReport({}, {});
+    stubApi({
+      ...baseRoutes,
+      ...pageRoutes,
+      'GET /api/settings': { language: 'ru' },
+      'GET /api/setup': { ...report, steps: [...report.steps, { id: 'access', ...access }] },
+    });
+    window.history.pushState({}, '', '/settings');
+    render(<App />);
+    const section = await screen.findByRole('region', { name: 'Первый запуск' });
+    await userEvent.click(await within(section).findByRole('button', { name: 'Показать шаги' }));
+    const detail = (title: string) => within(section).getByText(title).closest('li')?.querySelector('.setup-step__detail');
+    expect(detail('3. Модель отвечает')).toHaveTextContent('a/model ответила за 420 мс');
+    expect(detail('2. Ключ OmniRoute')).toHaveTextContent('Сохранён, OmniRoute его принимает');
+    expect(detail('7. Что команде можно в Keboola')).toHaveTextContent('admin · BigQuery · изменения переносятся в прод из приложения');
+    expect(section).not.toHaveTextContent(/answered in|set and accepted|registered/);
   });
 
   it('offers the commands to install and start what is missing, as PowerShell on Windows', async () => {
@@ -132,7 +179,9 @@ describe('setup checklist', () => {
 
     expect(api.callsTo('POST', '/api/setup/omniroute')[0]?.body).toEqual({ apiKey: KEY });
     expect(api.calls.every((call) => !call.path.includes(KEY))).toBe(true);
-    expect(await within(section).findByText('Everything is set up.')).toBeInTheDocument();
+    expect(await within(section).findByText('All set · 6 of 6')).toBeInTheDocument();
+    // Fixed right here: the steps stay open to show the result instead of folding away.
+    expect(within(section).getByRole('list', { name: 'Setup' })).toBeInTheDocument();
     expect(document.body.innerHTML).not.toContain(KEY);
   });
 
@@ -188,7 +237,7 @@ describe('setup checklist', () => {
 
     await userEvent.click(within(step).getByRole('button', { name: 'Test the model' }));
     expect(api.callsTo('POST', '/api/setup/test-model')).toHaveLength(1);
-    expect(await within(section).findByText('Everything is set up.')).toBeInTheDocument();
+    expect(await within(section).findByText('All set · 6 of 6')).toBeInTheDocument();
   });
 
   it('shows why a model test failed', async () => {
@@ -246,7 +295,7 @@ describe('setup checklist', () => {
     expect(await within(section).findByText('Could not check the setup: Internal error')).toBeInTheDocument();
     fail = false;
     await userEvent.click(within(section).getByRole('button', { name: 'Check again' }));
-    expect(await within(section).findByText('Everything is set up.')).toBeInTheDocument();
+    expect(await within(section).findByText('All set · 6 of 6')).toBeInTheDocument();
     expect(api.callsTo('GET', '/api/setup')).toHaveLength(2);
   });
 });

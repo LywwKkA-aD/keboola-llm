@@ -183,6 +183,34 @@
   gap: var(--space-3);
 }
 
+/* A complete checklist folded into one line: status, the steps on demand, a recheck. */
+.setup__summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+
+.setup__summary-text {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.setup__summary + .setup__steps {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+/* A technical value in a step's facts (URL, model, version): set off from the words around it. */
+.setup-step__value {
+  background: var(--color-surface-3);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+  padding: 0 4px;
+}
+
 /* Phone width: a step's status chip and its buttons move under the title when they do not fit. */
 @media (max-width: 720px) {
   .setup-step__head,

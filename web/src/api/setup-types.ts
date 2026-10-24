@@ -18,12 +18,42 @@ export type SetupReason =
   | 'sessionExpired'
   | 'accessUnreadable';
 
+/** How a verified change reaches production (server/src/system/keboola-access.ts). */
+export type ChangePath = 'promote' | 'merge-request' | 'keboola-ui' | 'read-only';
+
+/** What a step found, as data for the UI to word in the user's language. `none`: the reason says it all. */
+export type SetupFacts =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'router'; readonly url: string; readonly models?: number }
+  | { readonly kind: 'unreachable'; readonly url: string; readonly error?: string }
+  | { readonly kind: 'http'; readonly url: string; readonly status: number }
+  | { readonly kind: 'keyAccepted' }
+  | { readonly kind: 'keyRejected'; readonly status: number }
+  | { readonly kind: 'modelAnswered'; readonly model: string; readonly ms: number }
+  | { readonly kind: 'modelFailed'; readonly model: string; readonly error: string }
+  | { readonly kind: 'version'; readonly version: string }
+  | { readonly kind: 'error'; readonly message: string }
+  | { readonly kind: 'projects'; readonly aliases: readonly string[] }
+  | { readonly kind: 'project'; readonly alias: string; readonly source: 'configured' | 'default' | 'only' }
+  | { readonly kind: 'projectUnknown'; readonly alias: string }
+  | {
+      readonly kind: 'access';
+      readonly role?: string;
+      readonly token?: true;
+      readonly backend?: string;
+      readonly changePath: ChangePath;
+      readonly protectedProduction: boolean;
+    }
+  | { readonly kind: 'session'; readonly session: string };
+
 export interface SetupStep {
   readonly id: SetupStepId;
   readonly status: SetupStatus;
   readonly reason?: SetupReason;
-  /** Short English facts from the server, e.g. "kbagent v0.100.2" or "HTTP 401". */
+  /** Short English facts for the terminal, e.g. "kbagent v0.100.2"; the UI words `facts` instead. */
   readonly detail: string;
+  /** Absent on blocked steps. */
+  readonly facts?: SetupFacts;
 }
 
 /** The OmniRoute key is write-only: the UI only learns whether one is set. */
