@@ -1,0 +1,101 @@
+/*
+ * Chat commands (components/CommandMenu.tsx): the menu that opens over a composer on "/", the note line in its place,
+ * and the command chip on a user message. Keboola Connection list styling: surface, 1px border, 8px radius.
+ */
+.command-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+
+.command-menu {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  bottom: calc(100% + var(--space-2));
+  box-shadow: var(--shadow-panel);
+  left: 0;
+  list-style: none;
+  margin: 0;
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
+  padding: var(--space-1);
+  position: absolute;
+  right: 0;
+  z-index: 5;
+}
+
+.command-menu__item {
+  align-items: baseline;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(120px, max-content) minmax(0, 1fr);
+  padding: 6px var(--space-2);
+}
+
+.command-menu__item--on {
+  background: var(--color-primary-soft);
+}
+
+.command-menu__name {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.command-menu__item--on .command-menu__name {
+  color: var(--color-primary);
+}
+
+.command-menu__arg {
+  color: var(--color-text-faint);
+}
+
+.command-menu__help {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-note {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  bottom: calc(100% + var(--space-2));
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  left: 0;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  position: absolute;
+  z-index: 5;
+}
+
+.command-note--error {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+/* The command a message was sent with, above its text in the user's bubble. */
+.message__command {
+  align-self: flex-start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+  padding: 0 6px;
+}
+
+@media (max-width: 640px) {
+  .command-menu__item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}

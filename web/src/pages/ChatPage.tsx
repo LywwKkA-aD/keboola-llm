@@ -5,6 +5,8 @@ import type { Thread } from '../api/types.ts';
 import { Composer } from '../components/Composer.tsx';
 import { Conversation } from '../components/Conversation.tsx';
 import { ThreadList } from '../components/ThreadList.tsx';
+import type { Outgoing } from '../hooks/useCommandField.ts';
+import { useInitWorkspace } from '../hooks/useInitWorkspace.ts';
 import { useSettings } from '../state/settings-context.tsx';
 import { useTeam } from '../state/team-context.tsx';
 
@@ -24,15 +26,25 @@ export function ChatPage() {
 
   const current = threads.find((thread) => thread.id === threadId);
 
-  const start = async (text: string) => {
+  const start = async ({ text, command }: Outgoing) => {
     try {
-      const { thread } = await api.createThread(text);
+      const { thread } = await api.createThread(text, command);
       refresh();
       navigate(`/chat/${thread.id}`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t('error.generic'));
     }
   };
+
+  const openChat = useCallback(
+    (id: string) => {
+      refresh();
+      navigate(`/chat/${id}`);
+    },
+    [navigate, refresh],
+  );
+  const init = useInitWorkspace(openChat);
+  const newChat = useCallback(() => navigate('/chat'), [navigate]);
 
   const remove = async (id: string) => {
     await api.remove(id).catch(() => {});
@@ -52,13 +64,14 @@ export function ChatPage() {
           {...(current ? { updatedAt: current.updatedAt } : {})}
           resumable={current?.resumable === true}
           onActivity={refresh}
+          actions={{ init, newChat }}
         />
       ) : (
         <div className="chat-page__start">
           <span className="label">{t('chat.new')}</span>
           <p className="conversation__empty">{t('chat.empty')}</p>
           {error && <div className="conversation__status conversation__status--error">{error}</div>}
-          <Composer onSend={(text) => void start(text)} onStop={() => {}} running={false} disabled={false} />
+          <Composer onSend={(message) => void start(message)} onStop={() => {}} running={false} disabled={false} actions={{ init }} />
         </div>
       )}
     </div>
