@@ -17,7 +17,7 @@ export async function listModels(config: Pick<OmniRouteConfig, 'baseUrl' | 'apiK
   return [...new Set(ids)].toSorted();
 }
 
-interface ModelEntry {
+export interface ModelEntry {
   readonly id?: unknown;
   readonly type?: unknown;
   readonly output_modalities?: unknown;
@@ -28,7 +28,7 @@ interface ModelEntry {
  * Agents need a model that answers in text and calls tools. OmniRoute also lists image, video, audio and embedding
  * models; when it says nothing about a field, the model gets the benefit of the doubt.
  */
-function runsAgents(entry: ModelEntry): boolean {
+export function runsAgents(entry: ModelEntry): boolean {
   if (typeof entry.type === 'string' && entry.type !== 'chat' && entry.type !== 'text') return false;
   if (Array.isArray(entry.output_modalities) && !entry.output_modalities.includes('text')) return false;
   return entry.capabilities?.tool_calling !== false;
