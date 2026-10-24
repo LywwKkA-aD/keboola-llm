@@ -114,6 +114,63 @@ describe('Home page', () => {
     expect(screen.queryByRole('complementary', { name: 'keboola-expert' })).toBeNull();
   });
 
+  it('opens an action from the agent card in place: an edit shows its diff, a delegation its task and reply', async () => {
+    await openHome();
+    act(() => {
+      const stream = FakeEventSource.global();
+      stream.emit({ type: 'run.started', runId: 'r' }, 't1');
+      stream.emit({ type: 'delegate.start', agent: 'lead', callId: 'd1', to: 'keboola-expert', task: 'Найди таблицы с customer_id' }, 't1');
+      stream.emit(
+        { type: 'tool.start', agent: 'keboola-expert', callId: 'e1', tool: 'edit_file', args: { file_path: '/knowledge/tables.md', old_string: 'old line', new_string: 'new line' } },
+        't1',
+      );
+      stream.emit({ type: 'tool.end', agent: 'keboola-expert', callId: 'e1', tool: 'edit_file', ok: true, preview: 'Updated file' }, 't1');
+      stream.emit({ type: 'message', agent: 'keboola-expert', text: 'Нашёл **3** таблицы.' }, 't1');
+      stream.emit({ type: 'delegate.end', agent: 'lead', callId: 'd1', to: 'keboola-expert', ok: true }, 't1');
+    });
+    await userEvent.click(within(await openTeam()).getByRole('button', { name: /keboola-expert/ }));
+    const card = screen.getByRole('complementary', { name: 'keboola-expert' });
+    const actions = within(card).getByRole('list', { name: 'Последние действия агента' });
+    expect(within(actions).getAllByRole('button').map((row) => row.textContent)).toEqual([
+      expect.stringMatching(/Правка.*knowledge\/tables\.md.*Готово/),
+      expect.stringMatching(/Задача от.*lead: Найди таблицы с customer_id.*Готово/),
+    ]);
+
+    await userEvent.click(within(actions).getByRole('button', { name: /Правка/ }));
+    const detail = within(card).getByRole('region', { name: 'Действие' });
+    expect(within(detail).getByText('/knowledge/tables.md')).toBeInTheDocument();
+    const diff = within(detail).getByRole('list', { name: 'Изменение' });
+    expect(within(diff).getAllByRole('listitem').map((line) => line.textContent)).toEqual(['-old line', '+new line']);
+    expect(within(detail).getByText('Updated file')).toBeInTheDocument();
+    expect(within(card).queryByRole('list', { name: 'Последние действия агента' })).toBeNull();
+
+    await userEvent.click(within(detail).getByRole('button', { name: 'Назад' }));
+    await userEvent.click(within(card).getByRole('button', { name: /Задача от/ }));
+    const delegation = within(card).getByRole('region', { name: 'Действие' });
+    expect(within(delegation).getByText('Найди таблицы с customer_id')).toBeInTheDocument();
+    expect(within(delegation).getByText('3', { selector: 'strong' })).toBeInTheDocument();
+
+    // The chat it happened in opens in the popup, the card stays.
+    await userEvent.click(within(delegation).getByRole('button', { name: 'Открыть в чате' }));
+    expect(await screen.findByRole('dialog', { name: 'Чат' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'keboola-expert' })).toBeInTheDocument();
+  });
+
+  it('shows an approval the agent waits for, with a way to answer it, and an empty card before anything happened', async () => {
+    const request = { tool: 'write_file', agent: 'keboola-expert', args: { file_path: '/knowledge/new.md', content: '# New note' }, decisions: ['approve', 'reject'] };
+    await openHome({ 'GET /api/approvals': [{ ...APPROVAL, interruptId: 'i7', requests: [request] }] });
+    await userEvent.click(within(await openTeam()).getByRole('button', { name: /keboola-expert/ }));
+    const card = screen.getByRole('complementary', { name: 'keboola-expert' });
+    expect(within(card).getByText('С момента открытия страницы ничего не было. Более ранняя работа — в чатах.')).toBeInTheDocument();
+
+    act(() => FakeEventSource.global().emit({ type: 'approval.required', interruptId: 'i7', requests: [request] }, 't1'));
+    await userEvent.click(await within(card).findByRole('button', { name: /Подтверждение.*Ждёт вашего решения/ }));
+    const detail = within(card).getByRole('region', { name: 'Действие' });
+    expect(within(detail).getByText('# New note')).toBeInTheDocument();
+    await userEvent.click(within(detail).getByRole('button', { name: 'Ответить в чате' }));
+    expect(await screen.findByRole('dialog', { name: 'Чат' })).toBeInTheDocument();
+  });
+
   it('counts runs and approvals, and shows today\'s tokens with the cache share from the server', async () => {
     let report = usageReport({ calls: 3, input: 12_000, cached: 10_200, output: 300 });
     const api = await openHome({ 'GET /api/approvals': [APPROVAL], 'GET /api/usage': () => report });

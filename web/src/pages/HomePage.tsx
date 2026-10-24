@@ -58,7 +58,7 @@ export function HomePage() {
           <OnboardingCard onOpenChat={openChat} />
           {agent ? (
             <aside className="hud-surface agent-card" aria-label={agent.name}>
-              <AgentDetail agent={agent} current={state.agents[agent.name]} now={now} onClose={() => setSelected(undefined)} />
+              <AgentDetail agent={agent} current={state.agents[agent.name]} now={now} onClose={() => setSelected(undefined)} onOpenChat={openChat} />
             </aside>
           ) : (
             <p className="home__hint">{t('home.hint')}</p>
