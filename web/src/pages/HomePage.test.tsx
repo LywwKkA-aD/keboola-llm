@@ -67,13 +67,13 @@ describe('Home page', () => {
     const card = await screen.findByRole('region', { name: 'Завершите настройку' });
     expect(within(card).getByText('4. kbagent установлен')).toBeInTheDocument();
     expect(within(card).getByText('not installed or not on PATH')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Знакомство с проектом' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Инициализация проекта' })).toBeNull();
     // Above the stats, where the survey offer goes.
     expect(card.compareDocumentPosition(screen.getByText('Сейчас ничего не выполняется.')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     setup = SETUP_COMPLETE;
     await userEvent.click(within(card).getByRole('button', { name: 'Проверить снова' }));
-    expect(await screen.findByRole('region', { name: 'Знакомство с проектом' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Инициализация проекта' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Завершите настройку' })).toBeNull();
   });
 
@@ -81,7 +81,7 @@ describe('Home page', () => {
     await openHome({ 'GET /api/setup': () => errorResponse(500, 'Internal error'), 'GET /api/onboarding': { project: 'sandbox', profiled: false, running: false } });
     const card = await screen.findByRole('region', { name: 'Завершите настройку' });
     expect(within(card).getByText('Не удалось проверить настройку: Internal error')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Знакомство с проектом' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Инициализация проекта' })).toBeNull();
   });
 
   it('offers no survey without a Keboola project or once the project is profiled', async () => {

@@ -21,7 +21,7 @@ test('home shows the setup checklist in place of the survey offer while kbagent 
   await expect(kbagent).toContainText(/winget install|install\.sh/);
   await expect(kbagent.getByRole('button', { name: 'Копировать' })).toBeVisible();
   await expect(steps.nth(4)).toContainText('Ждёт предыдущих шагов.');
-  await expect(page.getByRole('region', { name: 'Знакомство с проектом' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Инициализация проекта' })).toHaveCount(0);
 });
 
 test('the model answers a test request through OmniRoute', async ({ request }) => {
