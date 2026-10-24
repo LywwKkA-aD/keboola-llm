@@ -6,7 +6,7 @@ import { rackLeds } from '../../hall.ts';
 import { seeded } from '../../nature.ts';
 import { faceplateTexture } from './faceplate.ts';
 
-export const HALL = { background: '#04070c', fogNear: 24, fogFar: 52 } as const;
+export const HALL = { background: '#04070c', fogNear: 55, fogFar: 110 } as const;
 
 /** The hall's walls: open toward the camera (+z), closed at the back and on both sides. */
 const WALLS = { back: -14, left: -12.9, right: 12.9, front: 5.5, height: 4.2 } as const;
