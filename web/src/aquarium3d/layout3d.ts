@@ -16,7 +16,8 @@ export const STATIONS_3D: Readonly<Record<StationId, Spot & { readonly label: st
   // Mirror of the knowledge archive on the right side.
   console: { position: [7.6, 0.2, 0.2], facing: Math.PI / 2, label: 'console' },
   forge: { position: [-3.9, 0.2, 6.0], facing: -Math.PI / 4, label: 'forge' },
-  beacon: { position: [5.1, 0.2, 6.1], facing: -0.3, label: 'beacon' },
+  // Turned to the left: three pads in a column, waiting agents look toward the centre of the hall.
+  beacon: { position: [5.1, 0.2, 6.1], facing: -1.2, label: 'beacon' },
 };
 
 const STATION_FOR: Partial<Record<AgentActivity, StationId>> = {

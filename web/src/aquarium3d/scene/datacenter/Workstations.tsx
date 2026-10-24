@@ -54,9 +54,9 @@ function Workstation({ index, slot, occupied, motion }: { index: number; slot: r
           </mesh>
         ))}
         {[
-          { x: 0, y: 2.75, w: 1.3, h: 0.74, turn: 0 },
-          { x: -1.0, y: 2.62, w: 0.8, h: 0.5, turn: 0.35 },
-          { x: 1.0, y: 2.62, w: 0.8, h: 0.5, turn: -0.35 },
+          { x: 0, y: 1.55, w: 1.3, h: 0.74, turn: 0 },
+          { x: -1.0, y: 1.45, w: 0.8, h: 0.5, turn: 0.35 },
+          { x: 1.0, y: 1.45, w: 0.8, h: 0.5, turn: -0.35 },
         ].map((monitor, i) => (
           <group key={monitor.x} position={[monitor.x, monitor.y, -0.25]} rotation={[0, monitor.turn, 0]}>
             <mesh position={[0, -(monitor.y - 0.84) / 2, -0.04]}>
