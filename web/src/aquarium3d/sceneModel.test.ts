@@ -3,10 +3,19 @@ import type { AgentInfo, Envelope } from '../api/types.ts';
 import { initialAquarium, reduceAquarium } from '../aquarium/state.ts';
 import { STATION_SPOTS } from './floorplan.ts';
 import { STATIONS_3D } from './layout3d.ts';
+import { briefingSpot } from './pastimes.ts';
 import { buildSceneModel } from './sceneModel.ts';
 
-const agent = (name: string, role: AgentInfo['role'] = 'subagent'): AgentInfo => ({ name, description: 'd', role, enabled: true, skills: [], tools: [] });
-const agents = [agent('lead', 'orchestrator'), agent('keboola-expert'), agent('kbc-sql-reviewer'), agent('knowledge-keeper')];
+const agent = (name: string, role: AgentInfo['role'] = 'subagent', access?: AgentInfo['access']): AgentInfo => ({
+  name,
+  description: 'd',
+  role,
+  enabled: true,
+  skills: [],
+  tools: [],
+  ...(access ? { access } : {}),
+});
+const agents = [agent('lead', 'orchestrator'), agent('keboola-expert', 'subagent', 'read'), agent('kbc-sql-reviewer', 'subagent', 'read'), agent('knowledge-keeper')];
 
 const play = (events: Envelope['event'][], threadId = 't1') =>
   events.reduce((state, event, i) => reduceAquarium(state, { seq: i, threadId, event }, 0), initialAquarium('lead'));
@@ -71,6 +80,17 @@ describe('buildSceneModel', () => {
     const model = buildSceneModel({ agents, lead: 'lead', state, now: 0 });
     expect(model.moods['keboola-expert']).toBe('thinking');
     expect(model.spots['keboola-expert']?.position).toEqual(STATION_SPOTS.console[0]);
+  });
+
+  it('sends a Keboola agent with a new task straight to the Keboola terminal, others to the lead to hear it out', () => {
+    const state = play([
+      { type: 'delegate.start', agent: 'lead', callId: 'd1', to: 'keboola-expert', task: 'Find tables' },
+      { type: 'delegate.start', agent: 'lead', callId: 'd2', to: 'knowledge-keeper', task: 'Look up the glossary' },
+    ]);
+    const model = buildSceneModel({ agents, lead: 'lead', state, now: 0 });
+    expect(model.spots['keboola-expert']?.position).toEqual(STATION_SPOTS.console[0]);
+    expect(model.occupancy.console).toBe(1);
+    expect(model.spots['knowledge-keeper']).toEqual(briefingSpot(0));
   });
 
   it('never sends a subagent planning its own task to the lead desk', () => {

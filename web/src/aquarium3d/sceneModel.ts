@@ -24,12 +24,13 @@ export function buildSceneModel({ agents, lead, state, now }: {
   const names = agents.map((agent) => agent.name);
   const moods = Object.fromEntries(names.map((name) => [name, moodOf(state.agents[name], now)]));
   // Where to stand follows the task, not the moment: thinking between tool calls keeps an agent at its station, and
-  // only the lead plans at the command dais.
+  // only the lead plans at the command dais. A delegate that has just got a task goes to its own workplace: the
+  // Keboola terminal for an agent with Keboola access, otherwise the lead's dais to hear the task out.
+  const homeWork = (name: string): AgentActivity | undefined => (agents.find((agent) => agent.name === name)?.access ? 'computing' : undefined);
   const placeAs = (name: string): AgentActivity => {
     const mood = moods[name] ?? 'idle';
     const work = state.agents[name]?.work;
-    if (mood === 'planning' && name !== lead) return work ?? 'idle';
-    if (mood === 'thinking' && work) return work;
+    if (name !== lead && (mood === 'thinking' || mood === 'planning')) return work ?? homeWork(name) ?? 'thinking';
     return mood;
   };
   const placements = Object.fromEntries(names.map((name) => [name, placeAs(name)]));
