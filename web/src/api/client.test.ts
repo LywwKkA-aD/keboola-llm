@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { errorResponse, stubApi } from '../test-utils/fake-api.ts';
-import { ApiError, api, eventsUrl } from './client.ts';
+import { ApiError, api, eventsUrl, setupApi } from './client.ts';
 
 describe('api client', () => {
   it('sends GETs without a body or content type', async () => {
@@ -65,5 +65,26 @@ describe('api client', () => {
       '/api/status',
       '/api/system',
     ]);
+  });
+});
+
+describe('setup api', () => {
+  it('asks for the checklist, a retest and a model test', async () => {
+    const { fetchMock } = stubApi({ 'GET /api/setup': { complete: true }, 'POST /api/setup/test-model': { ok: true } });
+    await setupApi.report();
+    await setupApi.report(true);
+    await setupApi.testModel();
+    expect(fetchMock.mock.calls.map(([url, init]) => `${init?.method ?? 'GET'} ${String(url)}`)).toEqual([
+      'GET /api/setup',
+      'GET /api/setup?retest=1',
+      'POST /api/setup/test-model',
+    ]);
+  });
+
+  it('sends the OmniRoute key in the POST body only', async () => {
+    const { calls, fetchMock } = stubApi({ 'POST /api/setup/omniroute': { baseUrl: 'http://x/v1', apiKeySet: true } });
+    await expect(setupApi.saveOmniRoute({ apiKey: 'sk-secret-1' })).resolves.toEqual({ baseUrl: 'http://x/v1', apiKeySet: true });
+    expect(calls[0]?.body).toEqual({ apiKey: 'sk-secret-1' });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('/api/setup/omniroute');
   });
 });

@@ -1,0 +1,204 @@
+/* First-run setup checklist: the Home card and the Setup section in Settings. */
+.setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.setup__checking {
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.setup__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.setup-step {
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 7px minmax(0, 1fr);
+  padding: var(--space-3) 0;
+}
+
+.setup-step:first-child {
+  padding-top: 0;
+}
+
+.setup-step:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.setup-step > .dot {
+  margin-top: 7px;
+}
+
+.setup-step__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.setup-step__head {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.setup-step__title {
+  font-weight: 600;
+}
+
+.setup-step--blocked .setup-step__title {
+  color: var(--color-text-muted);
+}
+
+.setup-step__text {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.setup-step__detail {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.setup-step__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.setup-step__row {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.setup-step__row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.setup-step__result {
+  color: var(--color-success);
+  font-size: var(--text-xs);
+  margin: 0;
+}
+
+.setup-step__recheck {
+  align-self: flex-start;
+}
+
+/* A button that reads as a link. Two classes: this file loads before base.css and must beat .btn. */
+.setup .setup-link {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  min-height: 0;
+  padding: 0;
+}
+
+.setup .setup-link:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
+}
+
+/* A command to copy into the user's terminal. */
+.command {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.command__head {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  padding-left: var(--space-3);
+}
+
+/* Lines stay as they are (each one is a command); long ones scroll, Copy takes them whole. */
+.command__code {
+  font-size: var(--text-xs);
+  line-height: 18px;
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: var(--space-2) var(--space-3);
+  white-space: pre;
+}
+
+.setup-key,
+.setup-connect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.setup-key .field,
+.setup-connect .field {
+  max-width: none;
+}
+
+.setup-key__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-3);
+}
+
+.setup-key__note {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  margin: 0;
+}
+
+.setup-connect__alt summary {
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-2);
+}
+
+.setup__done {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Home: above the stats while a step still fails; amber like everything that waits for the user. */
+.setup-card {
+  border-left: 3px solid var(--color-warning);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.setup-card__title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin: 0;
+}
+
+.setup-card__intro {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}

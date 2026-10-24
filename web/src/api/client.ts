@@ -13,6 +13,7 @@ import type {
 } from './types.ts';
 import type { DefinitionKind, TrackedDefinition, VersionDetail, VersionSummary } from './types.ts';
 import type { PendingApproval } from '../state/run-state.ts';
+import type { ModelTest, OmniRouteInput, OmniRouteState, SetupReport } from './setup-types.ts';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -74,4 +75,11 @@ export const versionsApi = {
   get: (kind: DefinitionKind, name: string, id: number) => request<VersionDetail>(`${versionsPath(kind, name)}/${id}`),
   restore: (kind: DefinitionKind, name: string, id: number) =>
     request<{ changed: boolean; version?: VersionSummary }>(`${versionsPath(kind, name)}/${id}/restore`, 'POST'),
+};
+
+/** First-run setup wizard. The OmniRoute key only ever travels in a POST body, never in a URL. */
+export const setupApi = {
+  report: (retest = false) => request<SetupReport>(retest ? '/api/setup?retest=1' : '/api/setup'),
+  testModel: () => request<ModelTest>('/api/setup/test-model', 'POST'),
+  saveOmniRoute: (input: OmniRouteInput) => request<OmniRouteState>('/api/setup/omniroute', 'POST', input),
 };

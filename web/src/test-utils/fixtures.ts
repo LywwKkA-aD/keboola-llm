@@ -1,4 +1,5 @@
 import type { TeamInfo, Thread } from '../api/types.ts';
+import { SETUP_COMPLETE } from './setup-fixtures.ts';
 
 export const TEAM: TeamInfo = {
   lead: 'lead',
@@ -42,4 +43,5 @@ export const baseRoutes = {
   'GET /api/threads/t2/messages': [],
   'GET /api/threads/t2/policy': { allowSql: false },
   'GET /api/routines': { routines: [], loadErrors: [] },
+  'GET /api/setup': SETUP_COMPLETE,
 };
