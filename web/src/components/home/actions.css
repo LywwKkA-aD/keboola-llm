@@ -1,0 +1,223 @@
+/* An agent's recent actions in its card, and one action opened in place. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.action-row {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: var(--space-2);
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  padding: 6px var(--space-2);
+  text-align: left;
+  width: 100%;
+}
+
+.action-row:hover {
+  background: var(--color-surface-3);
+}
+
+.action-row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.action-row__time {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+}
+
+.action-row__chip {
+  white-space: nowrap;
+}
+
+.action-row__text {
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A dot per state; the word shows only where it needs attention (running, waiting, failed). */
+.action-status {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: inline-flex;
+  font-size: var(--text-xs);
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.action-status::before {
+  background: var(--color-text-faint);
+  border-radius: 50%;
+  content: '';
+  flex: none;
+  height: 7px;
+  width: 7px;
+}
+
+.action-status--running::before {
+  animation: action-pulse 1.4s ease-in-out infinite;
+  background: var(--color-primary);
+}
+
+.action-status--done::before {
+  background: var(--color-success);
+}
+
+.action-status--failed {
+  color: var(--color-danger);
+}
+
+.action-status--failed::before {
+  background: var(--color-danger);
+}
+
+.action-status--waiting {
+  color: var(--color-warning);
+}
+
+.action-status--waiting::before {
+  background: var(--color-warning);
+}
+
+.action-row .action-status--done .action-status__label,
+.action-row .action-status--answered .action-status__label {
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+@keyframes action-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-status--running::before {
+    animation: none;
+  }
+}
+
+.action-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.action-detail__back {
+  align-self: flex-start;
+  margin-left: calc(-1 * var(--space-2));
+}
+
+.action-detail__back::before {
+  content: '‹';
+  margin-right: 6px;
+}
+
+.action-detail__meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-xs);
+  gap: var(--space-2);
+}
+
+.action-detail__title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.action-detail__path {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.action-detail__purpose {
+  margin: 0;
+}
+
+.action-detail__text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.action-detail__command {
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.action-detail__error,
+.action-detail__failed {
+  color: var(--color-danger);
+}
+
+.action-detail__error {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.action-detail__waiting {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  justify-content: space-between;
+  margin: 0;
+}
+
+.action-detail__foot {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+.action-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.action-field .request__code {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.action-detail .diff {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.agent-detail__about summary {
+  cursor: pointer;
+  margin-bottom: var(--space-2);
+}
+
+.agent-detail__now > span:nth-child(2) {
+  flex: none;
+}
+
+.agent-detail__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
