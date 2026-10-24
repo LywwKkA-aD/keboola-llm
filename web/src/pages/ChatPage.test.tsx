@@ -160,12 +160,13 @@ describe('Chat page', () => {
     render(<App />);
     // Settings and team arrive asynchronously and re-render the page: type only once the app has settled.
     await waitFor(() => expect(callsTo('GET', '/api/team').length + callsTo('GET', '/api/settings').length).toBeGreaterThanOrEqual(2));
+    await screen.findByRole('link', { name: 'Почему упал джоб?' });
     await screen.findByRole('textbox');
     await act(async () => {});
 
     await userEvent.type(screen.getByRole('textbox'), 'Новый вопрос{Enter}');
 
-    expect(callsTo('POST', '/api/threads')[0]?.body).toEqual({ text: 'Новый вопрос' });
+    await waitFor(() => expect(callsTo('POST', '/api/threads')[0]?.body).toEqual({ text: 'Новый вопрос' }));
     await waitFor(() => expect(window.location.pathname).toBe('/chat/t9'));
     expect(FakeEventSource.forThread('t9').url).toBe('/api/events?threadId=t9');
   });
