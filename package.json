@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:e2e": "npm run build -w web && playwright test",
     "eval": "node scripts/eval.mjs",
+    "eval:routing": "node scripts/eval-routing.mjs",
     "dev": "node scripts/dev.mjs",
     "start": "npm run build -w web && npm run start -w server",
     "chat": "npm run chat -w server --",
