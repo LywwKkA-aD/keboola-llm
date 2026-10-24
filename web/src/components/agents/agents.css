@@ -1,5 +1,8 @@
-/* Agents page extras: Agents/Skills tabs, why an agent is disabled, self-check, removed definitions. */
-.page__head--tabs {
+/*
+ * Agents page extras: Agents/Skills tabs, why an agent is disabled, self-check, removed definitions.
+ * The global stylesheets load after this file, so overrides of their classes use two class selectors.
+ */
+.page__head.page__head--tabs {
   padding-bottom: 0;
 }
 
@@ -37,7 +40,7 @@
   margin-left: var(--space-1);
 }
 
-.agent-detail__disabled {
+.notice.agent-detail__disabled {
   margin-bottom: var(--space-4);
 }
 
@@ -45,7 +48,7 @@
   margin: var(--space-1) 0 0;
 }
 
-.table__hint--warning {
+.table__hint.table__hint--warning {
   color: var(--color-warning);
 }
 

@@ -21,7 +21,7 @@ function SkillDetail({ skill, onClose }: { skill: Skill; onClose: () => void }) 
         <span className={custom ? 'chip chip--blue' : 'chip mono'}>{custom ? t('skills.custom') : skill.source}</span>
       </DrawerHead>
       <div className="panel-section">
-        <span className="label">{t('agents.description')}</span>
+        <span className="label">{t('skills.description')}</span>
         <p className="agent-detail__description">{skill.description || t('agents.none')}</p>
         {!custom && <p className="skills__note">{t('skills.vendored')}</p>}
       </div>

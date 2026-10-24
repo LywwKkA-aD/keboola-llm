@@ -67,7 +67,8 @@ describe('Check agent', () => {
     await userEvent.click(within(drawer).getByRole('button', { name: 'Проверить агента' }));
 
     const body = api.callsTo('POST', '/api/threads')[0]?.body as { text: string };
-    expect(body.text).toContain('«keboola-expert»');
+    // The first line becomes the chat title.
+    expect(body.text.split('\n')[0]).toBe('Проверка агента «keboola-expert».');
     expect(body.text).toContain('только на чтение');
     expect(within(drawer).getByRole('link', { name: 'Открыть чат' })).toHaveAttribute('href', '/chat/t9');
     expect(within(drawer).getByText('Лид проверяет агента.')).toBeInTheDocument();
