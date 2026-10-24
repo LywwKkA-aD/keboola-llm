@@ -101,7 +101,14 @@ export function createScheduler({ routines, store, clock, isRunning, launch, log
   function check() {
     if (!started) return;
     const now = clock.now();
-    routines().forEach((routine) => settle(routine, now));
+    // One broken routine (or a failed state write) must neither stop the others nor escape a timer callback.
+    routines().forEach((routine) => {
+      try {
+        settle(routine, now);
+      } catch (error) {
+        log(`[routines] ${routine.name}: ${message(error)}`);
+      }
+    });
     lastCheck = now;
     arm(now);
   }

@@ -205,6 +205,36 @@ describe('createScheduler', () => {
     expect(launched.map((run) => run.name)).toEqual(['other', 'morning-check', 'other']);
   });
 
+  it('keeps scheduling the others when one routine cannot save its state', () => {
+    const time = fakeClock('2026-10-26T07:59:00Z');
+    const real = createRoutineStateStore(join(makeTree({}), 'routines.json'));
+    real.update('broken', () => ({ settledUntil: '2026-10-23T08:00:00.000Z' }));
+    real.update('morning-check', () => ({ settledUntil: '2026-10-23T08:00:00.000Z' }));
+    const store = {
+      get: real.get,
+      update: (name: string, change: (state: RoutineState) => RoutineState) => {
+        if (name === 'broken') throw new Error('disk full');
+        return real.update(name, change);
+      },
+    };
+    const launched: string[] = [];
+    const logs: string[] = [];
+    const scheduler = createScheduler({
+      routines: () => [weekdays({ name: 'broken' }), weekdays()],
+      store,
+      clock: time.clock,
+      isRunning: () => false,
+      launch: (name) => launched.push(name),
+      log: (message) => logs.push(message),
+    });
+    scheduler.start();
+    time.advance(MINUTE);
+
+    expect(launched).toEqual(['morning-check']);
+    expect(logs.join('\n')).toMatch(/broken: disk full/);
+    expect(time.pendingTimers()).toBe(1);
+  });
+
   it('wakes at the next run or within a minute, whichever is sooner, and stops cleanly', () => {
     const { time, scheduler } = setup('2026-10-26T07:59:30Z');
     scheduler.start();
