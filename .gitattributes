@@ -1,0 +1,6 @@
+# Keep LF on every OS: fixtures are compared byte for byte and scripts must run on Windows too.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
