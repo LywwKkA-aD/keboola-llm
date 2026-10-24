@@ -1,39 +1,91 @@
+/*
+ * Home: the aquarium edge to edge under the top bar. The HUD, the setup card, the agent card, the chat popup
+ * and the composer float over it (their surfaces are in hud.css); the overlay itself lets clicks through.
+ */
 .home {
-  display: grid;
-  grid-template-columns: var(--panel-left) minmax(0, 1fr) var(--panel-right);
+  --hud-gap: var(--space-4);
+  --hud-bar: 48px;
+  --left-width: 360px;
+  --chat-width: min(540px, calc(100vw - 2 * var(--hud-gap)));
+  /* Kept free at the bottom of the left column for the composer. */
+  --ask-room: 84px;
   height: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
-.team-panel {
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  overflow-y: auto;
+/* Its own stacking context: the scene's label overlays (z-index up to 20) stay under the HUD. */
+.home__scene {
+  inset: 0;
+  isolation: isolate;
+  position: absolute;
 }
 
-.team-panel__head {
-  align-items: center;
-  border-bottom: 1px solid var(--color-border);
+.home__overlay {
+  display: flex;
+  gap: var(--hud-gap);
+  inset: 0;
+  justify-content: space-between;
+  padding: var(--hud-gap);
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.home__left {
+  display: flex;
+  flex: 0 1 var(--left-width);
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  min-width: 0;
+  padding-bottom: var(--ask-room);
+}
+
+.home__right {
+  align-items: flex-end;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+
+.home__hint {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  margin: 0;
+  max-width: 300px;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 35%);
+}
+
+:root[data-theme='light'] .home__hint {
+  color: var(--color-text-muted);
+  text-shadow: none;
+}
+
+.team-list {
+  margin: 0 calc(-1 * var(--space-4));
+}
+
+.team-list__group + .team-list__group {
+  margin-top: var(--space-2);
+}
+
+.team-list__group-head {
   display: flex;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-1) var(--space-4);
 }
 
-.team-panel__group {
-  padding: var(--space-3) 0 var(--space-2);
-}
-
-.team-panel__group-head {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-1) var(--space-5);
-}
-
-.team-panel__group-head .label {
+.team-list__group-head .label {
   color: var(--color-text-faint);
   font-size: var(--text-2xs);
 }
 
-.team-panel__list {
+.team-list__list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -49,7 +101,7 @@
   display: flex;
   font: inherit;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-5) var(--space-2) calc(var(--space-5) - 2px);
+  padding: var(--space-2) var(--space-4) var(--space-2) calc(var(--space-4) - 2px);
   text-align: left;
   width: 100%;
 }
@@ -93,100 +145,39 @@
   color: var(--color-primary);
 }
 
-.home__stage {
-  background: var(--color-bg);
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-  position: relative;
-}
-
-.home__stage .aquarium-view {
-  inset: 0;
-  position: absolute;
-}
-
-.home__hint {
-  color: var(--color-text-faint);
-  font-size: var(--text-2xs);
-  left: var(--space-5);
-  margin: 0;
-  pointer-events: none;
-  position: absolute;
-  top: var(--space-4);
-}
-
-.home__side {
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border);
-  overflow-y: auto;
-}
-
-.stats {
-  border-bottom: 1px solid var(--color-border);
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.stat {
-  border-right: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-4) var(--space-3);
-}
-
-.stat:last-child {
-  border-right: none;
-}
-
-.stat__value {
-  font-size: var(--text-2xl);
-  font-weight: 300;
-  line-height: 1.1;
-}
-
-.stat__value--blue {
-  color: var(--color-primary);
-}
-
-.stat__value--amber {
-  color: var(--color-warning);
-}
-
-.stat .label {
-  font-size: var(--text-2xs);
-}
-
-.run-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.run-list li {
-  align-items: center;
-  display: flex;
-  gap: var(--space-2);
-}
-
 .mini-approval {
   border: 1px solid var(--color-border);
   border-left: 2px solid var(--color-warning);
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
   padding: var(--space-3);
+}
+
+.mini-approval + .mini-approval {
+  margin-top: var(--space-3);
 }
 
 .mini-approval__head {
   align-items: center;
   display: flex;
   gap: var(--space-2);
+}
+
+.mini-approval__chat {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.mini-approval__chat:hover {
+  text-decoration: underline;
 }
 
 .mini-approval__actions {
@@ -238,7 +229,6 @@
   overflow-wrap: anywhere;
 }
 
-.usage,
 .facts {
   display: grid;
   gap: var(--space-2) var(--space-4);
@@ -246,7 +236,6 @@
   margin: 0;
 }
 
-.usage dd,
 .facts dd {
   margin: 0;
   overflow-wrap: anywhere;
@@ -290,23 +279,31 @@
   white-space: pre-wrap;
 }
 
+.request__title {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* The composer at the bottom centre; with the chat popup open, centred in the room left of it. */
 .ask {
-  bottom: var(--space-5);
+  bottom: var(--hud-gap);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  left: 50%;
+  left: var(--hud-gap);
+  margin: 0 auto;
   max-width: 760px;
   position: absolute;
-  transform: translateX(-50%);
-  width: calc(100% - 2 * var(--space-5));
+  right: var(--hud-gap);
+  z-index: 1;
+}
+
+.home--chat .ask {
+  right: calc(var(--chat-width) + 2 * var(--hud-gap));
 }
 
 .ask__form {
   align-items: center;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  box-shadow: var(--shadow-panel);
   display: flex;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
@@ -319,58 +316,5 @@
 .ask__input {
   background: transparent;
   border: none;
-}
-
-.ask__drawer {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  box-shadow: var(--shadow-panel);
-}
-
-.ask__drawer-head {
-  align-items: center;
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-}
-
-.ask__drawer-actions {
-  display: flex;
-  gap: var(--space-1);
-}
-
-.ask__reply {
-  max-height: 40vh;
-  overflow-y: auto;
-  padding: var(--space-3) var(--space-4);
-}
-
-/* First-run offer to survey the Keboola project, above the stats. */
-.onboarding {
-  background: var(--color-primary-soft);
-  border-left: 3px solid var(--color-primary);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.onboarding__title {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  margin: 0;
-}
-
-.onboarding__text {
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-.onboarding .btn {
-  align-self: flex-start;
-}
-
-.request__title {
-  color: var(--color-text);
-  font-weight: 600;
+  min-width: 0;
 }

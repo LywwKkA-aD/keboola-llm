@@ -140,42 +140,43 @@ describe('Routines in Settings', () => {
   });
 });
 
-describe('Latest routine runs on Home', () => {
-  async function openHome(routes: Record<string, unknown>) {
+describe('Latest routine runs in the Home chats panel', () => {
+  async function openChats(routes: Record<string, unknown>) {
     const api = stubApi({ ...baseRoutes, ...routes });
     visit('/');
     render(<App />);
-    await screen.findByRole('button', { name: /keboola-expert/ });
-    return api;
+    await userEvent.click(await screen.findByRole('button', { name: 'Чаты' }));
+    return { api, panel: screen.getByRole('dialog', { name: 'Чаты' }) };
   }
 
-  it('links the latest runs, newest first, and marks a run that still goes', async () => {
+  it('lists the latest runs, newest first, marks a run that still goes and opens its chat in the popup', async () => {
     const running: RoutineInfo = { ...MORNING, lastRun: { at: '2026-10-27T07:00:00.000Z', threadId: 't9', running: true } };
-    await openHome({ 'GET /api/routines': { routines: [REFRESH, running, { ...MORNING, name: 'never' }], loadErrors: [] } });
+    const { panel } = await openChats({ 'GET /api/routines': { routines: [REFRESH, running, { ...MORNING, name: 'never' }], loadErrors: [] } });
 
-    const block = await screen.findByRole('region', { name: 'Последние запуски по расписанию' });
-    const links = within(block).getAllByRole('link');
-    expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
-      ['Morning check', '/chat/t9'],
-      ['Profile refresh', '/chat/t2'],
-    ]);
+    const block = await within(panel).findByRole('region', { name: 'Последние запуски по расписанию' });
+    const runs = within(block).getAllByRole('button');
+    expect(runs.map((run) => run.querySelector('.chat-item__title')?.textContent)).toEqual(['Morning check', 'Profile refresh']);
     expect(block.querySelectorAll('.dot--pulse')).toHaveLength(1);
+
+    await userEvent.click(within(block).getByRole('button', { name: /Profile refresh/ }));
+    expect(screen.queryByRole('dialog', { name: 'Чаты' })).toBeNull();
+    expect(await within(screen.getByRole('dialog', { name: 'Чат' })).findByRole('heading', { name: 'Почему упал джоб?' })).toBeInTheDocument();
   });
 
   it('is hidden when no routine has run, and refetches when runs change', async () => {
     let list: RoutineList = { routines: [MORNING], loadErrors: [] };
-    const api = await openHome({ 'GET /api/routines': () => list });
+    const { api, panel } = await openChats({ 'GET /api/routines': () => list });
     await waitFor(() => expect(api.callsTo('GET', '/api/routines').length).toBeGreaterThan(0));
-    expect(screen.queryByRole('region', { name: 'Последние запуски по расписанию' })).toBeNull();
+    expect(within(panel).queryByRole('region', { name: 'Последние запуски по расписанию' })).toBeNull();
 
     list = { routines: [REFRESH], loadErrors: [] };
     act(() => FakeEventSource.global().emit({ type: 'run.started', runId: 'r' }, 't2'));
-    expect(await screen.findByRole('region', { name: 'Последние запуски по расписанию' })).toBeInTheDocument();
+    expect(await within(panel).findByRole('region', { name: 'Последние запуски по расписанию' })).toBeInTheDocument();
   });
 
   it('stays hidden when routines cannot be listed', async () => {
-    const api = await openHome({ 'GET /api/routines': () => errorResponse(500, 'Internal error') });
+    const { api, panel } = await openChats({ 'GET /api/routines': () => errorResponse(500, 'Internal error') });
     await waitFor(() => expect(api.callsTo('GET', '/api/routines').length).toBeGreaterThan(0));
-    expect(screen.queryByRole('region', { name: 'Последние запуски по расписанию' })).toBeNull();
+    expect(within(panel).queryByRole('region', { name: 'Последние запуски по расписанию' })).toBeNull();
   });
 });

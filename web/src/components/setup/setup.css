@@ -183,26 +183,6 @@
   gap: var(--space-3);
 }
 
-/* Home: above the stats while a step still fails; amber like everything that waits for the user. */
-.setup-card {
-  border-left: 3px solid var(--color-warning);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.setup-card__title {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  margin: 0;
-}
-
-.setup-card__intro {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  margin: 0;
-}
-
 /* Phone width: a step's status chip and its buttons move under the title when they do not fit. */
 @media (max-width: 720px) {
   .setup-step__head,

@@ -33,8 +33,8 @@ test('the shipped routines are off, and switching one on sticks after a reload',
   await expect(page.getByRole('region', { name: SECTION }).getByRole('listitem', { name: 'Morning check' }).getByRole('checkbox', { name: SWITCH })).toBeChecked();
 });
 
-test('run now opens a chat titled after the routine, and Home links the run', async ({ page }) => {
-  // The overview, not the 3D view, is under test on Home.
+test('run now opens a chat titled after the routine, and Home opens the run in the chat popup', async ({ page }) => {
+  // The chats panel, not the 3D view, is under test on Home.
   await withoutWebGL(page);
   await page.goto('/settings');
   const refresh = page.getByRole('region', { name: SECTION }).getByRole('listitem', { name: 'Profile refresh' });
@@ -50,5 +50,10 @@ test('run now opens a chat titled after the routine, and Home links the run', as
   await expect(lastReply(page)).toContainText(PLAIN_REPLY);
 
   await page.goto('/');
-  await expect(page.getByRole('region', { name: LATEST }).getByRole('link', { name: 'Profile refresh' })).toHaveAttribute('href', chat ?? '');
+  await page.getByRole('region', { name: 'Обзор' }).getByRole('button', { name: 'Чаты' }).click();
+  const runs = page.getByRole('dialog', { name: 'Чаты' }).getByRole('region', { name: LATEST });
+  await runs.getByRole('button', { name: /Profile refresh/ }).click();
+  const popup = page.getByRole('dialog', { name: 'Чат' });
+  await expect(popup.getByRole('heading', { level: 1 })).toHaveText(/^Profile refresh · \d{4}-\d{2}-\d{2}$/);
+  await expect(popup.getByRole('link', { name: 'Открыть в чатах' })).toHaveAttribute('href', chat ?? '');
 });

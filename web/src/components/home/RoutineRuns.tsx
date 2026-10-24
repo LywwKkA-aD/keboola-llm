@@ -1,15 +1,13 @@
 import { useEffect, useId, useState } from 'react';
-import { Link } from 'react-router';
 import { type RoutineInfo, routinesApi } from '../../api/routines.ts';
 import { formatWhen } from '../../lib/schedule.ts';
 import { useLive } from '../../live/live-context.tsx';
 import { useSettings } from '../../state/settings-context.tsx';
-import '../../styles/routines.css';
 
 const MAX_RUNS = 5;
 
-/** Overview block: the latest run of each routine, newest first, linking to its chat. Hidden until one has run. */
-export function RoutineRuns() {
+/** Chats panel block: the latest run of each routine, newest first, opening its chat. Hidden until one has run. */
+export function RoutineRuns({ onOpen }: { onOpen: (threadId: string) => void }) {
   const { t, settings } = useSettings();
   const { live } = useLive();
   const headingId = useId();
@@ -30,18 +28,18 @@ export function RoutineRuns() {
   if (runs.length === 0) return null;
 
   return (
-    <section className="panel-section" aria-labelledby={headingId}>
-      <div className="panel-section__head">
-        <span className="label" id={headingId}>
-          {t('routines.latest')}
-        </span>
-      </div>
-      <ul className="run-list">
+    <section className="hud-section" aria-labelledby={headingId}>
+      <h3 className="hud-section__title label" id={headingId}>
+        {t('routines.latest')}
+      </h3>
+      <ul className="chat-list">
         {runs.map(({ routine, run }) => (
           <li key={routine.name}>
-            <span className={`dot${run.running ? ' dot--blue dot--pulse' : ''}`} />
-            <Link to={`/chat/${run.threadId}`}>{routine.title}</Link>
-            <span className="routine-runs__when">{formatWhen(run.at, settings.language)}</span>
+            <button type="button" className="chat-item" onClick={() => onOpen(run.threadId)}>
+              <span className={`dot${run.running ? ' dot--blue dot--pulse' : ''}`} />
+              <span className="chat-item__title">{routine.title}</span>
+              <span className="chat-item__when">{formatWhen(run.at, settings.language)}</span>
+            </button>
           </li>
         ))}
       </ul>

@@ -5,7 +5,8 @@ import { groupTeam } from '../../lib/agent-groups.ts';
 import { useSettings } from '../../state/settings-context.tsx';
 import { moodDot, roleHint, shortName } from './mood.ts';
 
-export function TeamPanel({ agents, state, now, selected, onSelect }: {
+/** The team by group with what each agent is doing now; picking one selects it in the aquarium. */
+export function TeamList({ agents, state, now, selected, onSelect }: {
   agents: readonly AgentInfo[];
   state: AquariumState;
   now: number;
@@ -13,22 +14,16 @@ export function TeamPanel({ agents, state, now, selected, onSelect }: {
   onSelect: (name: string | undefined) => void;
 }) {
   const { t } = useSettings();
-  const groups = groupTeam(agents);
-  const enabled = agents.filter((agent) => agent.enabled).length;
 
   return (
-    <nav className="team-panel" aria-label={t('home.team')}>
-      <div className="team-panel__head">
-        <span className="label">{t('home.team')}</span>
-        <span className="label mono">{String(enabled).padStart(2, '0')}</span>
-      </div>
-      {groups.map(({ group, agents: members }) => (
-        <section key={group} className="team-panel__group">
-          <div className="team-panel__group-head">
+    <div className="team-list">
+      {groupTeam(agents).map(({ group, agents: members }) => (
+        <section key={group} className="team-list__group">
+          <div className="team-list__group-head">
             <span className="label">{t(`group.${group}` as StringKey)}</span>
             <span className="label">{members.length}</span>
           </div>
-          <ul className="team-panel__list">
+          <ul className="team-list__list">
             {members.map((agent) => {
               const mood = agent.enabled ? moodOf(state.agents[agent.name], now) : 'idle';
               const label = state.agents[agent.name]?.label ?? '';
@@ -55,6 +50,6 @@ export function TeamPanel({ agents, state, now, selected, onSelect }: {
           </ul>
         </section>
       ))}
-    </nav>
+    </div>
   );
 }
