@@ -72,6 +72,9 @@ export function Octopus3D({ name, caption, mood, spot, selected, motion, onSelec
   const walk = useRef<{ key: string; points: Vector3[]; next: number; speed: number }>({ key: '', points: [], next: 0, speed: 0 });
   // Tip caps follow the bend shader, so the ends of the tentacles stay closed while they wave.
   const caps = useRef<(Mesh | null)[]>([]);
+  // Wave phase, advanced by speed x frame time. Feeding the shader time x speed instead would jump the phase (and
+  // flail the tentacles) whenever the speed changes late in the session.
+  const wave = useRef(0);
 
   useEffect(() => {
     document.body.style.cursor = hovered ? 'pointer' : '';
@@ -133,12 +136,13 @@ export function Octopus3D({ name, caption, mood, spot, selected, motion, onSelec
     }
     const speed = MathUtils.lerp(aura.tentacleSpeed, 5, swimming ? stride : 0);
     const amp = MathUtils.lerp(aura.tentacleAmp, 0.16, swimming ? stride : 0);
+    wave.current = motion ? wave.current + speed * dt : 0;
     tentacles.forEach(({ uniforms, tip, phase }, index) => {
-      uniforms.uTime.value = t;
-      uniforms.uSpeed.value = speed;
+      uniforms.uTime.value = wave.current;
+      uniforms.uSpeed.value = 1;
       uniforms.uAmp.value = amp;
       const { x, y, z } = uniforms.uBend.value;
-      const [dx, dy, dz] = tipOffset({ t, speed, amp, phase, bend: [x, y, z] });
+      const [dx, dy, dz] = tipOffset({ t: wave.current, speed: 1, amp, phase, bend: [x, y, z] });
       caps.current[index]?.position.set(tip.x + dx, tip.y + dy, tip.z + dz);
     });
     if (auraRef.current) {
