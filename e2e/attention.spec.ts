@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
-import { SKILL_PATH } from './stub-llm/scenarios.mjs';
+import { REJECTED_REPLY, SKILL_PATH } from './stub-llm/scenarios.mjs';
 import { removeE2eSkill } from './support/paths.ts';
-import { expect, RU, test, withoutWebGL } from './support/test.ts';
+import { expect, lastReply, RU, test, withoutWebGL } from './support/test.ts';
 
 interface ShownNotice {
   readonly title: string;
@@ -54,7 +54,11 @@ const notices = (page: Page) =>
   );
 const setHidden = (page: Page, hidden: boolean) => page.evaluate((value) => (window as unknown as FakeWindow).setHidden(value), hidden);
 
+/** Chats a test started; deleted afterwards, so a routine's last run does not leak into routines.spec. */
+let chats: string[] = [];
+
 test.beforeEach(async ({ page, request }) => {
+  chats = [];
   removeE2eSkill();
   expect((await request.put('/api/settings', { data: { desktopNotifications: true } })).ok()).toBe(true);
   await withoutWebGL(page);
@@ -63,6 +67,7 @@ test.beforeEach(async ({ page, request }) => {
 
 test.afterEach(async ({ request }) => {
   removeE2eSkill();
+  for (const id of chats) expect((await request.delete(`/api/threads/${id}`)).ok()).toBe(true);
   expect((await request.put('/api/settings', { data: { desktopNotifications: false } })).ok()).toBe(true);
 });
 
@@ -75,6 +80,7 @@ test('a hidden tab counts the waiting approval in its title and gets one notific
   const created = await request.post('/api/threads', { data: { text: `e2e-approval: создай скилл ${Date.now()}` } });
   expect(created.ok()).toBe(true);
   const { thread } = (await created.json()) as { thread: { id: string; title: string } };
+  chats = [thread.id];
 
   await expect(page).toHaveTitle('(1) Agent Studio');
   await expect.poll(() => notices(page)).toEqual([{ title: thread.title, body: 'agent-builder ждёт вашего подтверждения', tag: `chat:${thread.id}` }]);
@@ -86,7 +92,8 @@ test('a hidden tab counts the waiting approval in its title and gets one notific
 
   await page.getByRole('region', { name: RU.approval }).getByRole('button', { name: RU.reject }).click();
   await expect(page).toHaveTitle('Agent Studio');
-  // Back in the tab: the rejected run's end is not announced.
+  await expect(lastReply(page)).toContainText(REJECTED_REPLY);
+  // Back in the tab: the end of the rejected run is not announced.
   expect(await notices(page)).toHaveLength(1);
 });
 
@@ -99,6 +106,7 @@ test('a routine run that finishes while the tab is hidden is announced as a rout
 
   await expect.poll(() => notices(page)).toHaveLength(1);
   const [notice] = await notices(page);
+  chats = [notice?.tag.replace(/^chat:/, '') ?? ''];
   expect(notice?.title).toMatch(/^Profile refresh · \d{4}-\d{2}-\d{2}$/);
   expect(notice?.body).toBe('lead выполнил регулярную задачу');
 });
