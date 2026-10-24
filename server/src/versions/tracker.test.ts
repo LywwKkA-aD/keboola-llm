@@ -51,6 +51,18 @@ describe('createDefinitionVersions', () => {
     expect(versions.get('agents', 'scout', 2)).toMatchObject({ change: 'deleted', size: 0, content: null, current: null });
   });
 
+  it('catches up with the file when the history is read, so a change the watcher missed still shows', () => {
+    const { versions, file } = setup();
+    versions.sync('start');
+    rmSync(file('skills/sql-style'), { recursive: true });
+    versions.sync('change');
+    // Re-created right away; the watcher of a removed folder may never report it.
+    writeNew(file('skills/sql-style/SKILL.md'), 'style v2');
+
+    expect(changes(versions.list('skills', 'sql-style'))).toEqual(['created', 'deleted', 'baseline']);
+    expect(changes(versions.list('skills', 'sql-style'))).toEqual(['created', 'deleted', 'baseline']);
+  });
+
   it('notices what changed while the app was off', () => {
     const { create, file } = setup();
     create().sync('start');

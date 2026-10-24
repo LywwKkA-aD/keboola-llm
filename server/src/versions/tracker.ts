@@ -27,7 +27,7 @@ export interface DefinitionVersions {
   /** Compare every definition with its last version and record what changed: on start, then after each reload. */
   sync(reason: 'start' | 'change'): readonly RecordedChange[];
   tracked(kind: DefinitionKind): readonly TrackedDefinition[];
-  /** Newest first. */
+  /** Newest first, after recording what changed on disk since the last sync. */
   list(kind: DefinitionKind, name: string): readonly VersionSummary[];
   get(kind: DefinitionKind, name: string, id: number): VersionDetail | undefined;
   /** Write an older version back to disk (recreating a deleted definition); the file watcher reloads the team. */
@@ -95,7 +95,11 @@ export function createDefinitionVersions({ rootDir, dir, limit = DEFAULT_LIMIT, 
         const last = log.read(kind, name).at(-1);
         return last ? [{ name, exists: readDefinition(rootDir, kind, name) !== undefined, last: summary(last) }] : [];
       }),
-    list: (kind, name) => log.read(kind, name).map(summary).toReversed(),
+    // Reading catches up with the file first: a file watcher can miss a change (a folder removed and made again).
+    list(kind, name) {
+      syncOne(kind, name, 'change');
+      return log.read(kind, name).map(summary).toReversed();
+    },
     get(kind, name, id) {
       const version = log.read(kind, name).find((entry) => entry.id === id);
       if (!version) return undefined;
