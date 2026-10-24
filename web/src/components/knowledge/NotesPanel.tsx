@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { ApiError } from '../../api/client.ts';
 import { knowledgeApi, type Note, type NoteSummary } from '../../api/knowledge.ts';
 import { folderOf, newNotePath, noteLinkTarget } from '../../lib/notes.ts';
 import { useLive } from '../../live/live-context.tsx';
@@ -63,6 +64,7 @@ export function NotesPanel({ draft, setDraft, confirm }: {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [conflict, setConflict] = useState(false);
   // Agents edit notes too: look again whenever a run starts or ends.
   const runningKey = live.running.join(',');
 
@@ -102,7 +104,8 @@ export function NotesPanel({ draft, setDraft, confirm }: {
     setParams(path ? { note: path } : {});
   };
 
-  const save = async () => {
+  /** overwrite: save even though the note changed on the server since the draft was opened. */
+  const save = async ({ overwrite = false } = {}) => {
     if (!draft || draft.kind === 'memory') return;
     setBusy(true);
     setError(undefined);
@@ -112,17 +115,25 @@ export function NotesPanel({ draft, setDraft, confirm }: {
         setDraft(undefined);
         show(created.path);
       } else {
-        await knowledgeApi.saveNote(draft.path, draft.text);
+        await knowledgeApi.saveNote(draft.path, draft.text, overwrite ? undefined : draft.baseModifiedAt);
         setDraft(undefined);
         setVersion((value) => value + 1);
       }
+      setConflict(false);
       setSaved(true);
       loadNotes();
     } catch (reason) {
-      setError(errorText(reason, t('error.generic')));
+      if (reason instanceof ApiError && reason.status === 409 && draft.kind === 'note') setConflict(true);
+      else setError(errorText(reason, t('error.generic')));
     } finally {
       setBusy(false);
     }
+  };
+
+  const reloadNote = () => {
+    setConflict(false);
+    setDraft(undefined);
+    setVersion((value) => value + 1);
   };
 
   const remove = async () => {
@@ -153,10 +164,16 @@ export function NotesPanel({ draft, setDraft, confirm }: {
           text={editing.text}
           onChange={(text) => setDraft({ ...editing, text })}
           onSave={() => void save()}
-          onCancel={() => confirm(() => setError(undefined))}
+          onCancel={() =>
+            confirm(() => {
+              setError(undefined);
+              setConflict(false);
+            })
+          }
           dirty={isDirty(editing)}
           busy={busy}
           error={error}
+          conflict={conflict ? { text: t('knowledge.conflict'), onOverwrite: () => void save({ overwrite: true }), onReload: reloadNote } : undefined}
           internalLink={linkFrom(newNote ? newNotePath(editing.path) : editing.path)}
         >
           {newNote && <PathField value={editing.path} onChange={(path) => setDraft({ ...editing, path })} />}
@@ -184,7 +201,7 @@ export function NotesPanel({ draft, setDraft, confirm }: {
           actions={
             <>
               {saved && <span className="chip chip--green">{t('knowledge.saved')}</span>}
-              <button type="button" className="btn btn--small" onClick={() => setDraft({ kind: 'note', path: note.path, original: note.content, text: note.content })}>
+              <button type="button" className="btn btn--small" onClick={() => setDraft({ kind: 'note', path: note.path, original: note.content, text: note.content, baseModifiedAt: note.modifiedAt })}>
                 {t('knowledge.edit')}
               </button>
               <button type="button" className="btn btn--danger btn--small" onClick={() => setDeleting(true)}>

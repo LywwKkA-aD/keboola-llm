@@ -65,9 +65,45 @@ describe('Knowledge page: notes', () => {
     expect(screen.getByText('определение').tagName).toBe('EM');
 
     await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
-    expect(callsTo('PUT', '/api/knowledge/note')[0]?.body).toEqual({ path: 'glossary.md', content: '# Словарь\n\nНовое _определение_' });
+    expect(callsTo('PUT', '/api/knowledge/note')[0]?.body).toEqual({
+      path: 'glossary.md',
+      content: '# Словарь\n\nНовое _определение_',
+      expectedModifiedAt: '2026-10-24T10:00:00Z',
+    });
     expect(await screen.findByText('Сохранено')).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Markdown' })).toBeNull();
+  });
+
+  it('keeps the draft when an agent changed the note meanwhile, then saves over it or opens the new version', async () => {
+    let saves = 0;
+    const { callsTo } = await openKnowledge('/knowledge?note=glossary.md', {
+      'PUT /api/knowledge/note': (body: unknown) => {
+        saves += 1;
+        if (saves === 1) return errorResponse(409, '"glossary.md" changed after you opened it');
+        return { path: 'glossary.md', title: 'Глоссарий', size: 1, modifiedAt: '2026-10-24T12:00:00Z', ...(body as object) };
+      },
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Изменить' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Markdown' }), ' моё');
+    await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    expect(await screen.findByText(/изменилась, пока вы её редактировали/)).toBeInTheDocument();
+    expect((screen.getByRole('textbox', { name: 'Markdown' }) as HTMLTextAreaElement).value).toContain(' моё');
+    await userEvent.click(screen.getByRole('button', { name: 'Сохранить мою версию' }));
+    expect(callsTo('PUT', '/api/knowledge/note')[1]?.body).toEqual({ path: 'glossary.md', content: expect.stringContaining(' моё') });
+    expect(await screen.findByText('Сохранено')).toBeInTheDocument();
+  });
+
+  it('opens the newer version of a note when asked, dropping the draft', async () => {
+    await openKnowledge('/knowledge?note=glossary.md', {
+      'PUT /api/knowledge/note': () => errorResponse(409, '"glossary.md" changed after you opened it'),
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Изменить' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Markdown' }), ' моё');
+    await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Открыть новую версию' }));
+    expect(screen.queryByRole('textbox', { name: 'Markdown' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Изменить' })).toBeInTheDocument();
   });
 
   it('saves with Ctrl+S and shows why saving failed', async () => {

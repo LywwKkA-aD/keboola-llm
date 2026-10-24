@@ -30,13 +30,16 @@ export const knowledgeApi = {
   note: (path: string) => request<Note>(note(path)),
   /** Create only: answers 409 when the path is taken. */
   createNote: (path: string, content: string) => request<NoteSummary>('/api/knowledge/note', 'POST', { path, content }),
-  saveNote: (path: string, content: string) => request<NoteSummary>('/api/knowledge/note', 'PUT', { path, content }),
+  /** With expectedModifiedAt (the version the editor opened), a newer note on the server is a 409 instead. */
+  saveNote: (path: string, content: string, expectedModifiedAt?: string) =>
+    request<NoteSummary>('/api/knowledge/note', 'PUT', expectedModifiedAt ? { path, content, expectedModifiedAt } : { path, content }),
   deleteNote: (path: string) => request<void>(note(path), 'DELETE'),
   /** A .md or .txt file read as text; it lands at the top level unless a folder is given. */
   upload: (name: string, content: string, folder?: string) =>
     request<NoteSummary>('/api/knowledge/upload', 'POST', folder ? { name, content, folder } : { name, content }),
   memory: () => request<MemoryFile>('/api/memory'),
-  saveMemory: (content: string) => request<MemoryFile>('/api/memory', 'PUT', { content }),
+  saveMemory: (content: string, expectedModifiedAt?: string) =>
+    request<MemoryFile>('/api/memory', 'PUT', expectedModifiedAt ? { content, expectedModifiedAt } : { content }),
   profiles: () => request<{ profiles: NoteSummary[] }>('/api/memory/projects'),
   profile: (file: string) => request<Note>(`/api/memory/projects/${encodeURIComponent(file)}`),
 };

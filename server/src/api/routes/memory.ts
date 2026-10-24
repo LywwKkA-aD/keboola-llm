@@ -24,8 +24,9 @@ export function registerMemoryRoutes(app: FastifyInstance, { memories }: Pick<Se
   });
 
   app.put('/api/memory', async (request) => {
-    const content = cleanText(memoryBody.parse(request.body).content);
-    const { modifiedAt } = await memories.write(MEMORY_FILE, content);
+    const { content: raw, expectedModifiedAt } = memoryBody.parse(request.body);
+    const content = cleanText(raw);
+    const { modifiedAt } = await memories.write(MEMORY_FILE, content, expectedModifiedAt === undefined ? {} : { expectedModifiedAt });
     return { content, modifiedAt };
   });
 

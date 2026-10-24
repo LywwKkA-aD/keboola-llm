@@ -59,6 +59,15 @@ describe('knowledge routes', () => {
     expect(updated.json().title).toBe('Naming rules');
   });
 
+  it('refuses a save based on an older version of the note', async () => {
+    const { dir, send } = await setup();
+    const { modifiedAt } = (await send('GET', noteUrl('glossary.md'))).json() as { modifiedAt: string };
+    const stale = new Date(Date.parse(modifiedAt) - 60_000).toISOString();
+    expect((await send('PUT', '/api/knowledge/note', { path: 'glossary.md', content: '# Mine', expectedModifiedAt: stale })).statusCode).toBe(409);
+    expect(readFileSync(join(dir, 'glossary.md'), 'utf8')).toBe('# Glossary\n\nTerms.');
+    expect((await send('PUT', '/api/knowledge/note', { path: 'glossary.md', content: '# Mine', expectedModifiedAt: modifiedAt })).statusCode).toBe(200);
+  });
+
   it('deletes a note', async () => {
     const { dir, send } = await setup();
     expect((await send('DELETE', noteUrl('glossary.md'))).statusCode).toBe(204);

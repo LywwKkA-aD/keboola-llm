@@ -33,7 +33,10 @@ describe('Knowledge page: memory', () => {
     expect(screen.getByText('Пишем CTE')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
 
-    expect(callsTo('PUT', '/api/memory')[0]?.body).toEqual({ content: '# Общая память\n\n- Бэкенд BigQuery\n- Пишем CTE' });
+    expect(callsTo('PUT', '/api/memory')[0]?.body).toEqual({
+      content: '# Общая память\n\n- Бэкенд BigQuery\n- Пишем CTE',
+      expectedModifiedAt: '2026-10-24T10:00:00Z',
+    });
     expect(await screen.findByText('Сохранено')).toBeInTheDocument();
     expect(within(screen.getByRole('article', { name: 'AGENTS.md' })).getByText('Пишем CTE')).toBeInTheDocument();
   });

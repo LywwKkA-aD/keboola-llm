@@ -36,11 +36,14 @@ const relativePath = z.string().min(1).max(1000);
 
 export const notePathQuery = z.object({ path: relativePath });
 
-export const noteBody = z.object({ path: relativePath, content: z.string() }).strict();
+// The modification time the editor opened; a save over a newer version is refused (409).
+const expectedModifiedAt = z.string().max(40).optional();
+
+export const noteBody = z.object({ path: relativePath, content: z.string(), expectedModifiedAt }).strict();
 
 export const uploadBody = z.object({ name: z.string().min(1).max(255), content: z.string(), folder: z.string().max(1000).optional() }).strict();
 
-export const memoryBody = z.object({ content: z.string() }).strict();
+export const memoryBody = z.object({ content: z.string(), expectedModifiedAt }).strict();
 // First-run setup. The OmniRoute key is write-only; printable ASCII without spaces or quotes keeps it
 // intact in .env. The address must be a plain http(s) URL: no credentials, query or fragment.
 const isRouterUrl = (value: string) => {

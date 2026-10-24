@@ -1,6 +1,6 @@
-export type NoteErrorCode = 'NOTE_INVALID' | 'NOTE_NOT_FOUND' | 'NOTE_EXISTS' | 'NOTE_TOO_LARGE';
+export type NoteErrorCode = 'NOTE_INVALID' | 'NOTE_NOT_FOUND' | 'NOTE_EXISTS' | 'NOTE_CHANGED' | 'NOTE_TOO_LARGE';
 
-const STATUS: Record<NoteErrorCode, number> = { NOTE_INVALID: 400, NOTE_NOT_FOUND: 404, NOTE_EXISTS: 409, NOTE_TOO_LARGE: 413 };
+const STATUS: Record<NoteErrorCode, number> = { NOTE_INVALID: 400, NOTE_NOT_FOUND: 404, NOTE_EXISTS: 409, NOTE_CHANGED: 409, NOTE_TOO_LARGE: 413 };
 
 export type NoteError = Error & { readonly code: NoteErrorCode; readonly statusCode: number };
 

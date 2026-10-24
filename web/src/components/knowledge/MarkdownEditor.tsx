@@ -6,7 +6,7 @@ import { Markdown } from '../Markdown.tsx';
  * Markdown source next to its live preview, with Save and Cancel. Ctrl+S or Cmd+S saves.
  * Links to other notes in the preview open in a new tab, so following one never drops the draft.
  */
-export function MarkdownEditor({ heading, text, onChange, onSave, onCancel, dirty, busy, error, internalLink, children }: {
+export function MarkdownEditor({ heading, text, onChange, onSave, onCancel, dirty, busy, error, conflict, internalLink, children }: {
   heading: ReactNode;
   text: string;
   onChange: (text: string) => void;
@@ -15,6 +15,8 @@ export function MarkdownEditor({ heading, text, onChange, onSave, onCancel, dirt
   dirty: boolean;
   busy: boolean;
   error?: string | undefined;
+  /** The file changed on the server since the draft was opened (e.g. an agent wrote it): keep the text, let the user pick. */
+  conflict?: { readonly text: string; readonly onOverwrite: () => void; readonly onReload: () => void } | undefined;
   internalLink?: (href: string) => string | undefined;
   /** Extra fields above the text, e.g. the path of a new note. */
   children?: ReactNode;
@@ -44,6 +46,19 @@ export function MarkdownEditor({ heading, text, onChange, onSave, onCancel, dirt
         </div>
       </div>
       {error && <div className="error-banner">{error}</div>}
+      {conflict && (
+        <div className="notice note-editor__conflict" role="alert">
+          <p>{conflict.text}</p>
+          <div className="note-detail__actions">
+            <button type="button" className="btn btn--primary btn--small" disabled={busy} onClick={conflict.onOverwrite}>
+              {t('knowledge.overwrite')}
+            </button>
+            <button type="button" className="btn btn--small" disabled={busy} onClick={conflict.onReload}>
+              {t('knowledge.reload')}
+            </button>
+          </div>
+        </div>
+      )}
       {children}
       <div className="note-editor__panes">
         <div className="note-editor__pane">

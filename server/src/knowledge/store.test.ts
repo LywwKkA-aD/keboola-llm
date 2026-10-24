@@ -115,6 +115,21 @@ describe('note store: write', () => {
     expect(readdirSync(dir).toSorted()).toEqual(['.keep', 'glossary.md']);
   });
 
+  it('refuses to overwrite what changed since the editor opened it', async () => {
+    const { dir, store } = setup({ 'knowledge/glossary.md': '# Old' });
+    const opened = (await store.read('glossary.md')).modifiedAt;
+    utimesSync(join(dir, 'glossary.md'), new Date('2026-10-24T12:00:00Z'), new Date('2026-10-24T12:00:00Z'));
+    await expect(store.write('glossary.md', '# Mine', { expectedModifiedAt: opened })).rejects.toThrow(
+      expect.objectContaining({ statusCode: 409, code: 'NOTE_CHANGED' }),
+    );
+    expect(readFileSync(join(dir, 'glossary.md'), 'utf8')).toBe('# Old');
+
+    const current = (await store.read('glossary.md')).modifiedAt;
+    await store.write('glossary.md', '# Mine', { expectedModifiedAt: current });
+    expect(readFileSync(join(dir, 'glossary.md'), 'utf8')).toBe('# Mine');
+    await expect(store.write('gone.md', '# Mine', { expectedModifiedAt: current })).rejects.toThrow(status(409));
+  });
+
   it('only creates when asked to, never overwriting', async () => {
     const { dir, store } = setup({ 'knowledge/glossary.md': '# Old' });
     await expect(store.write('glossary.md', '# New', { create: true })).rejects.toThrow(status(409));

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ApiError } from '../../api/client.ts';
 import { knowledgeApi, type MemoryFile, type Note, type NoteSummary } from '../../api/knowledge.ts';
 import { useLive } from '../../live/live-context.tsx';
 import { useSettings } from '../../state/settings-context.tsx';
@@ -24,6 +25,7 @@ export function MemoryPanel({ draft, setDraft, confirm }: {
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [conflict, setConflict] = useState(false);
   // The lead and project-scout write here during runs: look again whenever one starts or ends.
   const runningKey = live.running.join(',');
 
@@ -56,19 +58,28 @@ export function MemoryPanel({ draft, setDraft, confirm }: {
       setSelected(file);
     });
 
-  const save = async () => {
+  /** overwrite: save even though the lead or project-scout changed the memory since the draft was opened. */
+  const save = async ({ overwrite = false } = {}) => {
     if (!editing) return;
     setBusy(true);
     setError(undefined);
     try {
-      setMemory(await knowledgeApi.saveMemory(editing.text));
+      setMemory(await knowledgeApi.saveMemory(editing.text, overwrite ? undefined : editing.baseModifiedAt));
       setDraft(undefined);
+      setConflict(false);
       setSaved(true);
     } catch (reason) {
-      setError(errorText(reason, t('error.generic')));
+      if (reason instanceof ApiError && reason.status === 409) setConflict(true);
+      else setError(errorText(reason, t('error.generic')));
     } finally {
       setBusy(false);
     }
+  };
+
+  const reloadMemory = () => {
+    setConflict(false);
+    setDraft(undefined);
+    knowledgeApi.memory().then(setMemory, (reason: unknown) => setError(errorText(reason, t('error.generic'))));
   };
 
   const detail = () => {
@@ -79,10 +90,16 @@ export function MemoryPanel({ draft, setDraft, confirm }: {
           text={editing.text}
           onChange={(text) => setDraft({ ...editing, text })}
           onSave={() => void save()}
-          onCancel={() => confirm(() => setError(undefined))}
+          onCancel={() =>
+            confirm(() => {
+              setError(undefined);
+              setConflict(false);
+            })
+          }
           dirty={isDirty(editing)}
           busy={busy}
           error={error}
+          conflict={conflict ? { text: t('memory.conflict'), onOverwrite: () => void save({ overwrite: true }), onReload: reloadMemory } : undefined}
         >
           <p className="note-editor__hint">{t('memory.sharedHint')}</p>
         </MarkdownEditor>
@@ -118,7 +135,7 @@ export function MemoryPanel({ draft, setDraft, confirm }: {
             actions={
               <>
                 {saved && <span className="chip chip--green">{t('knowledge.saved')}</span>}
-                <button type="button" className="btn btn--small" onClick={() => setDraft({ kind: 'memory', original: memory.content, text: memory.content })}>
+                <button type="button" className="btn btn--small" onClick={() => setDraft({ kind: 'memory', original: memory.content, text: memory.content, ...(memory.modifiedAt ? { baseModifiedAt: memory.modifiedAt } : {}) })}>
                   {t('knowledge.edit')}
                 </button>
               </>

@@ -41,6 +41,16 @@ describe('memory routes', () => {
     expect(readFileSync(join(dir, 'AGENTS.md'), 'utf8')).toBe('# Shared memory\n\n- Prefer CTEs\n');
   });
 
+  it('refuses to overwrite memory an agent changed while the user was editing it', async () => {
+    const { dir, send } = await setup();
+    const opened = (await send('GET', '/api/memory')).json().modifiedAt as string;
+    const stale = new Date(Date.parse(opened) - 60_000).toISOString();
+    const conflict = await send('PUT', '/api/memory', { content: '# Mine', expectedModifiedAt: stale });
+    expect(conflict.statusCode).toBe(409);
+    expect(readFileSync(join(dir, 'AGENTS.md'), 'utf8')).toBe('# Shared memory\n\n- Backend is BigQuery\n');
+    expect((await send('PUT', '/api/memory', { content: '# Mine', expectedModifiedAt: opened })).statusCode).toBe(200);
+  });
+
   it('validates the body and keeps the memory small enough for every prompt', async () => {
     const { dir, send } = await setup();
     expect((await send('PUT', '/api/memory', { text: 'x' })).statusCode).toBe(400);

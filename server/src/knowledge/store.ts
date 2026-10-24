@@ -30,8 +30,11 @@ export interface Note extends NoteSummary {
 export interface NoteStore {
   list(): Promise<readonly NoteSummary[]>;
   read(path: string): Promise<Note>;
-  /** Create or replace a note; with create, an existing note is a 409 instead. */
-  write(path: string, content: string, options?: { readonly create?: boolean }): Promise<NoteSummary>;
+  /**
+   * Create or replace a note; with create, an existing note is a 409 instead. With expectedModifiedAt (what the
+   * editor opened), a note changed or deleted since then is a 409 too, so an agent's edit is never lost silently.
+   */
+  write(path: string, content: string, options?: { readonly create?: boolean; readonly expectedModifiedAt?: string }): Promise<NoteSummary>;
   remove(path: string): Promise<void>;
 }
 
@@ -165,13 +168,16 @@ export function createNoteStore(rootDir: string, { maxBytes = MAX_NOTE_BYTES }: 
       return { ...summaryOf(path, info, content), content };
     },
 
-    async write(raw, content, { create = false } = {}) {
+    async write(raw, content, { create = false, expectedModifiedAt } = {}) {
       if (Buffer.byteLength(content, 'utf8') > maxBytes) {
         throw noteError('NOTE_TOO_LARGE', `The note is larger than ${Math.round(maxBytes / 1024)} KB`);
       }
       const { path, file, info } = await locate(raw);
       if (info && !info.isFile()) throw noteError('NOTE_INVALID', `Invalid path: "${path}" is a folder`);
       if (info && create) throw noteError('NOTE_EXISTS', `A note named "${path}" already exists`);
+      if (expectedModifiedAt !== undefined && info?.mtime.toISOString() !== expectedModifiedAt) {
+        throw noteError('NOTE_CHANGED', `"${path}" changed after you opened it`);
+      }
       await prepareFolder(path, file);
       if (create) {
         try {

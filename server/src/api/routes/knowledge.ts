@@ -17,8 +17,8 @@ export function registerKnowledgeRoutes(app: FastifyInstance, { knowledge }: Pic
   });
 
   app.put('/api/knowledge/note', async (request) => {
-    const { path, content } = noteBody.parse(request.body);
-    return knowledge.write(path, cleanText(content));
+    const { path, content, expectedModifiedAt } = noteBody.parse(request.body);
+    return knowledge.write(path, cleanText(content), expectedModifiedAt === undefined ? {} : { expectedModifiedAt });
   });
 
   app.delete('/api/knowledge/note', async (request, reply) => {
