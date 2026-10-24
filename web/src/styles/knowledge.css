@@ -314,3 +314,63 @@
   justify-content: flex-end;
   margin-top: var(--space-2);
 }
+
+/*
+ * Phone width: one column that scrolls as a whole, the list above the open note. Note actions wrap under
+ * the title, the editor shows source above preview, and wide Markdown tables scroll inside their box.
+ */
+@media (max-width: 720px) {
+  .knowledge {
+    display: block;
+    overflow-y: auto;
+    padding: var(--space-5) var(--space-4) 0;
+  }
+
+  .knowledge__head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .organize {
+    align-items: flex-start;
+  }
+
+  .knowledge__body {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .knowledge__list {
+    border-bottom: 1px solid var(--color-border);
+    border-right: none;
+    overflow-y: visible;
+    padding: var(--space-4) 0;
+  }
+
+  .knowledge__detail {
+    overflow-y: visible;
+    padding: var(--space-4) 0 var(--space-5);
+  }
+
+  .note-detail__head {
+    flex-wrap: wrap;
+  }
+
+  .note-detail__actions {
+    flex-shrink: 1;
+    flex-wrap: wrap;
+  }
+
+  .note-editor__panes {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(280px, auto) minmax(200px, auto);
+    min-height: 0;
+  }
+
+  .markdown table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}

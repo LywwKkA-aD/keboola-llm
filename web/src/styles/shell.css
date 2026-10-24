@@ -170,3 +170,73 @@
   width: min(480px, 100vw);
   z-index: 21;
 }
+
+/* Narrower windows: the tabs scroll sideways instead of widening the page; project and model make room. */
+@media (max-width: 1280px) {
+  .topbar__nav {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .topbar__link {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .topbar__status {
+    flex-shrink: 0;
+  }
+
+  /* The first two items are the project and the model. */
+  .topbar__status-item:nth-of-type(-n + 2) {
+    display: none;
+  }
+}
+
+/* Tablet and phone: brand and status share the first row, the tabs get a second one. */
+@media (max-width: 1100px) {
+  :root {
+    --topbar-height: 93px;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .topbar__brand {
+    border-right: none;
+    height: 48px;
+    padding: 0 var(--space-4);
+    width: auto;
+  }
+
+  .topbar__name {
+    white-space: nowrap;
+  }
+
+  .topbar__nav {
+    border-top: 1px solid var(--color-border);
+    height: 44px;
+    order: 1;
+    padding: 0 var(--space-2);
+    width: 100%;
+  }
+
+  .topbar__status {
+    gap: var(--space-4);
+    height: 48px;
+    padding: 0 var(--space-4);
+  }
+}
+
+/* Phone width: no room for the clock, and pages keep a narrow margin. */
+@media (max-width: 720px) {
+  .topbar__clock {
+    display: none;
+  }
+
+  .page {
+    padding: var(--space-5) var(--space-4);
+  }
+}

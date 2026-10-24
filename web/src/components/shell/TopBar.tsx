@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { NavLink, useLocation } from 'react-router';
 import type { StringKey } from '../../i18n/strings.ts';
 import { formatClock } from '../../lib/format.ts';
 import { useLive } from '../../live/live-context.tsx';
@@ -28,6 +29,13 @@ export function TopBar() {
   const { t, settings } = useSettings();
   const { connected, approvals, status, now, live } = useLive();
   const running = Math.max(status?.activeRuns ?? 0, live.running.length);
+  const nav = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+
+  // On a phone the tabs scroll sideways: keep the current one in sight.
+  useEffect(() => {
+    nav.current?.querySelector('.topbar__link--active')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [pathname]);
 
   return (
     <header className="topbar">
@@ -36,7 +44,7 @@ export function TopBar() {
         <span className="topbar__name">{t('app.title')}</span>
         <span className="topbar__sub label">{t('app.subtitle')}</span>
       </div>
-      <nav className="topbar__nav" aria-label={t('app.title')}>
+      <nav className="topbar__nav" aria-label={t('app.title')} ref={nav}>
         {NAV.map(([to, key, end]) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => `topbar__link${isActive ? ' topbar__link--active' : ''}`}>
             {t(key)}

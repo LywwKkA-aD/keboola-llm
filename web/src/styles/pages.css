@@ -271,3 +271,29 @@
   font-size: var(--text-xs);
   overflow-wrap: anywhere;
 }
+
+/* Phone width: settings sections stack and filters wrap. */
+@media (max-width: 720px) {
+  .settings-section {
+    gap: var(--space-4);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filters {
+    flex-wrap: wrap;
+  }
+}
+
+/* Too narrow for the six agent columns: the table scrolls sideways inside its own box. */
+@media (max-width: 1000px) {
+  .table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  /* The table is at its narrowest here: keep names readable instead of breaking them at every dash. */
+  .table th:first-child,
+  .table td:first-child {
+    min-width: 200px;
+  }
+}

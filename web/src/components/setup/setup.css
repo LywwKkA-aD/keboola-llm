@@ -202,3 +202,11 @@
   font-size: var(--text-sm);
   margin: 0;
 }
+
+/* Phone width: a step's status chip and its buttons move under the title when they do not fit. */
+@media (max-width: 720px) {
+  .setup-step__head,
+  .setup-step__row {
+    flex-wrap: wrap;
+  }
+}
