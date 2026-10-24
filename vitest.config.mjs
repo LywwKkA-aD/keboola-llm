@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     projects: [
-      { test: { name: 'node', include: ['scripts/**/*.test.mjs', 'server/src/**/*.test.ts'], environment: 'node' } },
+      { test: { name: 'node', include: ['scripts/**/*.test.mjs', 'server/src/**/*.test.ts', 'e2e/**/*.test.mjs'], environment: 'node' } },
       {
         plugins: [react()],
         test: {

@@ -68,6 +68,7 @@ npm run chat                # or talk to the team in the terminal
 | `npm start` / `npm run dev` | Run the API server (dev: restart on change) |
 | `npm run chat [-- "message"]` | Terminal chat with the team (`--raw` dumps stream chunks, `--yes` auto-approves) |
 | `npm test` / `npm run typecheck` | Unit tests / TypeScript check |
+| `npm run test:e2e` | Build the web app, then Playwright tests of the real app against a stub LLM on port 4900 (no OmniRoute, no kbagent) |
 
 ## Layout
 
@@ -77,6 +78,7 @@ skills/<name>/SKILL.md   the app's own skills (override vendored ones with the s
 knowledge/               shared knowledge base (Markdown)
 server/                  Node.js API + agent runtime (deepagents / LangGraph via OmniRoute)
 scripts/                 doctor, smoke test, vendor sync, kbagent snapshot
+e2e/                     Playwright specs and the scripted OpenAI-compatible stub LLM they run against
 vendor/keboola/          Keboola's official agents and skills (generated, do not edit)
 data/                    local state, not in git: chats, checkpoints, shared memory, settings
 ```
