@@ -6,6 +6,7 @@ import { commandFor, type Os } from './commands.ts';
 import { ConnectProject } from './ConnectProject.tsx';
 import { OmniRouteKeyForm } from './OmniRouteKeyForm.tsx';
 import { ModelPicker, ProjectPicker } from './Pickers.tsx';
+import { StepFacts } from './StepFacts.tsx';
 
 const DOT: Readonly<Record<SetupStatus, string>> = { ok: 'dot--green', fail: 'dot--red', blocked: '' };
 const CHIP: Readonly<Record<SetupStatus, string>> = { ok: 'chip--green', fail: 'chip--red', blocked: '' };
@@ -45,7 +46,7 @@ function StepFix({ step, report, os, onChanged }: FixProps) {
   return command ? <CommandBlock command={command} os={os} /> : null;
 }
 
-/** One step of the checklist: status, a one-line explanation, the server's facts and the fix. */
+/** One step of the checklist: status, a one-line explanation, what the server found and the fix. */
 export function SetupStepRow({ step, number, checking, onRecheck, ...fix }: FixProps & {
   readonly number: number;
   readonly checking: boolean;
@@ -72,7 +73,7 @@ export function SetupStepRow({ step, number, checking, onRecheck, ...fix }: FixP
           <span className={`chip ${CHIP[step.status]}`}>{t(`setup.status.${step.status}` as const)}</span>
         </div>
         <p className="setup-step__text">{explanation}</p>
-        {step.status !== 'blocked' && step.detail && <p className="setup-step__detail mono">{step.detail}</p>}
+        <StepFacts step={step} />
         <StepFix step={step} {...fix} />
         {step.status === 'fail' && (
           <button type="button" className="btn btn--small setup-step__recheck" disabled={checking} onClick={onRecheck}>

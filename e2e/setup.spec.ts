@@ -17,7 +17,9 @@ test('home shows the setup checklist in place of the survey offer while kbagent 
   await expect(steps).toHaveCount(7);
   await expect(steps.nth(6)).toContainText('Что команде можно в Keboola');
   await expect(steps.nth(0)).toContainText('Готово');
-  await expect(steps.nth(2)).toContainText(`${MODEL_ID} answered in`);
+  // What the server found, worded in the UI language, not its English terminal line.
+  await expect(steps.nth(2)).toContainText(`${MODEL_ID} ответила за`);
+  await expect(steps.nth(0)).toContainText('Моделей:');
   const kbagent = steps.nth(3);
   await expect(kbagent).toContainText('Нужно сделать');
   await expect(kbagent).toContainText(/winget install|install\.sh/);
@@ -56,5 +58,5 @@ test('a new OmniRoute key from Settings goes to .env and never comes back', asyn
   const envFile = process.env.E2E_ENV_FILE ?? '';
   expect(parseEnv(readFileSync(envFile, 'utf8')).OMNIROUTE_API_KEY).toBe(KEY);
   // Applied without a restart: the checklist that ran after saving already used the new key.
-  await expect(section.getByRole('listitem', { name: /Модель отвечает/ })).toContainText(`${MODEL_ID} answered in`);
+  await expect(section.getByRole('listitem', { name: /Модель отвечает/ })).toContainText(`${MODEL_ID} ответила за`);
 });

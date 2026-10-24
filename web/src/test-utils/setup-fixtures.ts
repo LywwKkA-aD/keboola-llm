@@ -1,12 +1,12 @@
 import type { SetupReport, SetupStep, SetupStepId } from '../api/setup-types.ts';
 
 const OK_STEPS: readonly SetupStep[] = [
-  { id: 'omniroute', status: 'ok', detail: '2 models at http://127.0.0.1:20128/v1' },
-  { id: 'apiKey', status: 'ok', detail: 'set and accepted' },
-  { id: 'model', status: 'ok', detail: 'a/model answered in 420 ms' },
-  { id: 'kbagent', status: 'ok', detail: 'kbagent v0.100.2' },
-  { id: 'projects', status: 'ok', detail: '1 registered: sandbox' },
-  { id: 'project', status: 'ok', detail: 'sandbox (kbagent default)' },
+  { id: 'omniroute', status: 'ok', detail: '2 models at http://127.0.0.1:20128/v1', facts: { kind: 'router', url: 'http://127.0.0.1:20128/v1', models: 2 } },
+  { id: 'apiKey', status: 'ok', detail: 'set and accepted', facts: { kind: 'keyAccepted' } },
+  { id: 'model', status: 'ok', detail: 'a/model answered in 420 ms', facts: { kind: 'modelAnswered', model: 'a/model', ms: 420 } },
+  { id: 'kbagent', status: 'ok', detail: 'kbagent v0.100.2', facts: { kind: 'version', version: 'kbagent v0.100.2' } },
+  { id: 'projects', status: 'ok', detail: '1 registered: sandbox', facts: { kind: 'projects', aliases: ['sandbox'] } },
+  { id: 'project', status: 'ok', detail: 'sandbox (kbagent default)', facts: { kind: 'project', alias: 'sandbox', source: 'default' } },
 ];
 
 /** Everything set up, like a working install. */
