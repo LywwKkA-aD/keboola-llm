@@ -3,6 +3,7 @@ import type { AgentInfo } from '../api/types.ts';
 import { moodOf } from '../aquarium/state.ts';
 import { AgentDetail } from '../components/home/AgentDetail.tsx';
 import { moodDot, roleHint } from '../components/home/mood.ts';
+import { Select } from '../components/Select.tsx';
 import type { StringKey } from '../i18n/strings.ts';
 import { type AgentGroup, GROUP_ORDER, groupOf } from '../lib/agent-groups.ts';
 import { useLive } from '../live/live-context.tsx';
@@ -10,6 +11,7 @@ import { useSettings } from '../state/settings-context.tsx';
 import { useTeam } from '../state/team-context.tsx';
 
 type StatusFilter = 'all' | 'enabled' | 'disabled';
+type GroupFilter = AgentGroup | 'all';
 
 const STATUS_FILTERS: readonly [StatusFilter, StringKey][] = [
   ['all', 'agents.all'],
@@ -17,7 +19,7 @@ const STATUS_FILTERS: readonly [StatusFilter, StringKey][] = [
   ['disabled', 'agents.disabled'],
 ];
 
-const matches = (agent: AgentInfo, status: StatusFilter, group: AgentGroup | 'all') =>
+const matches = (agent: AgentInfo, status: StatusFilter, group: GroupFilter) =>
   (status === 'all' || (status === 'enabled') === agent.enabled) && (group === 'all' || groupOf(agent) === group);
 
 export function AgentsPage() {
@@ -25,7 +27,7 @@ export function AgentsPage() {
   const team = useTeam();
   const { state, now } = useLive();
   const [status, setStatus] = useState<StatusFilter>('all');
-  const [group, setGroup] = useState<AgentGroup | 'all'>('all');
+  const [group, setGroup] = useState<GroupFilter>('all');
   const [selected, setSelected] = useState<string>();
 
   const order = (agent: AgentInfo) => GROUP_ORDER.indexOf(groupOf(agent));
@@ -54,14 +56,13 @@ export function AgentsPage() {
             </button>
           ))}
         </div>
-        <select className="select filters__group" aria-label={t('agents.group')} value={group} onChange={(event) => setGroup(event.target.value as AgentGroup | 'all')}>
-          <option value="all">{t('agents.allGroups')}</option>
-          {GROUP_ORDER.map((value) => (
-            <option key={value} value={value}>
-              {t(`group.${value}` as StringKey)}
-            </option>
-          ))}
-        </select>
+        <Select<GroupFilter>
+          className="filters__group"
+          aria-label={t('agents.group')}
+          value={group}
+          options={[['all', t('agents.allGroups')], ...GROUP_ORDER.map((value) => [value, t(`group.${value}` as StringKey)] as const)]}
+          onChange={setGroup}
+        />
       </div>
 
       {team.warnings.length + team.loadErrors.length > 0 && (

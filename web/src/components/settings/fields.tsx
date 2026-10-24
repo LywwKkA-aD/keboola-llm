@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useId } from 'react';
+import { Select, type SelectOption } from '../Select.tsx';
 
 /** A settings block: title and explanation on the left, controls on the right. */
 export function SettingsSection({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
@@ -41,29 +42,36 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
   );
 }
 
+/** A labelled select. */
+export function SelectField<T extends string>({ label, value, options, error, onChange }: {
+  label: string;
+  value: T;
+  options: readonly SelectOption<T>[];
+  error?: string | undefined;
+  onChange: (value: T) => void;
+}) {
+  const labelId = useId();
+  return (
+    <div className="field">
+      <span className="label" id={labelId}>
+        {label}
+      </span>
+      <Select<T> aria-labelledby={labelId} value={value} options={options} onChange={onChange} />
+      {error && <span className="field__error">{error}</span>}
+    </div>
+  );
+}
+
 /** A select whose empty option means "use the value from .env". */
 export function EnvSelect({ label, value, options, envLabel, error, onChange }: {
   label: string;
   value: string;
-  options: readonly (readonly [string, string])[];
+  options: readonly SelectOption<string>[];
   envLabel: string;
   error?: string;
   onChange: (value: string) => void;
 }) {
   const known = value === '' || options.some(([option]) => option === value);
-  return (
-    <label className="field">
-      <span className="label">{label}</span>
-      <select className="select" value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="">{envLabel}</option>
-        {!known && <option value={value}>{value}</option>}
-        {options.map(([option, text]) => (
-          <option key={option} value={option}>
-            {text}
-          </option>
-        ))}
-      </select>
-      {error && <span className="field__error">{error}</span>}
-    </label>
-  );
+  const choices: readonly SelectOption<string>[] = [['', envLabel], ...(known ? [] : [[value, value] as const]), ...options];
+  return <SelectField label={label} value={value} options={choices} error={error} onChange={onChange} />;
 }

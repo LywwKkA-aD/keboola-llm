@@ -91,7 +91,8 @@ describe('Settings page', () => {
     visit('/settings');
     render(<App />);
 
-    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Язык ответов и интерфейса' }), 'en');
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Язык ответов и интерфейса' }));
+    await userEvent.click(screen.getByRole('option', { name: 'English' }));
     expect(callsTo('PUT', '/api/settings')[0]?.body).toEqual({ language: 'en' });
     expect(await screen.findByRole('link', { name: 'Aquarium' })).toBeInTheDocument();
     expect(screen.getByText('Saved')).toBeInTheDocument();
@@ -113,12 +114,12 @@ describe('Settings page', () => {
     visit('/settings');
     render(<App />);
 
-    const model = await screen.findByRole('combobox', { name: 'Модель по умолчанию' });
-    await screen.findByRole('option', { name: 'b/model' });
-    await userEvent.selectOptions(model, 'b/model');
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Модель по умолчанию' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'b/model' }));
     expect(callsTo('PUT', '/api/settings')[0]?.body).toEqual({ model: 'b/model' });
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Проект по умолчанию' }), 'sandbox');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Проект по умолчанию' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'sandbox · Sandbox (6487)' }));
     expect(callsTo('PUT', '/api/settings')[1]?.body).toEqual({ keboolaProject: 'sandbox' });
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Разрешать SQL в новых чатах по умолчанию' }));
@@ -169,7 +170,8 @@ describe('Agents page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Выключены' }));
     expect(screen.getAllByRole('row')).toHaveLength(2);
     await userEvent.click(screen.getByRole('button', { name: 'Все' }));
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Группа' }), 'keboola');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Группа' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Специалисты Keboola' }));
     expect(screen.getAllByRole('row')).toHaveLength(2);
 
     await userEvent.click(screen.getByRole('button', { name: /keboola-expert/ }));

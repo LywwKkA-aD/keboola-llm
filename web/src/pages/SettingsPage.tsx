@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.ts';
 import type { KeboolaProject, Language, Quality, ReduceMotion, Settings, Theme } from '../api/types.ts';
-import { EnvSelect, Segmented, SettingsSection } from '../components/settings/fields.tsx';
+import { EnvSelect, Segmented, SelectField, SettingsSection } from '../components/settings/fields.tsx';
 import { SystemChecks } from '../components/settings/SystemChecks.tsx';
 import { LANGUAGE_NAMES } from '../i18n/strings.ts';
 import { useSettings } from '../state/settings-context.tsx';
@@ -49,16 +49,12 @@ export function SettingsPage() {
       {error && <div className="error-banner">{error}</div>}
 
       <SettingsSection title={t('settings.interface')}>
-        <label className="field">
-          <span className="label">{t('settings.language')}</span>
-          <select className="select" value={settings.language} onChange={(event) => void save({ language: event.target.value as Language })}>
-            {LANGUAGES.map((code) => (
-              <option key={code} value={code}>
-                {LANGUAGE_NAMES[code]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField<Language>
+          label={t('settings.language')}
+          value={settings.language}
+          options={LANGUAGES.map((code) => [code, LANGUAGE_NAMES[code]] as const)}
+          onChange={(language) => void save({ language })}
+        />
         <Segmented<Theme>
           label={t('settings.theme')}
           value={settings.theme}

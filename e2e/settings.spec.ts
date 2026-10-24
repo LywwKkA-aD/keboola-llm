@@ -12,7 +12,8 @@ test('switching to English and the light theme sticks after a reload', async ({ 
   await expect(page.getByRole('heading', { name: 'Настройки студии' })).toBeVisible();
   await expect(html).toHaveAttribute('data-theme', 'dark');
 
-  await page.getByRole('combobox', { name: 'Язык ответов и интерфейса' }).selectOption('en');
+  await page.getByRole('combobox', { name: 'Язык ответов и интерфейса' }).click();
+  await page.getByRole('option', { name: 'English' }).click();
   await expect(page.getByRole('heading', { name: 'Studio settings' })).toBeVisible();
   await expect(html).toHaveAttribute('lang', 'en');
 
