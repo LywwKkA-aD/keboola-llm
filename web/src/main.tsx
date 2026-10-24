@@ -7,6 +7,7 @@ import '@fontsource/ibm-plex-mono/600.css';
 import { App } from './App.tsx';
 import './styles/tokens.css';
 import './styles/base.css';
+import './styles/select.css';
 import './styles/shell.css';
 import './styles/home.css';
 import './styles/chat.css';
