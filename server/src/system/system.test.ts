@@ -62,6 +62,11 @@ describe('kbagentVersion', () => {
     expect(await kbagentVersion({ exec: execReturning('kbagent v0.100.2\n') })).toBe('kbagent v0.100.2');
   });
 
+  it('says plainly when kbagent cannot start', async () => {
+    const exec: ExecFn = async () => ({ stdout: '', stderr: '', exitCode: null, timedOut: false, spawnError: 'ENOENT' });
+    await expect(kbagentVersion({ exec })).rejects.toThrow('not installed or not on PATH');
+  });
+
   it('throws when kbagent is missing', async () => {
     const exec: ExecFn = async () => {
       throw Object.assign(new Error('spawn kbagent ENOENT'), { code: 'ENOENT' });

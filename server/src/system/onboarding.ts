@@ -12,9 +12,11 @@ export interface OnboardingStatus {
 /** Profile file of a project inside /memories/projects/; project-scout uses the same rule. */
 export const profileFileName = (alias: string) => `${alias.replace(/[^A-Za-z0-9_-]/g, '-')}.md`;
 
+/** kbagent's own choice without --project: its default project, else the only one registered. */
 async function defaultProject(projects: () => Promise<readonly KeboolaProject[]>): Promise<string> {
   try {
-    return (await projects()).find((project) => project.isDefault)?.alias ?? '';
+    const listed = await projects();
+    return (listed.find((project) => project.isDefault) ?? (listed.length === 1 ? listed[0] : undefined))?.alias ?? '';
   } catch {
     return '';
   }

@@ -38,6 +38,12 @@ describe('onboardingStatus', () => {
     expect(await onboardingStatus({ memoriesDir, project: '', projects: projects('main', 'other') })).toMatchObject({ project: 'main', profiled: true });
   });
 
+  it('uses the only registered project when kbagent has no default, as kbagent itself does', async () => {
+    const memoriesDir = makeTree({});
+    const solo = async () => [{ alias: 'solo', name: 'Solo', id: 1, stackUrl: 'https://x', isDefault: false }];
+    expect(await onboardingStatus({ memoriesDir, project: '', projects: solo })).toEqual({ project: 'solo', profiled: false });
+  });
+
   it('has no project to offer without kbagent or registered projects', async () => {
     const memoriesDir = makeTree({});
     const failing = async () => {

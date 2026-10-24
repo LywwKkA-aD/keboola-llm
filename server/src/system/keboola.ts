@@ -1,4 +1,6 @@
-import { buildChildEnv, type ExecFn, runKbagent } from '../tools/kbagent/index.ts';
+// The runner and env only, not the agent tools: `npm run doctor` loads this file without LangChain.
+import { buildChildEnv } from '../tools/kbagent/env.ts';
+import { type ExecFn, runKbagent } from '../tools/kbagent/runner.ts';
 
 export interface KeboolaProject {
   readonly alias: string;
@@ -40,6 +42,7 @@ export async function listKeboolaProjects(options: Options = {}): Promise<Kebool
 /** `kbagent --version`, e.g. "kbagent v0.100.2". */
 export async function kbagentVersion(options: Options = {}): Promise<string> {
   const result = await run(['--version'], options);
-  if (!result.ok) throw new Error(`kbagent --version failed (exit ${result.exitCode})`);
+  // No exit code: the process never ran (or was killed), almost always because kbagent is not installed.
+  if (!result.ok) throw new Error(result.exitCode === null ? 'not installed or not on PATH' : `kbagent --version failed (exit ${result.exitCode})`);
   return String(result.output).trim();
 }
