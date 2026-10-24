@@ -1,0 +1,158 @@
+{
+  "description": "Questions about the Keboola shop fixture (fixtures/keboola-shop) with answers checked against fixtures/keboola-shop/KNOWN_ISSUES.md. Patterns are case-insensitive regular expressions; an expectation is met when any of its patterns matches the team's answer.",
+  "scenarios": [
+    {
+      "id": "fct-orders-fan-out",
+      "prompt": "Проверь логику выручки в трансформации «Shop 02 - lake to DWH»: всё ли правильно считается в fct_orders?",
+      "expect": [
+        {
+          "name": "finds the shipping fan-out",
+          "any": [
+            "fan.?out",
+            "разм[аон]",
+            "для каждой (позиции|строки)",
+            "столько раз",
+            "per (order )?item",
+            "multipl",
+            "задваива",
+            "дублир",
+            "завыш"
+          ]
+        },
+        {
+          "name": "names the shipping fee",
+          "any": [
+            "shipping"
+          ]
+        },
+        {
+          "name": "suggests aggregating items first",
+          "any": [
+            "агрегир",
+            "CTE",
+            "подзапрос",
+            "pre-?aggregat",
+            "ANY_VALUE",
+            "один раз на заказ",
+            "WITH\\s+\\w+\\s+AS",
+            "для каждого заказа",
+            "сначала (посчита|слож|просуммир)",
+            "per order first"
+          ]
+        }
+      ],
+      "forbid": [
+        {
+          "name": "claims to have changed the transformation",
+          "any": [
+            "(я )?(изменил|исправил|обновил) (трансформацию|код трансформации)",
+            "I (changed|fixed|updated) the transformation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dim-product-review",
+      "prompt": "Есть ли проблемы с производительностью или стилем в SQL, который строит dim_product?",
+      "expect": [
+        {
+          "name": "spots the needless cross join",
+          "any": [
+            "cross join"
+          ]
+        },
+        {
+          "name": "spots SELECT * / p.*",
+          "any": [
+            "select \\*",
+            "p\\.\\*",
+            "EXCEPT\\s*\\(\\s*_timestamp"
+          ]
+        },
+        {
+          "name": "suggests an explicit column list",
+          "any": [
+            "явн",
+            "перечисл",
+            "explicit",
+            "column list",
+            "списк\\w* (колонок|столбцов)",
+            "INSERT INTO \\w+\\s*\\("
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orphan-products",
+      "prompt": "Есть ли в out.c-shop_lake.order_items позиции с товарами, которых нет в out.c-shop_lake.products? Посчитай их.",
+      "allowSql": true,
+      "expect": [
+        {
+          "name": "counts 29 orphan items",
+          "any": [
+            "\\b29\\b"
+          ]
+        },
+        {
+          "name": "names the missing product ids",
+          "any": [
+            "P09\\d"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "revenue-lineage",
+      "prompt": "Откуда берётся колонка revenue в fct_orders? Опиши путь данных от raw до DWH.",
+      "expect": [
+        {
+          "name": "starts in the raw bucket",
+          "any": [
+            "shop_raw"
+          ]
+        },
+        {
+          "name": "goes through the lake",
+          "any": [
+            "shop_lake"
+          ]
+        },
+        {
+          "name": "names the DWH transformation",
+          "any": [
+            "Shop 02",
+            "lake to DWH",
+            "01m5ne18awcvbsznntean4k7q4"
+          ]
+        },
+        {
+          "name": "uses order items",
+          "any": [
+            "order_items"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "customer-dedup",
+      "prompt": "Почему в out.c-shop_lake.customers 185 строк, а в in.c-shop_raw.customers 200?",
+      "expect": [
+        {
+          "name": "explains deduplication",
+          "any": [
+            "дубл",
+            "duplicat",
+            "dedup",
+            "повтор"
+          ]
+        },
+        {
+          "name": "names the tie-breaker column",
+          "any": [
+            "updated_at"
+          ]
+        }
+      ]
+    }
+  ]
+}

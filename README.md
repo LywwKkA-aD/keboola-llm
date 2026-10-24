@@ -83,6 +83,7 @@ npm run chat                # or talk to the team in the terminal
 | `npm run chat [-- "message"]` | Terminal chat with the team (`--raw` dumps stream chunks, `--yes` auto-approves) |
 | `npm test` / `npm run typecheck` | Unit tests / TypeScript check |
 | `npm run test:e2e` | Build the web app, then Playwright tests of the real app against a stub LLM on port 4900 (no OmniRoute, no kbagent) |
+| `npm run eval [-- --only id]` | Ask the running team the questions in `evals/shop.json` (real model and Keboola project, read-only) and grade the answers; report in `data/evals/` |
 
 ## Layout
 
@@ -93,6 +94,7 @@ routines/<name>.md       scheduled routines: a cron schedule and the message for
 server/                  Node.js API + agent runtime (deepagents / LangGraph via OmniRoute)
 scripts/                 doctor, smoke test, vendor sync, kbagent snapshot
 e2e/                     Playwright specs and the scripted OpenAI-compatible stub LLM they run against
+evals/                   question sets with expected findings for `npm run eval` (shop.json targets fixtures/keboola-shop)
 vendor/keboola/          Keboola's official agents and skills (generated, do not edit)
 data/                    local state, not in git: chats, checkpoints, settings, and what the team knows:
   knowledge/             knowledge base, Markdown notes (agents see /knowledge/; edit them on the Knowledge page)
