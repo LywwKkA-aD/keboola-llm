@@ -67,6 +67,12 @@ export function RoutinesSection() {
   // Recheck whenever a run starts or ends: a routine's run shows as running until it is done.
   useEffect(load, [load, runningKey]);
 
+  // Show the switch flipped at once; the list fetched afterwards has the final word.
+  const toggle = (name: string, enabled: boolean) => {
+    setList((current) => current && { ...current, routines: current.routines.map((entry) => (entry.name === name ? { ...entry, enabled } : entry)) });
+    act(name, () => routinesApi.setEnabled(name, enabled));
+  };
+
   const act = (name: string, action: () => Promise<unknown>) => {
     setBusy(name);
     setError(undefined);
@@ -99,7 +105,7 @@ export function RoutinesSection() {
               key={routine.name}
               routine={routine}
               busy={busy === routine.name}
-              onToggle={(enabled) => act(routine.name, () => routinesApi.setEnabled(routine.name, enabled))}
+              onToggle={(enabled) => toggle(routine.name, enabled)}
               onRun={() => act(routine.name, () => routinesApi.run(routine.name))}
             />
           ))}

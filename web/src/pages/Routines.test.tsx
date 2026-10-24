@@ -84,6 +84,18 @@ describe('Routines in Settings', () => {
     expect(row).toHaveTextContent('Следующий запуск');
   });
 
+  it('puts the switch back when the server refuses it', async () => {
+    const { section } = await openSettings({
+      'GET /api/routines': { routines: [MORNING], loadErrors: [] },
+      'PUT /api/routines/morning-check': () => errorResponse(400, 'Invalid request'),
+    });
+    const row = await within(section).findByRole('listitem', { name: 'Morning check' });
+
+    await userEvent.click(within(row).getByRole('checkbox', { name: 'Запускать по расписанию' }));
+    expect(await within(section).findByText('Invalid request')).toBeInTheDocument();
+    await waitFor(() => expect(within(row).getByRole('checkbox', { name: 'Запускать по расписанию' })).not.toBeChecked());
+  });
+
   it('runs a routine now, links its chat and blocks a second run while it goes', async () => {
     let stored = MORNING;
     const { api, section } = await openSettings({
