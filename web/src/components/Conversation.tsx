@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.ts';
 import type { ChatEntry, Decision } from '../api/types.ts';
+import type { CommandActions, Outgoing } from '../hooks/useCommandField.ts';
 import { useThreadEvents } from '../hooks/useThreadEvents.ts';
 import { useSettings } from '../state/settings-context.tsx';
 import { useTeam } from '../state/team-context.tsx';
@@ -27,12 +28,14 @@ const INTERRUPTED: [StringKey, string] = ['chat.status.interrupted', 'chip--red'
  * One chat: header, history, the steps the team took, the live stream of the lead agent, approvals and the composer.
  * resumable: the server holds an unfinished run for this chat (e.g. one a restart cut off) that can be continued.
  */
-export function Conversation({ threadId, title, updatedAt, resumable = false, onActivity }: {
+export function Conversation({ threadId, title, updatedAt, resumable = false, onActivity, actions = {} }: {
   threadId: string;
   title: string;
   updatedAt?: string;
   resumable?: boolean;
   onActivity: () => void;
+  /** The page's own commands (/init, /new); /sql this chat carries out itself. */
+  actions?: Pick<CommandActions, 'init' | 'newChat'>;
 }) {
   const { t, settings } = useSettings();
   const team = useTeam();
@@ -57,8 +60,8 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
     api.policy(threadId).then((policy) => setAllowSql(policy.allowSql)).catch(() => {});
   }, [threadId]);
 
-  const changeSql = (allowed: boolean) =>
-    void guard(async () => setAllowSql((await api.setPolicy(threadId, { allowSql: allowed })).allowSql));
+  const saveSql = async (allowed: boolean) => setAllowSql((await api.setPolicy(threadId, { allowSql: allowed })).allowSql);
+  const changeSql = (allowed: boolean) => void guard(() => saveSql(allowed));
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
@@ -79,10 +82,10 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
     }
   };
 
-  const send = (text: string) => {
-    const local: ChatEntry = { id: `local-${Date.now()}`, role: 'user', text };
+  const send = ({ text, command }: Outgoing) => {
+    const local: ChatEntry = { id: `local-${Date.now()}`, role: 'user', text, ...(command ? { command } : {}) };
     setHistory((current) => [...current, local]);
-    void guard(() => api.send(threadId, text)).then((sent) => {
+    void guard(() => api.send(threadId, text, command)).then((sent) => {
       // The server did not take it (e.g. the chat is busy): do not pretend it was sent.
       if (!sent) setHistory((current) => current.filter((entry) => entry.id !== local.id));
     });
@@ -124,7 +127,7 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
           {history.length === 0 && !running && <p className="conversation__empty">{t('chat.empty')}</p>}
           {timeline(history, run.activities, run.turns).map((item) =>
             item.kind === 'entry' ? (
-              <MessageBubble key={item.entry.id} role={item.entry.role} text={item.entry.text} />
+              <MessageBubble key={item.entry.id} role={item.entry.role} text={item.entry.text} {...(item.entry.command ? { command: item.entry.command } : {})} />
             ) : (
               <StepRows key={`turn-${item.turn}`} steps={item.steps} />
             ),
@@ -140,7 +143,13 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
           {error && <div className="conversation__status conversation__status--error">{error}</div>}
           <div ref={endRef} />
         </div>
-        <Composer onSend={send} onStop={() => void guard(() => api.cancel(threadId))} running={running} disabled={busy || run.status === 'waiting'} />
+        <Composer
+          onSend={send}
+          onStop={() => void guard(() => api.cancel(threadId))}
+          running={running}
+          disabled={busy || run.status === 'waiting'}
+          actions={{ ...actions, sql: saveSql }}
+        />
       </div>
     </div>
   );

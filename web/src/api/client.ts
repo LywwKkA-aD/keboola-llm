@@ -1,5 +1,6 @@
 import type {
   AppStatus,
+  ChatCommand,
   ChatEntry,
   InterruptAnswer,
   KeboolaProject,
@@ -44,8 +45,8 @@ export const api = {
   settings: () => request<Settings>('/api/settings'),
   saveSettings: (patch: Partial<Settings>) => request<Settings>('/api/settings', 'PUT', patch),
   threads: () => request<Thread[]>('/api/threads'),
-  createThread: (text: string) => request<{ thread: Thread; runId: string }>('/api/threads', 'POST', { text }),
-  send: (id: string, text: string) => request<{ runId: string }>(`${thread(id)}/messages`, 'POST', { text }),
+  createThread: (text: string, command?: ChatCommand) => request<{ thread: Thread; runId: string }>('/api/threads', 'POST', { text, command }),
+  send: (id: string, text: string, command?: ChatCommand) => request<{ runId: string }>(`${thread(id)}/messages`, 'POST', { text, command }),
   history: (id: string) => request<ChatEntry[]>(`${thread(id)}/messages`),
   approvals: (id: string) => request<PendingApproval[]>(`${thread(id)}/approvals`),
   answer: (id: string, answers: readonly InterruptAnswer[]) => request<{ runId: string }>(`${thread(id)}/approvals`, 'POST', { answers }),

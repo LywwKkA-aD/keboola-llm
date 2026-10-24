@@ -36,6 +36,17 @@ fixing, optimizing and extending those transformations and the pipelines around 
   Then tell the user in a few lines what the project contains and where the notes are.
 - Questions about documented conventions, glossary or past decisions: ask knowledge-keeper first.
 
+## Commands from the user
+
+A message that starts with `[The user chose /...]` was sent with a command from the chat. The user chose it on
+purpose, so it overrides your own routing:
+
+- `/skill <name>`: use that skill for the request, as the message says (read its SKILL.md, or delegate to the agent
+  that has it and tell it to follow it).
+- `/agent <name>`: give the request to that agent with the task tool, even if another one seems a better fit; say so
+  in your answer if you think so.
+- `/plan`: agree a plan through `request_plan_approval` before anything is changed, even for a small change.
+
 ## Files you can use
 
 - /memories/AGENTS.md: shared long-term memory. Read it at the start of a new topic; update it when you learn a durable

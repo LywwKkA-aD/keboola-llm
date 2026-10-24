@@ -1,14 +1,25 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
+import { commandError, commandLabel, userTurn } from '../commands.ts';
 import { approvalsBody, messageBody, titleBody } from '../schemas.ts';
 import type { ServerDeps } from '../types.ts';
 
-const userMessage = (text: string) => ({ messages: [{ role: 'user', content: text }] });
-
-export function registerThreadRoutes(app: FastifyInstance, { runs, threads, history, deleteThread, settings }: ServerDeps): void {
+export function registerThreadRoutes(app: FastifyInstance, { runs, threads, history, deleteThread, settings, team }: ServerDeps): void {
   const findThread = (id: string, reply: FastifyReply) => {
     const thread = threads.get(id);
     if (!thread) reply.code(404).send({ error: 'Thread not found' });
     return thread;
+  };
+
+  /** The message of a request body as a run input, or undefined after answering 400 for one the team cannot follow. */
+  const turnOf = (body: unknown, reply: FastifyReply) => {
+    const { text, command } = messageBody.parse(body);
+    const info = team();
+    const error = commandError(text, command, info);
+    if (error) {
+      reply.code(400).send({ error });
+      return undefined;
+    }
+    return { title: text || (command ? commandLabel(command) : ''), input: userTurn(text, command, info) };
   };
 
   // resumable: the chat's last run stopped before it finished (failed, stopped, cut off by a restart).
@@ -18,10 +29,11 @@ export function registerThreadRoutes(app: FastifyInstance, { runs, threads, hist
   });
 
   app.post('/api/threads', async (request, reply) => {
-    const { text } = messageBody.parse(request.body);
-    const thread = threads.create(text);
+    const turn = turnOf(request.body, reply);
+    if (!turn) return reply;
+    const thread = threads.create(turn.title);
     if (settings.get().allowSqlByDefault) threads.setPolicy(thread.id, { allowSql: true });
-    const { runId } = runs.start(thread.id, userMessage(text));
+    const { runId } = runs.start(thread.id, turn.input);
     return reply.code(201).send({ thread, runId });
   });
 
@@ -32,8 +44,9 @@ export function registerThreadRoutes(app: FastifyInstance, { runs, threads, hist
 
   app.post<{ Params: { id: string } }>('/api/threads/:id/messages', async (request, reply) => {
     if (!findThread(request.params.id, reply)) return reply;
-    const { text } = messageBody.parse(request.body);
-    const { runId } = runs.start(request.params.id, userMessage(text));
+    const turn = turnOf(request.body, reply);
+    if (!turn) return reply;
+    const { runId } = runs.start(request.params.id, turn.input);
     threads.touch(request.params.id);
     return reply.code(202).send({ runId });
   });

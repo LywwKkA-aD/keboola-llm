@@ -43,10 +43,15 @@ export interface Thread {
   readonly resumable?: boolean;
 }
 
+/** A chat command the server turns into an instruction for the lead (server/src/api/commands.ts). */
+export type ChatCommand = { readonly name: 'skill' | 'agent'; readonly arg: string } | { readonly name: 'plan' };
+
 export interface ChatEntry {
   readonly id: string;
   readonly role: 'user' | 'assistant';
   readonly text: string;
+  /** The command the user sent the message with; text is then what followed it. */
+  readonly command?: ChatCommand;
 }
 
 export interface ApprovalRequest {

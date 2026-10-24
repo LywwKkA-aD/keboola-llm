@@ -17,7 +17,7 @@ describe('Composer', () => {
 
     await userEvent.type(box, 'first line{Shift>}{Enter}{/Shift}second{Enter}');
 
-    expect(onSend).toHaveBeenCalledWith('first line\nsecond');
+    expect(onSend).toHaveBeenCalledWith({ text: 'first line\nsecond' });
     expect(box).toHaveValue('');
   });
 

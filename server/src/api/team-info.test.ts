@@ -41,7 +41,8 @@ describe('describeTeam', () => {
         basedOn: 'vendor/x.md',
       },
     ]);
-    expect(info.skills).toEqual([{ name: 'kbagent', description: 'CLI', source: 'cli-kbagent' }]);
+    // The path is the one the agents see (where /skill points the lead), never a folder on disk.
+    expect(info.skills).toEqual([{ name: 'kbagent', description: 'CLI', source: 'cli-kbagent', path: '/skills/cli-kbagent/kbagent/' }]);
     expect(JSON.stringify(info)).not.toContain('/abs/path');
   });
 });

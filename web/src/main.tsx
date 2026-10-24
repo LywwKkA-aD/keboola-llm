@@ -13,6 +13,7 @@ import './styles/home.css';
 import './styles/hud.css';
 import './styles/usage.css';
 import './styles/chat.css';
+import './styles/commands.css';
 import './styles/pages.css';
 import './styles/knowledge.css';
 

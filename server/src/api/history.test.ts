@@ -17,6 +17,20 @@ describe('toChatHistory', () => {
     ]);
   });
 
+  it('shows a command message as the user typed it, not the instruction the lead got', () => {
+    const studio = { text: 'Fix the join', command: { name: 'agent', arg: 'keboola-developer' } };
+    const messages = [
+      new HumanMessage({ content: '[The user chose /agent keboola-developer]\nHand this request to ...', additional_kwargs: { studio }, id: 'h1' }),
+      new HumanMessage({ content: 'instruction', additional_kwargs: { studio: { text: '', command: { name: 'skill', arg: 'keboola-change' } } }, id: 'h2' }),
+      new HumanMessage({ content: 'Plain', additional_kwargs: { studio: { text: 3 } }, id: 'h3' }),
+    ];
+    expect(toChatHistory(messages)).toEqual([
+      { id: 'h1', role: 'user', text: 'Fix the join', command: { name: 'agent', arg: 'keboola-developer' } },
+      { id: 'h2', role: 'user', text: '', command: { name: 'skill', arg: 'keboola-change' } },
+      { id: 'h3', role: 'user', text: 'Plain' },
+    ]);
+  });
+
   it('keeps text written alongside tool calls and tolerates odd input', () => {
     const messages = [new AIMessage({ content: 'Let me check.', tool_calls: [{ id: 'c', name: 'ls', args: {} }], id: 'a' })];
     expect(toChatHistory(messages)).toEqual([{ id: 'a', role: 'assistant', text: 'Let me check.' }]);
