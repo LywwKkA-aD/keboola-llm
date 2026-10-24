@@ -129,6 +129,32 @@ describe('Settings page', () => {
     expect(callsTo('GET', '/api/system')).toHaveLength(2);
   });
 
+  it('offers only the connected provider\'s models, and every OmniRoute model on request', async () => {
+    const { callsTo } = stubApi({
+      ...baseRoutes,
+      ...settingsRoutes,
+      'GET /api/models': (_body: unknown, url: URL) =>
+        url.searchParams.get('all') === '1'
+          ? { models: ['aihorde/llama', 'cc/haiku', 'cc/opus'], current: 'cc/opus', total: 3 }
+          : { models: ['cc/haiku', 'cc/opus'], current: 'cc/opus', total: 3 },
+    });
+    visit('/settings');
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Модель по умолчанию' }));
+    expect(screen.queryByRole('option', { name: 'aihorde/llama' })).toBeNull();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByText(/бесплатные сервисы без ключа/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Показать все модели OmniRoute (3)' }));
+    await waitFor(() => expect(callsTo('GET', '/api/models')).toHaveLength(2));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Модель по умолчанию' }));
+    expect(await screen.findByRole('option', { name: 'aihorde/llama' })).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('button', { name: 'Только модели подключённого провайдера' }));
+    await waitFor(() => expect(callsTo('GET', '/api/models')).toHaveLength(3));
+  });
+
   it('explains when OmniRoute, kbagent or saving fail', async () => {
     stubApi({
       ...baseRoutes,

@@ -17,14 +17,25 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
   const [models, setModels] = useState<readonly string[]>([]);
+  const [modelsTotal, setModelsTotal] = useState(0);
+  const [allModels, setAllModels] = useState(false);
   const [modelsFailed, setModelsFailed] = useState(false);
   const [projects, setProjects] = useState<readonly KeboolaProject[]>([]);
   const [projectsFailed, setProjectsFailed] = useState(false);
 
   useEffect(() => {
-    api.models().then((result) => setModels(result.models), () => setModelsFailed(true));
     api.keboolaProjects().then((result) => setProjects(result.projects), () => setProjectsFailed(true));
   }, []);
+
+  useEffect(() => {
+    api.models(allModels).then(
+      (result) => {
+        setModels(result.models);
+        setModelsTotal(result.total ?? result.models.length);
+      },
+      () => setModelsFailed(true),
+    );
+  }, [allModels]);
 
   const save = async (patch: Partial<Settings>) => {
     setSaved(false);
@@ -100,6 +111,14 @@ export function SettingsPage() {
           {...(modelsFailed ? { error: t('settings.modelsError') } : {})}
           onChange={(model) => void save({ model })}
         />
+        {(allModels || modelsTotal > models.length) && (
+          <div className="settings-models">
+            {!allModels && <p className="settings-models__hint">{t('settings.modelsHint')}</p>}
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => setAllModels((all) => !all)}>
+              {allModels ? t('settings.modelsConnected') : t('settings.modelsAll').replace('{total}', String(modelsTotal))}
+            </button>
+          </div>
+        )}
       </SettingsSection>
 
       <SettingsSection title={t('settings.keboola')}>

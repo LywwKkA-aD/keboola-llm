@@ -7,6 +7,7 @@
 import type { OmniRouteConfig } from '../config/env.ts';
 import { type ChangePath, type KeboolaAccess, shortAccess } from '../system/keboola-access.ts';
 import type { KeboolaProject } from '../system/keboola.ts';
+import { modelsOfProvider } from '../system/models.ts';
 import { type ModelTestResult, type OmniRouteProbe, redactSecret } from './omniroute.ts';
 
 export type SetupStepId = 'omniroute' | 'apiKey' | 'model' | 'kbagent' | 'projects' | 'project' | 'access';
@@ -29,7 +30,8 @@ export type SetupReason =
 /** What a step found, as data. `none`: nothing to add to the reason (a key or a choice is missing). */
 export type SetupFacts =
   | { readonly kind: 'none' }
-  | { readonly kind: 'router'; readonly url: string; readonly models?: number }
+  // provider: the models counted are those of this provider (the default model's), not the whole catalog.
+  | { readonly kind: 'router'; readonly url: string; readonly models?: number; readonly provider?: string }
   | { readonly kind: 'unreachable'; readonly url: string; readonly error?: string }
   | { readonly kind: 'http'; readonly url: string; readonly status: number }
   | { readonly kind: 'keyAccepted' }
@@ -126,7 +128,7 @@ async function accessStep(project: SetupStep, read: () => Promise<KeboolaAccess>
   });
 }
 
-function omniRouteSteps({ baseUrl, apiKey }: OmniRouteConfig, probe: OmniRouteProbe): [SetupStep, SetupStep] {
+function omniRouteSteps({ baseUrl, apiKey, model }: OmniRouteConfig, probe: OmniRouteProbe): [SetupStep, SetupStep] {
   if (!probe.reachable) {
     const unreachable = fail('omniroute', 'unreachable', `not reachable at ${baseUrl}${probe.error ? ` (${probe.error})` : ''}`, {
       kind: 'unreachable',
@@ -141,10 +143,18 @@ function omniRouteSteps({ baseUrl, apiKey }: OmniRouteConfig, probe: OmniRoutePr
     const url = `${baseUrl}/models`;
     return [fail('omniroute', 'http', `${url} answered HTTP ${status}`, { kind: 'http', url, status }), blocked('apiKey', 'waiting for OmniRoute')];
   }
-  const count = probe.models?.length ?? 0;
+  // The models of the connected provider (the default model's), not OmniRoute's whole catalog of free providers.
+  const shown = modelsOfProvider(probe.models ?? [], model);
+  const provider = shown.length < (probe.models?.length ?? 0) ? shown[0]?.provider : undefined;
+  const count = shown.length;
   const router = denied
     ? ok('omniroute', `running at ${baseUrl}`, { kind: 'router', url: baseUrl })
-    : ok('omniroute', `${count} model${count === 1 ? '' : 's'} at ${baseUrl}`, { kind: 'router', url: baseUrl, models: count });
+    : ok('omniroute', `${count} model${count === 1 ? '' : 's'}${provider ? ` of ${provider}` : ''} at ${baseUrl}`, {
+        kind: 'router',
+        url: baseUrl,
+        models: count,
+        ...(provider ? { provider } : {}),
+      });
   if (!apiKey) return [router, fail('apiKey', 'keyMissing', 'not set', NONE)];
   const key = denied
     ? fail('apiKey', 'keyRejected', `rejected by OmniRoute (HTTP ${status})`, { kind: 'keyRejected', status })
@@ -210,7 +220,7 @@ export async function runSetupChecks(input: SetupInput): Promise<SetupChecks> {
   return {
     steps,
     complete: steps.every((entry) => entry.status === 'ok'),
-    models: key.status === 'ok' ? (probe.models ?? []) : [],
+    models: key.status === 'ok' ? modelsOfProvider(probe.models ?? [], input.omniroute.model).map((model) => model.id) : [],
     projects: listed.status === 'fulfilled' && version.status === 'fulfilled' ? listed.value : [],
   };
 }

@@ -24,7 +24,7 @@ export type ChangePath = 'promote' | 'merge-request' | 'keboola-ui' | 'read-only
 /** What a step found, as data for the UI to word in the user's language. `none`: the reason says it all. */
 export type SetupFacts =
   | { readonly kind: 'none' }
-  | { readonly kind: 'router'; readonly url: string; readonly models?: number }
+  | { readonly kind: 'router'; readonly url: string; readonly models?: number; readonly provider?: string }
   | { readonly kind: 'unreachable'; readonly url: string; readonly error?: string }
   | { readonly kind: 'http'; readonly url: string; readonly status: number }
   | { readonly kind: 'keyAccepted' }

@@ -59,7 +59,8 @@ export const api = {
   remove: (id: string) => request<void>(thread(id), 'DELETE'),
   allApprovals: () => request<PendingApprovalEntry[]>('/api/approvals'),
   status: () => request<AppStatus>('/api/status'),
-  models: () => request<{ models: string[]; current: string }>('/api/models'),
+  /** The connected provider's models (the default model's); all of OmniRoute's with `all`. total counts them all. */
+  models: (all = false) => request<{ models: string[]; current: string; total?: number }>(all ? '/api/models?all=1' : '/api/models'),
   keboolaProjects: () => request<{ projects: KeboolaProject[]; current: string }>('/api/keboola/projects'),
   onboarding: () => request<OnboardingStatus>('/api/onboarding'),
   startOnboarding: (text: string) => request<{ threadId: string }>('/api/onboarding/start', 'POST', { text }),

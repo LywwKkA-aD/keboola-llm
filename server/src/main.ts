@@ -26,7 +26,7 @@ import { watchFolders } from './runtime/watch.ts';
 import { createSetupService } from './setup/service.ts';
 import { kbagentVersion, keboolaAccess, listKeboolaProjects } from './system/keboola.ts';
 import { accessSummary, type KeboolaAccess, shortAccess } from './system/keboola-access.ts';
-import { listModels } from './system/models.ts';
+import { listModels, modelsOfProvider } from './system/models.ts';
 import { onboardingStatus } from './system/onboarding.ts';
 import { previewPromotion } from './system/promotion.ts';
 import { productionBranchOf, runnerFor } from './tools/kbagent/index.ts';
@@ -165,7 +165,13 @@ const server = await createServer({
   staticDir: join(app.env.rootDir, 'web', 'dist'),
   models,
   keboolaProjects: () => listKeboolaProjects(),
-  system: () => systemStatus({ version, models, kbagent: () => kbagentVersion(), model: team.effective.model }),
+  system: () =>
+    systemStatus({
+      version,
+      models: async () => modelsOfProvider(await models(), team.effective.model).map((model) => model.id),
+      kbagent: () => kbagentVersion(),
+      model: team.effective.model,
+    }),
   effective: () => team.effective,
   onboarding: () =>
     onboardingStatus({ memoriesDir: join(app.env.dataDir, 'memories'), project: team.effective.keboolaProject, projects: () => listKeboolaProjects() }),

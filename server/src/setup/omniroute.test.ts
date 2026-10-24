@@ -27,8 +27,15 @@ describe('redactSecret', () => {
 
 describe('probeOmniRoute', () => {
   it('lists the models with the server key', async () => {
-    const fetchImpl = fetchReturning(() => json({ data: [{ id: 'b' }, { id: 'a' }, { nope: 1 }] }));
-    expect(await probeOmniRoute(CONFIG, fetchImpl as unknown as typeof fetch)).toEqual({ reachable: true, status: 200, models: ['a', 'b'] });
+    const fetchImpl = fetchReturning(() => json({ data: [{ id: 'b', owned_by: 'claude' }, { id: 'a' }, { nope: 1 }] }));
+    expect(await probeOmniRoute(CONFIG, fetchImpl as unknown as typeof fetch)).toEqual({
+      reachable: true,
+      status: 200,
+      models: [
+        { id: 'a', provider: '' },
+        { id: 'b', provider: 'claude' },
+      ],
+    });
     const [url, init] = fetchImpl.mock.calls[0] ?? [];
     expect(url).toBe('http://omni/v1/models');
     expect((init?.headers as Record<string, string>).Authorization).toBe(`Bearer ${KEY}`);

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ExecFn } from '../tools/kbagent/index.ts';
 import { kbagentVersion, listKeboolaProjects } from './keboola.ts';
-import { listModels } from './models.ts';
+import { listModels, modelsOfProvider } from './models.ts';
 import { systemStatus } from './status.ts';
 
 const CONFIG = { baseUrl: 'http://omni/v1', apiKey: 'secret-key', model: 'm' };
@@ -9,9 +9,12 @@ const CONFIG = { baseUrl: 'http://omni/v1', apiKey: 'secret-key', model: 'm' };
 const okJson = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { 'content-type': 'application/json' } });
 
 describe('listModels', () => {
-  it('asks OmniRoute with the server key and returns sorted unique ids only', async () => {
+  it('asks OmniRoute with the server key and returns sorted unique models with their provider', async () => {
     const fetchImpl = vi.fn(async () => okJson({ data: [{ id: 'b/model', owned_by: 'x' }, { id: 'a/model' }, { id: 'b/model' }, { nope: 1 }] }));
-    expect(await listModels(CONFIG, fetchImpl as unknown as typeof fetch)).toEqual(['a/model', 'b/model']);
+    expect(await listModels(CONFIG, fetchImpl as unknown as typeof fetch)).toEqual([
+      { id: 'a/model', provider: '' },
+      { id: 'b/model', provider: 'x' },
+    ]);
 
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('http://omni/v1/models');
@@ -32,13 +35,37 @@ describe('listModels', () => {
         ],
       }),
     );
-    expect(await listModels(CONFIG, fetchImpl as unknown as typeof fetch)).toEqual(['cc/claude', 'plain/llm']);
+    expect((await listModels(CONFIG, fetchImpl as unknown as typeof fetch)).map((model) => model.id)).toEqual(['cc/claude', 'plain/llm']);
   });
 
   it('fails with a message that does not echo the key', async () => {
     const fetchImpl = vi.fn(async () => new Response('denied', { status: 401 }));
     await expect(listModels(CONFIG, fetchImpl as unknown as typeof fetch)).rejects.toThrow(/401/);
     await expect(listModels(CONFIG, fetchImpl as unknown as typeof fetch)).rejects.not.toThrow(/secret-key/);
+  });
+});
+
+describe('modelsOfProvider', () => {
+  // What OmniRoute lists with only Claude connected: the cc/ models, their claude/ and no-think/ aliases, a combo,
+  // and keyless free providers.
+  const catalog = [
+    { id: 'aihorde/llama', provider: 'aihorde' },
+    { id: 'auto/best-coding', provider: 'combo' },
+    { id: 'cc/claude-haiku-5-5', provider: 'claude' },
+    { id: 'cc/claude-opus-5-5', provider: 'claude' },
+    { id: 'claude/claude-opus-5-5', provider: 'claude' },
+    { id: 'ddgw/gpt', provider: 'duckduckgo-web' },
+    { id: 'no-think/cc/claude-opus-5-5', provider: 'claude' },
+  ];
+
+  it('keeps the models of the default model\'s provider under its prefix', () => {
+    expect(modelsOfProvider(catalog, 'cc/claude-opus-5-5').map((model) => model.id)).toEqual(['cc/claude-haiku-5-5', 'cc/claude-opus-5-5']);
+  });
+
+  it('keeps everything without a default model in the list or with a combo as default', () => {
+    expect(modelsOfProvider(catalog, '')).toHaveLength(catalog.length);
+    expect(modelsOfProvider(catalog, 'gone/model')).toHaveLength(catalog.length);
+    expect(modelsOfProvider(catalog, 'auto/best-coding')).toHaveLength(catalog.length);
   });
 });
 

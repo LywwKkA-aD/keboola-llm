@@ -63,7 +63,11 @@ async function setup(overrides: Partial<ServerDeps> = {}) {
     history: async () => [{ id: 'h', role: 'user', text: 'hi' }],
     deleteThread: async () => {},
     allowed: allowedFor({ port: 4800, devPort: 5173 }),
-    models: async () => ['a/model', 'b/model'],
+    models: async () => [
+      { id: 'a/model', provider: 'a' },
+      { id: 'a/other', provider: 'a' },
+      { id: 'free/model', provider: 'free' },
+    ],
     keboolaProjects: async () => [{ alias: 'sandbox', name: 'Sandbox', id: 1, stackUrl: 'https://x', isDefault: true }],
     knowledge: createNoteStore(makeTree({ 'README.md': '# Knowledge base' })),
     memories: createNoteStore(makeTree({ 'AGENTS.md': '# Shared memory' })),
@@ -245,7 +249,9 @@ describe('createServer', () => {
   it('exposes models, Keboola projects, shared memory and system checks', async () => {
     const { app } = await setup();
     close = () => app.close();
-    expect((await app.inject({ url: '/api/models', headers: HOST })).json()).toEqual({ models: ['a/model', 'b/model'], current: 'a/model' });
+    // Only the default model's provider, unless all are asked for (keyless free providers are listed too).
+    expect((await app.inject({ url: '/api/models', headers: HOST })).json()).toEqual({ models: ['a/model', 'a/other'], current: 'a/model', total: 3 });
+    expect((await app.inject({ url: '/api/models?all=1', headers: HOST })).json()).toEqual({ models: ['a/model', 'a/other', 'free/model'], current: 'a/model', total: 3 });
     expect((await app.inject({ url: '/api/keboola/projects', headers: HOST })).json()).toMatchObject({ current: 'sandbox', projects: [{ alias: 'sandbox' }] });
     expect((await app.inject({ url: '/api/memory', headers: HOST })).json()).toMatchObject({ content: '# Shared memory' });
     expect((await app.inject({ url: '/api/knowledge', headers: HOST })).json()).toMatchObject({ notes: [{ path: 'README.md', title: 'Knowledge base' }] });

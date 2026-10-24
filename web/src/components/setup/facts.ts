@@ -46,7 +46,9 @@ export function factParts(facts: SetupFacts, t: Translate): FactPart[] {
     case 'router':
       return facts.models === undefined
         ? fill(t('setup.fact.routerRunning'), { url: code(facts.url) })
-        : fill(t('setup.fact.router'), { count: text(String(facts.models)), url: code(facts.url) });
+        : facts.provider
+          ? fill(t('setup.fact.routerProvider'), { count: text(String(facts.models)), provider: code(facts.provider), url: code(facts.url) })
+          : fill(t('setup.fact.router'), { count: text(String(facts.models)), url: code(facts.url) });
     case 'unreachable':
       return facts.error
         ? fill(t('setup.fact.unreachableError'), { url: code(facts.url), error: code(facts.error) })

@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { ServerDeps } from '../types.ts';
+import { modelsOfProvider } from '../../system/models.ts';
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -34,8 +35,14 @@ export function registerWorkspaceRoutes(app: FastifyInstance, deps: ServerDeps):
     pendingApprovals: pendingApprovals().length,
   }));
 
-  app.get('/api/models', async (_request, reply) =>
-    upstream(reply, async () => ({ models: await deps.models(), current: deps.effective().model })),
+  // The default model's provider only (modelsOfProvider), or every model with ?all=1; total counts them all.
+  app.get('/api/models', async (request, reply) =>
+    upstream(reply, async () => {
+      const all = await deps.models();
+      const current = deps.effective().model;
+      const shown = (request.query as { all?: string }).all === '1' ? all : modelsOfProvider(all, current);
+      return { models: shown.map((model) => model.id), current, total: all.length };
+    }),
   );
 
   app.get('/api/keboola/projects', async (_request, reply) =>

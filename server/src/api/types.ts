@@ -9,6 +9,7 @@ import type { LoadError } from '../registry/types.ts';
 import type { DefinitionVersions } from '../versions/tracker.ts';
 import type { RoutinesApi } from '../routines/types.ts';
 import type { UsageReport } from '../usage/ledger.ts';
+import type { CatalogModel } from '../system/models.ts';
 import type { Envelope, EventBus } from './bus.ts';
 import type { Allowed } from './guard.ts';
 import type { ChatEntry } from './history.ts';
@@ -47,7 +48,7 @@ export interface ServerDeps {
   readonly allowed: Allowed;
   readonly staticDir?: string;
   /** Model ids from OmniRoute (asked with the server key). */
-  readonly models: () => Promise<readonly string[]>;
+  readonly models: () => Promise<readonly CatalogModel[]>;
   /** Projects registered in kbagent, without tokens. */
   readonly keboolaProjects: () => Promise<readonly KeboolaProject[]>;
   readonly system: () => Promise<SystemStatus>;

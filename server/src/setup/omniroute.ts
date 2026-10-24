@@ -1,6 +1,6 @@
 /** Talk to OmniRoute for the setup checks: is it there, does it take the key, does the model answer. */
 import type { OmniRouteConfig } from '../config/env.ts';
-import { type ModelEntry, runsAgents } from '../system/models.ts';
+import { agentModels, type CatalogModel } from '../system/models.ts';
 
 const PROBE_TIMEOUT_MS = 5000;
 const TEST_TIMEOUT_MS = 30_000;
@@ -11,8 +11,8 @@ export interface OmniRouteProbe {
   /** False when nothing answered at the base URL. */
   readonly reachable: boolean;
   readonly status?: number;
-  /** Model ids, sorted; empty unless the answer was OK. */
-  readonly models?: readonly string[];
+  /** Models that can run agents, sorted, with their provider; empty unless the answer was OK. */
+  readonly models?: readonly CatalogModel[];
   /** Why it was not reachable, e.g. ECONNREFUSED. */
   readonly error?: string;
 }
@@ -69,13 +69,8 @@ export async function probeOmniRoute(config: Pick<OmniRouteConfig, 'baseUrl' | '
     return { reachable: false, error: redactSecret(oneLine(networkError(error, PROBE_TIMEOUT_MS)), config.apiKey) };
   }
   if (!response.ok) return { reachable: true, status: response.status, models: [] };
-  const body = (await response.json().catch(() => ({}))) as { data?: unknown };
   // Only models that can run agents, like the model pickers elsewhere (no image, video, audio or embedding models).
-  const ids = (Array.isArray(body.data) ? body.data : [])
-    .filter((entry: unknown): entry is ModelEntry => typeof entry === 'object' && entry !== null && runsAgents(entry as ModelEntry))
-    .map((entry) => entry.id)
-    .filter((id): id is string => typeof id === 'string' && id.length > 0);
-  return { reachable: true, status: response.status, models: [...new Set(ids)].toSorted() };
+  return { reachable: true, status: response.status, models: agentModels(await response.json().catch(() => ({}))) };
 }
 
 /**

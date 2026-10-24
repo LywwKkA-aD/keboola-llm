@@ -8,7 +8,15 @@ function input(overrides: Partial<SetupInput> = {}): SetupInput {
   return {
     omniroute: { baseUrl: 'http://omni/v1', apiKey: 'sk-key-123456', model: 'cc/model' },
     keboolaProject: 'sandbox',
-    probeOmniRoute: async () => ({ reachable: true, status: 200, models: ['cc/model', 'other'] }),
+    probeOmniRoute: async () => ({
+      reachable: true,
+      status: 200,
+      models: [
+        { id: 'cc/model', provider: 'claude' },
+        { id: 'cc/other', provider: 'claude' },
+        { id: 'free/model', provider: 'aihorde' },
+      ],
+    }),
     testModel: async () => ({ ok: true, model: 'cc/model', latencyMs: 420 }),
     kbagentVersion: async () => 'kbagent v0.100.2',
     keboolaProjects: async () => [project('sandbox', true), project('prod')],
@@ -24,14 +32,15 @@ describe('runSetupChecks', () => {
     expect(result.complete).toBe(true);
     // detail: English for `npm run doctor`; facts: the same, structured, for the UI to put in the user's language.
     expect(result.steps).toEqual([
-      { id: 'omniroute', status: 'ok', detail: '2 models at http://omni/v1', facts: { kind: 'router', url: 'http://omni/v1', models: 2 } },
+      // Only the connected provider's models count, not keyless free providers OmniRoute lists too.
+      { id: 'omniroute', status: 'ok', detail: '2 models of claude at http://omni/v1', facts: { kind: 'router', url: 'http://omni/v1', models: 2, provider: 'claude' } },
       { id: 'apiKey', status: 'ok', detail: 'set and accepted', facts: { kind: 'keyAccepted' } },
       { id: 'model', status: 'ok', detail: 'cc/model answered in 420 ms', facts: { kind: 'modelAnswered', model: 'cc/model', ms: 420 } },
       { id: 'kbagent', status: 'ok', detail: 'kbagent v0.100.2', facts: { kind: 'version', version: 'kbagent v0.100.2' } },
       { id: 'projects', status: 'ok', detail: '2 registered: sandbox, prod', facts: { kind: 'projects', aliases: ['sandbox', 'prod'] } },
       { id: 'project', status: 'ok', detail: 'sandbox', facts: { kind: 'project', alias: 'sandbox', source: 'configured' } },
     ]);
-    expect(result.models).toEqual(['cc/model', 'other']);
+    expect(result.models).toEqual(['cc/model', 'cc/other']);
     expect(result.projects.map((entry) => entry.alias)).toEqual(['sandbox', 'prod']);
   });
 

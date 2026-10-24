@@ -25,12 +25,15 @@ function crossesRack(path: readonly Vec3[]): boolean {
   });
 }
 
+// Every kind of place once per aisle side: the other inspect places of a rack face only differ along the same aisle.
+// Walking between every pair of them is a few thousand routes, so the pair tests get more time on a busy machine.
 const places: Vec3[] = [
   ...Object.values(STATION_SPOTS).flat(),
-  ...[...INSPECT_SPOTS, ...BRIEFING_SPOTS].map((spot) => spot.position),
+  ...[...INSPECT_SPOTS.slice(0, 6), ...BRIEFING_SPOTS].map((spot) => spot.position),
   ...MEETING_POINTS,
   ...STROLL_PATHS.flat(),
 ];
+const PAIRS_TIMEOUT_MS = 30_000;
 
 describe('floorplan', () => {
   it('lays racks out in straight rows, not around a stage', () => {
@@ -43,7 +46,7 @@ describe('floorplan', () => {
   });
 
   it('keeps every station place and resting place out of the racks', () => {
-    places.forEach((place) => expect(inRack(place)).toBe(false));
+    [...places, ...INSPECT_SPOTS.map((spot) => spot.position)].forEach((place) => expect(inRack(place)).toBe(false));
   });
 
   it('walks between any two places along the aisles, never through a rack', () => {
@@ -55,7 +58,7 @@ describe('floorplan', () => {
         expect(crossesRack(path)).toBe(false);
       }),
     );
-  });
+  }, PAIRS_TIMEOUT_MS);
 
   it('takes a reasonable way: never more than three times the straight distance plus a detour', () => {
     const from = STATION_SPOTS.archive[0] as Vec3;
@@ -81,7 +84,7 @@ describe('floorplan', () => {
     const others = places.filter((place) => place !== command);
     others.forEach((from) => others.forEach((to) => expect(crossesDais(route(from, to)), `${from.join()} -> ${to.join()}`).toBe(false)));
     others.forEach((to) => expect(route(command, to).at(-1)).toEqual(to));
-  });
+  }, PAIRS_TIMEOUT_MS);
 
   it('goes straight when nothing is in the way', () => {
     const a: Vec3 = [0, 0.2, -4];
