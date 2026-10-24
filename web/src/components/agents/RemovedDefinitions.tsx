@@ -21,7 +21,8 @@ export function RemovedDefinitions({ kind, present }: { kind: DefinitionKind; pr
     versionsApi.tracked(kind).then(setTracked, () => setTracked([]));
   }, [kind, team]);
 
-  const missing = tracked.filter((definition) => !present.includes(definition.name));
+  // A team without agents has not loaded yet: comparing against it would list every agent as removed.
+  const missing = team.agents.length === 0 ? [] : tracked.filter((definition) => !present.includes(definition.name));
   if (missing.length === 0) return null;
   const titleId = `removed-${kind}`;
 

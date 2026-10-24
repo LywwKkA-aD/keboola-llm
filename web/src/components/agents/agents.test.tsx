@@ -237,4 +237,14 @@ describe('removed or broken definitions', () => {
     expect(within(drawer).getByRole('heading', { name: 'old-scout' })).toBeInTheDocument();
     expect(await within(history(drawer)).findByText('Первая запись')).toBeInTheDocument();
   });
+
+  it('lists nothing until the team is known, so present agents never flash as removed', async () => {
+    const api = open('/agents', {
+      'GET /api/team': () => errorResponse(500, 'Internal error'),
+      'GET /api/definitions/agents': [{ name: 'keboola-expert', exists: true, last: VERSIONS[0] }],
+    });
+    await waitFor(() => expect(api.callsTo('GET', '/api/definitions/agents')).toHaveLength(1));
+    await act(async () => {});
+    expect(screen.queryByRole('region', { name: 'Удалены или не загружаются' })).toBeNull();
+  });
 });
