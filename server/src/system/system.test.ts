@@ -18,6 +18,23 @@ describe('listModels', () => {
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer secret-key');
   });
 
+  it('offers only models that can run agents: text output with tool calling', async () => {
+    const fetchImpl = vi.fn(async () =>
+      okJson({
+        data: [
+          { id: 'cc/claude', capabilities: { tool_calling: true }, output_modalities: ['text'] },
+          { id: 'plain/llm' },
+          { id: 'aihorde/2DN', type: 'image', output_modalities: ['image'], capabilities: { tool_calling: false } },
+          { id: 'veo/clip', type: 'video' },
+          { id: 'old/chat', capabilities: { tool_calling: false } },
+          { id: 'tts/voice', output_modalities: ['audio'] },
+          { id: 'embed/small', type: 'embedding' },
+        ],
+      }),
+    );
+    expect(await listModels(CONFIG, fetchImpl as unknown as typeof fetch)).toEqual(['cc/claude', 'plain/llm']);
+  });
+
   it('fails with a message that does not echo the key', async () => {
     const fetchImpl = vi.fn(async () => new Response('denied', { status: 401 }));
     await expect(listModels(CONFIG, fetchImpl as unknown as typeof fetch)).rejects.toThrow(/401/);
