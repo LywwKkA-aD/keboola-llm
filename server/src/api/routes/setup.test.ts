@@ -103,6 +103,9 @@ describe('setup routes', () => {
       { apiKey: 'x'.repeat(600) },
       { apiKey: KEY, baseUrl: 'ftp://host/v1' },
       { apiKey: KEY, baseUrl: 'http://user:pass@host/v1' },
+      // The URL parser drops line breaks, .env would not: a second assignment must not get in.
+      { apiKey: KEY, baseUrl: 'http://host/v1\nOMNIROUTE_MODEL=evil' },
+      { apiKey: KEY, baseUrl: 'http://host/v1 x' },
       { apiKey: KEY, extra: true },
     ];
     for (const payload of invalid) {

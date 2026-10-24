@@ -61,7 +61,8 @@ export const omnirouteBody = z
       .max(512)
       .regex(/^[\x21-\x7E]+$/)
       .refine((value) => !/['"`\\]/.test(value)),
-    baseUrl: z.string().trim().max(500).refine(isRouterUrl).optional(),
+    // The URL parser drops line breaks and tabs that .env would keep: printable ASCII only.
+    baseUrl: z.string().trim().max(500).regex(/^[\x21-\x7E]+$/).refine(isRouterUrl).optional(),
   })
   .strict();
 
