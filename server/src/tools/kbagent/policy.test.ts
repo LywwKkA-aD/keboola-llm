@@ -98,7 +98,8 @@ describe('buildInvocation: categories', () => {
   });
 
   it('escalates conditional rules such as variables-set --replace', () => {
-    expect(write(['config', 'variables-set', '--component-id', 'c', '--config-id', '1'])).toMatchObject({ ok: true });
+    const onDevBranch = { productionBranch: '1' };
+    expect(write(['config', 'variables-set', '--component-id', 'c', '--config-id', '1', '--branch', '99'], onDevBranch)).toMatchObject({ ok: true });
     expect(reasonOf(write(['config', 'variables-set', '--component-id', 'c', '--config-id', '1', '--replace']))).toMatch(
       /destructive/i,
     );
@@ -271,7 +272,50 @@ describe('buildInvocation: branch scoping', () => {
     expect(write(['branch', 'create', '--name', 'x'], { branch: '42' }).ok).toBe(true);
   });
 
-  it('allows unscoped writes when no branch is configured', () => {
-    expect(write(['storage', 'file-tag', '--file-id', '1', '--add', 'x']).ok).toBe(true);
+});
+
+describe('buildInvocation: production stays read-only', () => {
+  const prod = { productionBranch: '57656' };
+  const update = (...branch: string[]) => ['config', 'update', '--component-id', 'c', '--config-id', '1', '--set', 'a=1', ...branch];
+
+  it('allows writes on a development branch the agent names', () => {
+    const argv = argvOf(write(['transformation', 'edit', '--config-id', '1', '--change-description', 'x', '--op', '{}', '--branch', '99'], prod));
+    expect(argv.slice(0, 2)).toEqual(['--json', '--deny-destructive']);
+    expect(argv.slice(-2)).toEqual(['--branch', '99']);
+    expect(write(update('--branch=99'), prod).ok).toBe(true);
+  });
+
+  it('rejects writes that do not name a development branch', () => {
+    expect(reasonOf(write(update(), prod))).toMatch(/--branch/);
+  });
+
+  it('rejects writes to the production branch, by its id or as 0', () => {
+    expect(reasonOf(write(update('--branch', '57656'), prod))).toMatch(/production/i);
+    expect(reasonOf(write(update('--branch=57656'), prod))).toMatch(/production/i);
+    expect(reasonOf(write(update('--branch', '0'), prod))).toMatch(/production/i);
+    expect(reasonOf(write(update('--branch', '99', '--branch', '57656'), prod))).toMatch(/production/i);
+  });
+
+  it('blocks writes that cannot be limited to a branch', () => {
+    expect(reasonOf(write(['storage', 'file-tag', '--file-id', '1', '--add', 'x'], prod))).toMatch(/production/i);
+  });
+
+  it('allows branch creation and workspace work, which never change production data', () => {
+    expect(write(['branch', 'create', '--name', 'agent/fix-orders'], prod).ok).toBe(true);
+    expect(write(['workspace', 'query', '--workspace-id', '1', '--sql', 'SELECT 1'], prod).ok).toBe(true);
+  });
+
+  it('refuses writes while the production branch is unknown', () => {
+    expect(reasonOf(write(update('--branch', '99')))).toMatch(/production branch/i);
+  });
+
+  it('never merges a branch into production: the user does that in Keboola', () => {
+    expect(reasonOf(write(['branch', 'merge', '--branch', '99'], prod))).toMatch(/merge request/i);
+    expect(write(['merge-request', 'create', '--title', 'Fix fan-out', '--branch', '99'], prod).ok).toBe(true);
+  });
+
+  it('leaves reads alone', () => {
+    expect(read(['config', 'list']).ok).toBe(true);
+    expect(read(['config', 'list', '--branch', '57656'], prod).ok).toBe(true);
   });
 });

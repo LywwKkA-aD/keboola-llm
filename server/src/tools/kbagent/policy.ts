@@ -24,6 +24,8 @@ export interface InvocationRequest {
   readonly project?: string;
   /** Keboola dev branch id the tool is pinned to. */
   readonly branch?: string | number;
+  /** Id of the project's production (default) branch; without a pinned branch, writes must avoid it. */
+  readonly productionBranch?: string;
   /** Sent as X-Conversation-ID for Keboola-side observability. */
   readonly conversationId?: string;
   /** When set, only these operations (e.g. "workspace.query") are allowed, on top of every other rule. */
@@ -104,6 +106,28 @@ function scopeBranch(
   return { inject: !hasBranch && operation.acceptsBranch ? ['--branch', id] : [] };
 }
 
+/**
+ * Without a pinned branch, writes must name a development branch: production changes only when the user merges a
+ * merge request in Keboola. Creating a branch and workspace work never touch production data.
+ */
+function checkProductionSafety(tokens: readonly string[], operation: OperationInfo, productionBranch: string | undefined) {
+  if (BRANCH_AGNOSTIC_WRITES.has(operation.name)) return undefined;
+  const command = operation.name.replaceAll('.', ' ');
+  if (!operation.acceptsBranch) return `"${command}" cannot be limited to a development branch and would change production. Ask the user to do it.`;
+  if (productionBranch === undefined) {
+    return 'The production branch of this project is not known, so writes are blocked. Try again; if it keeps failing, ask the user to check kbagent.';
+  }
+  const branches = valuesOf(tokens, '--branch');
+  if (branches.length === 0) {
+    return 'Writes run on a development branch only: pass --branch <id> (create one with ["branch", "create", "--name", "..."]).';
+  }
+  const production = branches.find((id) => id === '0' || id === productionBranch);
+  if (production !== undefined) {
+    return `Branch ${production} is production. Writes run on a development branch only; the user merges the result through a merge request.`;
+  }
+  return undefined;
+}
+
 /** "workspace commands: create, list" when all operations share a group, else the full names. */
 function describeOperations(operations: ReadonlySet<string>): string {
   const names = [...operations].toSorted();
@@ -129,7 +153,7 @@ export function operationOf(args: readonly string[]): string | undefined {
 }
 
 export function buildInvocation(request: InvocationRequest): InvocationResult {
-  const { args, access, project, branch, conversationId, operations: allowlist } = request;
+  const { args, access, project, branch, productionBranch, conversationId, operations: allowlist } = request;
   if (!Array.isArray(args) || !args.every((token) => typeof token === 'string')) {
     return reject('args must be an array of strings.');
   }
@@ -182,6 +206,8 @@ export function buildInvocation(request: InvocationRequest): InvocationResult {
   if ('error' in projectScope) return reject(projectScope.error as string);
   const branchScope = scopeBranch(analysed, operation, category, branch);
   if ('error' in branchScope) return reject(branchScope.error as string);
+  const productionError = category === 'write' && branch === undefined ? checkProductionSafety(analysed, operation, productionBranch) : undefined;
+  if (productionError) return reject(productionError);
 
   return {
     ok: true,

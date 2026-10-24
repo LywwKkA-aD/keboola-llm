@@ -116,6 +116,55 @@ describe('createKbagentTools', () => {
   });
 });
 
+describe('kbagent_write without a pinned branch', () => {
+  const BRANCHES = JSON.stringify({ status: 'ok', data: { branches: [{ id: 57656, name: 'Main', isDefault: true }, { id: 99, name: 'agent/fix', isDefault: false }] } });
+
+  /** Answers `branch list` with BRANCHES (or a failure) and everything else with a plain ok. */
+  const scriptedExec = ({ branchList = BRANCHES, branchListExit = 0 } = {}) => {
+    const calls: Call[] = [];
+    const exec: ExecFn = async (file, args, options) => {
+      calls.push({ file, args, options });
+      const listing = args.includes('branch') && args.includes('list');
+      return { exitCode: listing ? branchListExit : 0, stdout: listing ? branchList : '{"status":"ok","data":{}}', stderr: '', timedOut: false };
+    };
+    return { calls, exec };
+  };
+  const writeTool = (exec: ExecFn) => byName(createKbagentTools({ access: 'write', project: 'sandbox', exec }), 'kbagent_write');
+  const update = (branch: string) => ({ args: ['config', 'update', '--component-id', 'c', '--config-id', '1', '--set', 'a=1', '--branch', branch], purpose: 'change' });
+
+  it('finds the production branch once and runs writes on development branches only', async () => {
+    const { calls, exec } = scriptedExec();
+    const tool = writeTool(exec);
+    await tool.invoke(update('99'));
+    await tool.invoke(update('99'));
+    expect(calls.map((call) => call.args.join(' '))).toEqual([
+      '--json --deny-writes branch list --project sandbox',
+      '--json --deny-destructive config update --component-id c --config-id 1 --set a=1 --branch 99 --project sandbox',
+      '--json --deny-destructive config update --component-id c --config-id 1 --set a=1 --branch 99 --project sandbox',
+    ]);
+
+    const rejected = await tool.invoke(update('57656'));
+    expect(String(rejected)).toMatch(/production/i);
+    expect(calls).toHaveLength(3);
+  });
+
+  it('refuses writes when the production branch cannot be read', async () => {
+    const { calls, exec } = scriptedExec({ branchListExit: 1, branchList: '{"status":"error"}' });
+    const result = await writeTool(exec).invoke(update('99'));
+    expect(String(result)).toMatch(/production branch/i);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('puts kbagent back on production after creating a branch, so other agents keep reading production', async () => {
+    const { calls, exec } = scriptedExec();
+    await writeTool(exec).invoke({ args: ['branch', 'create', '--name', 'agent/fix'], purpose: 'dev branch' });
+    expect(calls.map((call) => call.args.join(' ')).slice(1)).toEqual([
+      '--json --deny-destructive branch create --name agent/fix --project sandbox',
+      '--json --deny-destructive branch reset --project sandbox',
+    ]);
+  });
+});
+
 describe('createKbagentSqlTool', () => {
   it('is named kbagent_sql and runs workspace queries behind --deny-destructive', async () => {
     const { calls, exec } = recordingExec('{"status":"ok","data":{"statements":[]}}');

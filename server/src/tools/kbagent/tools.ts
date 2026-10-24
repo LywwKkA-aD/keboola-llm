@@ -68,10 +68,11 @@ const READ_DESCRIPTION = `Run a read-only kbagent (Keboola CLI) command and get 
 - ["job", "detail", "--job-id", "123", "--log-tail-lines", "200"]
 Use ["<command>", "--help"] to see a command's options. Writes are blocked here.`;
 
-const WRITE_DESCRIPTION = `Run a kbagent (Keboola CLI) command that changes the project; the user approves each call. Prefer --dry-run first when the command supports it. Destructive operations (deleting, merging to production) are blocked: ask the user to do them. Examples:
-- ["branch", "create", "--name", "fix-orders-join"]
-- ["config", "update", "--component-id", "keboola.snowflake-transformation", "--config-id", "123", "--set", "parameters.limit=100", "--dry-run"]
-- ["workspace", "query", "--workspace-id", "456", "--sql", "SELECT COUNT(*) FROM \\"orders\\""]
+const WRITE_DESCRIPTION = `Run a kbagent (Keboola CLI) command that changes the project; the user approves each call. Changes happen on a development branch only: create one with ["branch", "create", "--name", "..."] (its id is in the result) and pass "--branch", "<id>" to every write. Production cannot be written or merged here; the user merges your merge request in Keboola. Prefer --dry-run first when the command supports it. Destructive operations (deleting, terminating) are blocked: ask the user. Examples:
+- ["branch", "create", "--name", "agent/fix-orders-fan-out"]
+- ["transformation", "edit", "--config-id", "123", "--change-description", "Fix shipping fan-out", "--op", "{\\"op\\": \\"str_replace\\", ...}", "--branch", "456", "--dry-run"]
+- ["job", "run", "--component-id", "keboola.snowflake-transformation", "--config-id", "123", "--branch", "456", "--wait", "--log-tail-lines", "50"]
+- ["merge-request", "create", "--title", "Fix shipping fan-out in fct_orders", "--branch", "456", "--description", "..."]
 Use kbagent_read for anything that only reads.`;
 
 const SQL_DESCRIPTION = `Query Keboola data with SQL through a workspace (kbagent workspace commands only). Each call waits for the user's approval unless the user allowed SQL for this chat. Typical flow: reuse or create one workspace, load only the tables you need, then run SELECTs. Examples:
@@ -94,44 +95,75 @@ function formatResult(result: RunResult): string {
   });
 }
 
-type Invoke = (args: readonly string[], conversationId: string | undefined) => InvocationResult;
+type Invoke = (args: readonly string[], conversationId: string | undefined) => InvocationResult | Promise<InvocationResult>;
+type Run = (argv: readonly string[]) => Promise<RunResult>;
 
 /** Policy for one tool: which access level, and optionally which operations only. */
 const invokeWith =
-  (access: Access, options: KbagentToolsOptions, operations?: ReadonlySet<string>): Invoke =>
-  (args, conversationId) =>
-    buildInvocation({
+  (access: Access, options: KbagentToolsOptions, operations?: ReadonlySet<string>, productionBranch?: () => Promise<string | undefined>): Invoke =>
+  async (args, conversationId) => {
+    const production = await productionBranch?.();
+    return buildInvocation({
       args,
       access,
       ...(operations === undefined ? {} : { operations }),
       ...(options.project === undefined ? {} : { project: options.project }),
       ...(options.branch === undefined ? {} : { branch: options.branch }),
+      ...(production === undefined ? {} : { productionBranch: production }),
       ...(conversationId === undefined ? {} : { conversationId }),
     });
+  };
 
-function createTool(name: string, description: string, options: KbagentToolsOptions, invoke: Invoke) {
+function runnerFor(options: KbagentToolsOptions): Run {
   const env = buildChildEnv({
     parentEnv: options.env ?? process.env,
     ...(options.configDir === undefined ? {} : { configDir: options.configDir }),
     ...(options.project === undefined ? {} : { project: options.project }),
     ...(options.extraEnv === undefined ? {} : { extraEnv: options.extraEnv }),
   });
+  return (argv) =>
+    runKbagent({
+      argv,
+      env,
+      ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+      ...(options.maxOutputChars === undefined ? {} : { maxOutputChars: options.maxOutputChars }),
+      ...(options.exec === undefined ? {} : { exec: options.exec }),
+    });
+}
 
+const projectArgs = (options: KbagentToolsOptions) => (options.project === undefined ? [] : ['--project', options.project]);
+
+/** Id of the default (production) branch from `branch list`, asked once; failures are retried on the next call. */
+function productionBranchOf(run: Run, options: KbagentToolsOptions): () => Promise<string | undefined> {
+  let known: string | undefined;
+  return async () => {
+    if (known !== undefined) return known;
+    const result = await run(['--json', '--deny-writes', 'branch', 'list', ...projectArgs(options)]);
+    const data = (result.output as { data?: { branches?: { id?: unknown; isDefault?: unknown }[] } } | undefined)?.data;
+    const id = result.ok ? data?.branches?.find((branch) => branch.isDefault === true)?.id : undefined;
+    known = typeof id === 'number' || typeof id === 'string' ? String(id) : undefined;
+    return known;
+  };
+}
+
+/** `branch create` also makes the new branch kbagent's active one for every agent: switch back to production. */
+async function afterWrite(run: Run, options: KbagentToolsOptions, operation: string | undefined, ok: boolean): Promise<string> {
+  if (operation !== 'branch.create' || !ok) return '';
+  const reset = await run(['--json', '--deny-destructive', 'branch', 'reset', ...projectArgs(options)]);
+  return reset.ok ? '' : '\nWarning: kbagent could not switch back to production after creating the branch; tell the user.';
+}
+
+function createTool(name: string, description: string, options: KbagentToolsOptions, invoke: Invoke, run: Run = runnerFor(options), after?: typeof afterWrite) {
   return tool(
     async (input: Input, config?: RunnableConfig): Promise<[string, KbagentCallArtifact]> => {
-      const invocation = invoke(input.args, conversationIdFrom(config));
+      const invocation = await invoke(input.args, conversationIdFrom(config));
       if (!invocation.ok) {
         return [`Rejected: ${invocation.reason}`, { ok: false, purpose: input.purpose, rejected: invocation.reason }];
       }
-      const result = await runKbagent({
-        argv: invocation.argv,
-        env,
-        ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
-        ...(options.maxOutputChars === undefined ? {} : { maxOutputChars: options.maxOutputChars }),
-        ...(options.exec === undefined ? {} : { exec: options.exec }),
-      });
+      const result = await run(invocation.argv);
+      const warning = after ? await after(run, options, invocation.operation, result.ok) : '';
       return [
-        formatResult(result),
+        formatResult(result) + warning,
         {
           operation: invocation.operation,
           category: invocation.category,
@@ -150,12 +182,16 @@ function createTool(name: string, description: string, options: KbagentToolsOpti
   );
 }
 
-/** kbagent_read always; kbagent_write only for write access (put it behind human approval). */
+/**
+ * kbagent_read always; kbagent_write only for write access (put it behind human approval). Unless the agent is pinned
+ * to one branch, kbagent_write only runs on development branches: production changes through merge requests.
+ */
 export function createKbagentTools(options: KbagentToolsOptions) {
-  const read = createTool('kbagent_read', READ_DESCRIPTION, options, invokeWith('read', options));
-  return options.access === 'write'
-    ? [read, createTool('kbagent_write', WRITE_DESCRIPTION, options, invokeWith('write', options))]
-    : [read];
+  const run = runnerFor(options);
+  const read = createTool('kbagent_read', READ_DESCRIPTION, options, invokeWith('read', options), run);
+  if (options.access !== 'write') return [read];
+  const production = options.branch === undefined ? productionBranchOf(run, options) : undefined;
+  return [read, createTool('kbagent_write', WRITE_DESCRIPTION, options, invokeWith('write', options, undefined, production), run, afterWrite)];
 }
 
 /** kbagent_sql: workspace commands for querying data only; put it behind human approval. */

@@ -16,6 +16,11 @@ fixing, optimizing and extending those transformations and the pipelines around 
   delegate to the Keboola specialists. Prefer one focused task per specialist over one vague task for many.
 - Reviews (SQL quality, performance, data quality, DWH design, security): delegate to the matching reviewer and,
   for a broad review, ask several in parallel and consolidate their findings yourself.
+- Changes to Keboola (fix, optimize or extend a transformation, config or flow): first agree the plan with the user in
+  one short message - what changes in which config, the expected effect, and that it runs on a development branch,
+  asks before every write and ends with a merge request she merges herself. Once she agrees, delegate to
+  keboola-developer with the plan, the config ids and the relevant notes; for an unclear bug, have keboola-expert or a
+  reviewer find the cause first.
 - Requests to add or change an agent or a skill: delegate to agent-builder.
 - "Init workspace", first contact with a project, or "scan / refresh / get to know the project" - run the init:
   1. Map: project-scout surveys the project (project-survey skill), unless its profile in /memories/projects/ is less

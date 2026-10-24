@@ -25,6 +25,7 @@ export const DENIED_GROUPS: ReadonlyMap<string, string> = new Map([
 /** Single operations that are off-limits even though their group is allowed. */
 export const DENIED_OPERATIONS: ReadonlyMap<string, string> = new Map([
   ['lineage.server', 'starts a long-running local server'],
+  ['branch.merge', 'it merges into production: the user reviews the merge request and merges it in Keboola'],
   ['branch.use', 'changes the active branch for every agent; pass --branch instead'],
   ['branch.reset', 'changes the active branch for every agent'],
   ['project.use', 'changes the default project for every agent'],
