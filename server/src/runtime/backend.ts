@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CompositeBackend, FilesystemBackend, StateBackend } from 'deepagents';
+import { seedKnowledge } from '../knowledge/seed.ts';
 import type { SkillSource } from '../registry/types.ts';
 
 const MEMORY_TEMPLATE = `# Shared memory
@@ -18,7 +19,7 @@ const folder = (rootDir: string) => {
  * Virtual filesystem seen by the agents:
  *   /skills/<source>/  read-only skill folders (vendored + custom)
  *   /agents/           agent definitions (agent-builder writes here)
- *   /knowledge/        shared knowledge base
+ *   /knowledge/        shared knowledge base (data dir, not in git: it holds company notes)
  *   /memories/         shared long-term memory (data dir, not in git)
  *   /routines/         scheduled routines (agent-builder writes here)
  *   anything else      per-thread scratch space kept in the checkpoint
@@ -30,10 +31,12 @@ export function createBackend({ rootDir, dataDir, skillSources }: {
 }): CompositeBackend {
   const memoriesDir = join(dataDir, 'memories');
   const memoryFile = join(memoriesDir, 'AGENTS.md');
+  const knowledgeDir = join(dataDir, 'knowledge');
+  seedKnowledge(knowledgeDir, join(rootDir, 'knowledge'));
   const routes = {
     ...Object.fromEntries(skillSources.map((source) => [`/skills/${source.id}/`, folder(source.dir)])),
     '/agents/': folder(join(rootDir, 'agents')),
-    '/knowledge/': folder(join(rootDir, 'knowledge')),
+    '/knowledge/': folder(knowledgeDir),
     '/memories/': folder(memoriesDir),
     '/routines/': folder(join(rootDir, 'routines')),
   };

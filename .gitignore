@@ -5,6 +5,8 @@ test-results/
 playwright-report/
 data/
 !fixtures/*/data/
+# The knowledge base moved to data/knowledge; notes left in the old place stay private.
+/knowledge/
 .env
 .env.*
 !.env.example

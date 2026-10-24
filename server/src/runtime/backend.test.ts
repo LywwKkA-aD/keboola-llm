@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { makeTree } from '../test-utils/tree.ts';
@@ -7,7 +7,7 @@ import { createBackend } from './backend.ts';
 function setup() {
   const root = makeTree({
     'agents/lead/AGENT.md': '---\nname: lead\n---\nLead.',
-    'knowledge/README.md': '# Knowledge\n',
+    'data/knowledge/README.md': '# Knowledge\n',
     'vendor/skills/kbagent/SKILL.md': '---\nname: kbagent\n---\nUse kbagent.',
   });
   const dataDir = join(root, 'data');
@@ -64,11 +64,28 @@ describe('createBackend', () => {
     expect(readFileSync(memoryFile, 'utf8')).toContain('prefers CTEs');
   });
 
-  it('creates missing folders so agents can write to them', async () => {
+  it('creates missing folders so agents can write to them, with a README in the knowledge base', async () => {
     const root = makeTree({});
     const backend = createBackend({ rootDir: root, dataDir: join(root, 'data'), skillSources: [] });
     const listing = await backend.ls('/knowledge/');
     expect(listing.error).toBeUndefined();
-    expect(listing.files).toEqual([]);
+    expect(listing.files?.map((file) => file.path)).toEqual(['/knowledge/README.md']);
+    expect((await backend.ls('/memories/')).files?.map((file) => file.path)).toEqual(['/memories/AGENTS.md']);
+  });
+
+  it('keeps the knowledge base in the data dir, out of the repository', async () => {
+    const root = makeTree({});
+    const dataDir = join(root, 'data');
+    const backend = createBackend({ rootDir: root, dataDir, skillSources: [] });
+
+    expect((await backend.write('/knowledge/glossary.md', '# Glossary\n')).error).toBeUndefined();
+    expect(readFileSync(join(dataDir, 'knowledge', 'glossary.md'), 'utf8')).toBe('# Glossary\n');
+    expect(existsSync(join(root, 'knowledge'))).toBe(false);
+  });
+
+  it('brings notes over from the old in-repo knowledge folder on first start', async () => {
+    const root = makeTree({ 'knowledge/data-model/sales.md': '# Sales\n' });
+    const backend = createBackend({ rootDir: root, dataDir: join(root, 'data'), skillSources: [] });
+    expect(String((await backend.read('/knowledge/data-model/sales.md')).content)).toContain('# Sales');
   });
 });

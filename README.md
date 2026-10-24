@@ -76,13 +76,18 @@ npm run chat                # or talk to the team in the terminal
 agents/<name>/AGENT.md   one file per agent: role, skills, tools, Keboola access, avatar
 skills/<name>/SKILL.md   the app's own skills (override vendored ones with the same name)
 routines/<name>.md       scheduled routines: a cron schedule and the message for the lead (off until switched on in Settings)
-knowledge/               shared knowledge base (Markdown)
 server/                  Node.js API + agent runtime (deepagents / LangGraph via OmniRoute)
 scripts/                 doctor, smoke test, vendor sync, kbagent snapshot
 e2e/                     Playwright specs and the scripted OpenAI-compatible stub LLM they run against
 vendor/keboola/          Keboola's official agents and skills (generated, do not edit)
-data/                    local state, not in git: chats, checkpoints, shared memory, settings
+data/                    local state, not in git: chats, checkpoints, settings, and what the team knows:
+  knowledge/             knowledge base, Markdown notes (agents see /knowledge/; edit them on the Knowledge page)
+  memories/              shared memory AGENTS.md and project profiles in projects/ (agents see /memories/)
 ```
+
+The knowledge base holds company notes, so it lives in `data/` (or `DATA_DIR`) and never in git. The first
+start creates it with a README; notes an older version kept in the repo's `knowledge/` folder are copied over
+once and the old folder can then be deleted.
 
 ## Safety model
 
