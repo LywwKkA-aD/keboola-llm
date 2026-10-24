@@ -65,7 +65,8 @@ export type TeamEvent =
   | { readonly type: 'delegate.start'; readonly agent: string; readonly callId: string; readonly to: string; readonly task: string }
   | { readonly type: 'delegate.end'; readonly agent: string; readonly callId: string; readonly to: string; readonly ok: boolean }
   | { readonly type: 'approval.required'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] }
-  | { readonly type: 'usage'; readonly agent: string; readonly input: number; readonly output: number; readonly cached: number };
+  // input counts every prompt token; cached of them were read from the prompt cache, cacheWrite written to it.
+  | { readonly type: 'usage'; readonly agent: string; readonly input: number; readonly output: number; readonly cached: number; readonly cacheWrite?: number };
 
 /** Why a run ended before the team finished (server/src/api/failure.ts). */
 export type FailureReason = 'stopped' | 'model_unavailable' | 'model_rejected' | 'step_limit' | 'error';
@@ -195,4 +196,29 @@ export interface TrackedDefinition {
   readonly name: string;
   readonly exists: boolean;
   readonly last: VersionSummary;
+}
+
+/** Tokens over some period (server/src/usage/ledger.ts). */
+export interface UsageTotals {
+  readonly calls: number;
+  /** Prompt tokens, cache reads and writes included. */
+  readonly input: number;
+  /** Prompt tokens read from the prompt cache. */
+  readonly cached: number;
+  /** Prompt tokens written to the prompt cache. */
+  readonly cacheWrite: number;
+  readonly output: number;
+}
+
+export interface UsageReport {
+  readonly today: UsageTotals;
+  /** The last 7 days, today included. */
+  readonly week: UsageTotals;
+  readonly total: UsageTotals;
+  /** The first day with usage. */
+  readonly since?: string;
+  /** The last 14 days, oldest first. */
+  readonly days: readonly ({ readonly date: string } & UsageTotals)[];
+  /** Today by agent, the biggest first. */
+  readonly agents: readonly ({ readonly agent: string } & UsageTotals)[];
 }

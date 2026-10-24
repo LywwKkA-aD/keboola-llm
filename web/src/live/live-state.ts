@@ -21,7 +21,8 @@ export interface LiveState {
   readonly waiting: readonly string[];
   /** Newest first. */
   readonly feed: readonly FeedItem[];
-  readonly usage: { readonly input: number; readonly output: number; readonly cached: number };
+  /** Bumped on every model call's usage: refetch the usage report. */
+  readonly usageVersion: number;
   /** Bumped whenever the list of pending approvals may have changed: refetch it. */
   readonly approvalsVersion: number;
   /** Bumped when agents or skills changed on disk: refetch the team. */
@@ -36,7 +37,7 @@ export const initialLive = (): LiveState => ({
   running: [],
   waiting: [],
   feed: [],
-  usage: { input: 0, output: 0, cached: 0 },
+  usageVersion: 0,
   approvalsVersion: 0,
   teamVersion: 0,
   signals: [],
@@ -95,10 +96,7 @@ function reduceEvent(state: LiveState, { seq, threadId, event }: Envelope, at: n
     case 'approval.auto':
       return pushFeed(state, requestItems('auto', event.requests, base, seq));
     case 'usage':
-      return {
-        ...state,
-        usage: { input: state.usage.input + event.input, output: state.usage.output + event.output, cached: state.usage.cached + event.cached },
-      };
+      return { ...state, usageVersion: state.usageVersion + 1 };
     case 'team.updated':
       return { ...state, teamVersion: state.teamVersion + 1 };
     default:

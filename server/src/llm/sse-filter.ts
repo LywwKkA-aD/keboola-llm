@@ -2,7 +2,9 @@
  * OmniRoute sends keepalive chunks while a model is thinking: chat.completion.chunk events with an empty
  * delta and no role. LangChain turns a role-less first chunk into a generic ChatMessage and the agent
  * then fails with "expected AIMessage". These events carry no information, so drop them on the wire.
+ * The usage chunk is rewritten the OpenAI way on the same pass (see usage-normalize.ts).
  */
+import { normalizeUsageEvent } from './usage-normalize.ts';
 
 const EVENT_BOUNDARY = /\r?\n\r?\n/;
 
@@ -35,7 +37,7 @@ function createNoopFilter(): TransformStream<Uint8Array, Uint8Array> {
   let buffer = '';
 
   const emit = (event: string, controller: TransformStreamDefaultController<Uint8Array>) => {
-    if (event.trim() && !isNoopEvent(event)) controller.enqueue(encoder.encode(`${event}\n\n`));
+    if (event.trim() && !isNoopEvent(event)) controller.enqueue(encoder.encode(`${normalizeUsageEvent(event)}\n\n`));
   };
 
   return new TransformStream({
@@ -50,7 +52,7 @@ function createNoopFilter(): TransformStream<Uint8Array, Uint8Array> {
   });
 }
 
-/** Wrap a fetch implementation so SSE responses come back without no-op events. */
+/** Wrap a fetch implementation so SSE responses come back without no-op events and with OpenAI-style usage. */
 export function withoutNoopChunks(fetchImpl: typeof fetch = fetch): typeof fetch {
   return async (input, init) => {
     const response = await fetchImpl(input, init);

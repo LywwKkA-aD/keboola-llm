@@ -2,6 +2,7 @@ import { type ReactNode, useId, useRef } from 'react';
 import { Link } from 'react-router';
 import type { StringKey } from '../../i18n/strings.ts';
 import { useLive } from '../../live/live-context.tsx';
+import { useUsage } from '../../live/useUsage.ts';
 import { useSettings } from '../../state/settings-context.tsx';
 import { useTeam } from '../../state/team-context.tsx';
 import { ApprovalsPanel } from './ApprovalsPanel.tsx';
@@ -9,10 +10,12 @@ import { ChatsPanel } from './ChatsPanel.tsx';
 import { HudPanel } from './HudPanel.tsx';
 import { HudStats } from './HudStats.tsx';
 import { TeamList } from './TeamList.tsx';
+import { UsagePanel } from './UsagePanel.tsx';
 
-export type HudPanelName = 'team' | 'chats' | 'approvals';
+export type HudPanelName = 'team' | 'chats' | 'approvals' | 'usage';
 
-const LABELS: Record<HudPanelName, StringKey> = { team: 'home.team', chats: 'nav.chats', approvals: 'nav.approvals' };
+const LABELS: Record<HudPanelName, StringKey> = { team: 'home.team', chats: 'nav.chats', approvals: 'nav.approvals', usage: 'usage.title' };
+/** The bar's buttons; the usage panel opens from the token stats. */
 const ORDER: readonly HudPanelName[] = ['team', 'chats', 'approvals'];
 
 /** The slim bar over the aquarium (stats, Team, Chats, Approvals) and the one panel open under it. */
@@ -26,6 +29,7 @@ export function HomeHud({ panel, onPanel, selected, onSelect, onOpenChat }: {
   const { t } = useSettings();
   const team = useTeam();
   const { approvals, state, now } = useLive();
+  const usage = useUsage();
   const panelId = useId();
   const triggers = useRef<Partial<Record<HudPanelName, HTMLButtonElement | null>>>({});
   const close = () => onPanel(undefined);
@@ -38,6 +42,8 @@ export function HomeHud({ panel, onPanel, selected, onSelect, onOpenChat }: {
         return { body: <ChatsPanel onOpen={onOpenChat} />, footer: <Link to="/chat">{t('home.allChats')}</Link> };
       case 'approvals':
         return { body: <ApprovalsPanel onOpen={onOpenChat} />, footer: <Link to="/approvals">{t('home.allApprovals')}</Link> };
+      case 'usage':
+        return { body: <UsagePanel report={usage} /> };
     }
   };
   const open = panel ? content(panel) : undefined;
@@ -45,7 +51,15 @@ export function HomeHud({ panel, onPanel, selected, onSelect, onOpenChat }: {
   return (
     <section className="hud" aria-label={t('home.overview')}>
       <div className="hud-surface hud__bar">
-        <HudStats />
+        <HudStats
+          usage={usage}
+          usageOpen={panel === 'usage'}
+          usagePanelId={panel === 'usage' ? panelId : undefined}
+          usageRef={(node) => {
+            triggers.current.usage = node;
+          }}
+          onUsage={() => onPanel(panel === 'usage' ? undefined : 'usage')}
+        />
         <div className="hud__buttons">
           {ORDER.map((name) => {
             const amber = name === 'approvals' && approvals.length > 0;

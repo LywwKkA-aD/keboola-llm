@@ -53,6 +53,14 @@ describe('withoutNoopChunks', () => {
     expect(await response.text()).toContain('"content":"x"');
   });
 
+  it('counts a cache write in the usage chunk', async () => {
+    const usage = { prompt_tokens: 10, completion_tokens: 4, total_tokens: 14, cache_creation_input_tokens: 6335, prompt_tokens_details: { cache_creation_in_prompt: false } };
+    const text = `${chunk({ content: 'ok' })}\n\ndata: ${JSON.stringify({ id: 'c1', choices: [], usage })}\n\ndata: [DONE]\n\n`;
+    const response = await withoutNoopChunks(fakeFetch(streamOf([text]), 'text/event-stream'))('http://x');
+    const usageLine = (await response.text()).split('\n').find((line) => line.includes('usage')) ?? '';
+    expect(JSON.parse(usageLine.slice(5)).usage).toMatchObject({ prompt_tokens: 6345, prompt_tokens_details: { cache_write_tokens: 6335 } });
+  });
+
   it('leaves non-SSE responses untouched', async () => {
     const response = await withoutNoopChunks(fakeFetch('{"ok":true}', 'application/json'))('http://x');
     expect(await response.json()).toEqual({ ok: true });

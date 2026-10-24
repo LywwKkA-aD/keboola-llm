@@ -11,6 +11,7 @@ import './styles/select.css';
 import './styles/shell.css';
 import './styles/home.css';
 import './styles/hud.css';
+import './styles/usage.css';
 import './styles/chat.css';
 import './styles/pages.css';
 import './styles/knowledge.css';

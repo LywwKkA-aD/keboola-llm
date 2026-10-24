@@ -11,7 +11,8 @@ export type TeamEvent =
   | { readonly type: 'delegate.start'; readonly agent: string; readonly callId: string; readonly to: string; readonly task: string }
   | { readonly type: 'delegate.end'; readonly agent: string; readonly callId: string; readonly to: string; readonly ok: boolean }
   | { readonly type: 'approval.required'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] }
-  | { readonly type: 'usage'; readonly agent: string; readonly input: number; readonly output: number; readonly cached: number };
+  // input counts every prompt token; cached of them were read from the provider's prompt cache, cacheWrite written to it.
+  | { readonly type: 'usage'; readonly agent: string; readonly input: number; readonly output: number; readonly cached: number; readonly cacheWrite: number };
 
 export interface ApprovalRequest {
   readonly tool: string;
@@ -63,8 +64,9 @@ const preview = (content: unknown): string => {
 function fromModelStep(state: MapperState, message: Rec): [MapperState, TeamEvent[]] {
   const agent = str(message.name) || state.lead;
   const usage = isRec(message.usage_metadata) ? message.usage_metadata : undefined;
+  const details = usage && isRec(usage.input_token_details) ? usage.input_token_details : {};
   const usageEvents: TeamEvent[] = usage
-    ? [{ type: 'usage', agent, input: num(usage.input_tokens), output: num(usage.output_tokens), cached: isRec(usage.input_token_details) ? num(usage.input_token_details.cache_read) : 0 }]
+    ? [{ type: 'usage', agent, input: num(usage.input_tokens), output: num(usage.output_tokens), cached: num(details.cache_read), cacheWrite: num(details.cache_creation) }]
     : [];
 
   const toolCalls = list(message.tool_calls).filter(isRec);

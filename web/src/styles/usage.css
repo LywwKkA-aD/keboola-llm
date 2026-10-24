@@ -1,0 +1,230 @@
+/*
+ * Token usage: the stats button in the HUD bar and its panel. Chart colors are the dataviz reference slots 1 and 2
+ * (blue, orange), validated against both surfaces; text never wears them.
+ */
+:root {
+  --usage-cached: #3987e5;
+  --usage-fresh: #d95926;
+}
+
+:root[data-theme='light'] {
+  --usage-cached: #2a78d6;
+  --usage-fresh: #eb6834;
+}
+
+.hud-usage {
+  align-items: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: var(--space-4);
+  margin: 0 calc(-1 * var(--space-2));
+  padding: 4px var(--space-2);
+}
+
+.hud-usage:hover {
+  background: var(--color-surface-3);
+}
+
+.hud-usage--on {
+  background: var(--color-primary-soft);
+}
+
+.usage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.usage__periods {
+  align-self: flex-start;
+}
+
+.usage-tiles {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: 1fr 1fr;
+}
+
+.usage-tile {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+}
+
+.usage-tile__label,
+.usage-tile__note {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.usage-tile__value {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.usage__since {
+  font-size: var(--text-xs);
+  margin: 0;
+}
+
+.usage-chart {
+  margin: 0;
+}
+
+.usage-chart__head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: var(--space-1) var(--space-3);
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.usage-legend {
+  color: var(--color-text-muted);
+  display: flex;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  gap: var(--space-3);
+}
+
+.usage-legend__item {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.usage-swatch {
+  border-radius: 2px;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+
+.usage-swatch--cached {
+  background: var(--usage-cached);
+}
+
+.usage-swatch--fresh {
+  background: var(--usage-fresh);
+}
+
+.usage-chart__plot {
+  position: relative;
+}
+
+.usage-chart__max {
+  color: var(--color-text-faint);
+  font-size: var(--text-2xs);
+  left: 0;
+  position: absolute;
+  top: -4px;
+}
+
+.usage-chart__svg {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.usage-chart__grid,
+.usage-chart__base {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.usage-col {
+  cursor: default;
+  outline: none;
+}
+
+.usage-col__hit {
+  fill: transparent;
+}
+
+.usage-col--on .usage-col__hit {
+  fill: var(--color-surface-3);
+}
+
+.usage-col:focus-visible .usage-col__hit {
+  stroke: var(--color-primary);
+  stroke-width: 1;
+}
+
+.usage-col__cached {
+  fill: var(--usage-cached);
+}
+
+.usage-col__fresh {
+  fill: var(--usage-fresh);
+}
+
+.usage-chart__axis {
+  color: var(--color-text-faint);
+  display: flex;
+  font-size: var(--text-2xs);
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.usage-chart__readout {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  margin: var(--space-1) 0 0;
+  min-height: 1.5em;
+}
+
+.usage__heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin: var(--space-1) 0 0;
+}
+
+.usage-agents {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.usage-agents__row {
+  align-items: baseline;
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  font-size: var(--text-sm);
+  gap: var(--space-3);
+  grid-template-columns: 1fr auto 3.5em;
+  padding: 6px 0;
+}
+
+.usage-agents__row:last-child {
+  border-bottom: none;
+}
+
+.usage-agents__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usage-agents__cache {
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.usage__note {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  margin: 0;
+}

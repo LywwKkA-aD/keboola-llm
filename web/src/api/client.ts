@@ -10,6 +10,7 @@ import type {
   TeamInfo,
   Thread,
   ThreadPolicy,
+  UsageReport,
 } from './types.ts';
 import type { DefinitionKind, TrackedDefinition, VersionDetail, VersionSummary } from './types.ts';
 import type { PendingApproval } from '../state/run-state.ts';
@@ -62,6 +63,7 @@ export const api = {
   startOnboarding: (text: string) => request<{ threadId: string }>('/api/onboarding/start', 'POST', { text }),
   memory: () => request<{ content: string }>('/api/memory'),
   system: () => request<SystemStatus>('/api/system'),
+  usage: () => request<UsageReport>('/api/usage'),
 };
 
 export const eventsUrl = (threadId?: string) =>

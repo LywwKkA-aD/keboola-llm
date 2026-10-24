@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App.tsx';
 import { errorResponse, FakeEventSource, stubApi, stubEventSource } from '../test-utils/fake-api.ts';
-import { baseRoutes } from '../test-utils/fixtures.ts';
+import { baseRoutes, usageReport } from '../test-utils/fixtures.ts';
 import { SETUP_COMPLETE, setupReport } from '../test-utils/setup-fixtures.ts';
 
 const APPROVAL = {
@@ -46,7 +46,8 @@ describe('Home page', () => {
 
     expect(stat('Работают')).toHaveTextContent('0');
     expect(stat('Ждут')).toHaveTextContent('0');
-    expect(stat('Токены')).toHaveTextContent('0');
+    expect(stat('Токенов сегодня')).toHaveTextContent('0');
+    expect(stat('Из кеша')).toHaveTextContent('—');
     for (const name of ['Команда', 'Чаты']) {
       expect(within(hud()).getByRole('button', { name })).toHaveAttribute('aria-expanded', 'false');
     }
@@ -113,22 +114,66 @@ describe('Home page', () => {
     expect(screen.queryByRole('complementary', { name: 'keboola-expert' })).toBeNull();
   });
 
-  it('counts runs, approvals and tokens of this session in the HUD', async () => {
-    await openHome({ 'GET /api/approvals': [APPROVAL] });
+  it('counts runs and approvals, and shows today\'s tokens with the cache share from the server', async () => {
+    let report = usageReport({ calls: 3, input: 12_000, cached: 10_200, output: 300 });
+    const api = await openHome({ 'GET /api/approvals': [APPROVAL], 'GET /api/usage': () => report });
     const approvals = await within(hud()).findByRole('button', { name: 'Подтверждения 1' });
     expect(approvals).toHaveClass('hud__btn--amber');
     expect(stat('Ждут')).toHaveTextContent('1');
+    await waitFor(() => expect(stat('Токенов сегодня')).toHaveTextContent('12.3k'));
+    expect(stat('Из кеша')).toHaveTextContent('85%');
 
+    // Every model call refetches the report the server keeps (so a reload does not reset it).
+    report = usageReport({ calls: 4, input: 40_000, cached: 38_000, output: 500 });
+    const calls = api.callsTo('GET', '/api/usage').length;
     act(() => {
       FakeEventSource.global().emit({ type: 'run.started', runId: 'r' }, 't1');
-      FakeEventSource.global().emit({ type: 'usage', agent: 'keboola-expert', input: 12_000, output: 300, cached: 11_000 }, 't1');
+      FakeEventSource.global().emit({ type: 'usage', agent: 'keboola-expert', input: 28_000, output: 200, cached: 27_800 }, 't1');
     });
     expect(stat('Работают')).toHaveTextContent('1');
-    const tokens = stat('Токены');
-    expect(tokens).toHaveTextContent('12.3k');
-    expect(tokens).toHaveAttribute('title', expect.stringContaining('Вход 12.0k'));
-    expect(tokens).toHaveAttribute('title', expect.stringContaining('Из кеша 11.0k'));
-    expect(tokens).toHaveAttribute('title', expect.stringContaining('Выход 300'));
+    await waitFor(() => expect(stat('Токенов сегодня')).toHaveTextContent('40.5k'));
+    expect(stat('Из кеша')).toHaveTextContent('95%');
+    expect(api.callsTo('GET', '/api/usage').length).toBe(calls + 1);
+  });
+
+  it('opens the usage panel from the token stats: periods, the 14-day chart and today by agent', async () => {
+    const today = { calls: 3, input: 12_000, cached: 10_200, cacheWrite: 1_500, output: 300 };
+    await openHome({
+      'GET /api/usage': {
+        today,
+        week: { ...today, input: 90_000, cached: 81_000 },
+        total: { ...today, input: 400_000, cached: 300_000 },
+        since: '2026-10-01',
+        days: [{ date: '2026-10-23', calls: 1, input: 78_000, cached: 70_800, cacheWrite: 0, output: 100 }, { date: '2026-10-24', ...today }],
+        agents: [
+          { agent: 'keboola-expert', calls: 2, input: 9_000, cached: 8_100, cacheWrite: 0, output: 200 },
+          { agent: 'lead', calls: 1, input: 3_000, cached: 2_100, cacheWrite: 1_500, output: 100 },
+        ],
+      },
+    });
+    const button = await within(hud()).findByRole('button', { name: /Токенов сегодня/ });
+    await waitFor(() => expect(button).toHaveTextContent('12.3k'));
+    await userEvent.click(button);
+    const panel = screen.getByRole('dialog', { name: 'Расход токенов' });
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+
+    const tile = (label: string) => within(panel).getByText(label, { selector: '.usage-tile__label' }).closest('.usage-tile');
+    expect(tile('Вход')).toHaveTextContent('12.0k3 вызовов модели');
+    expect(tile('Из кеша')).toHaveTextContent('85%10.2k');
+    expect(tile('Записано в кеш')).toHaveTextContent('1.5k');
+    expect(tile('Выход')).toHaveTextContent('300');
+    const rows = within(panel).getAllByRole('listitem');
+    expect(rows.map((row) => row.textContent)).toEqual(['keboola-expert9.2k90%', 'lead3.1k70%']);
+    expect(within(panel).getByRole('img', { name: /^23\.10: Вход 78\.0k · Из кеша 91%/ })).toBeInTheDocument();
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Всё время' }));
+    expect(tile('Вход')).toHaveTextContent('400.0k');
+    expect(tile('Из кеша')).toHaveTextContent('75%');
+    expect(within(panel).getByText('Считается с 2026-10-01')).toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Расход токенов' })).toBeNull();
+    expect(button).toHaveFocus();
   });
 
   it('offers to survey a project the team does not know yet, once, and hides the offer when it is done', async () => {

@@ -47,13 +47,13 @@ describe('reduceLive', () => {
     expect(play(many).feed).toHaveLength(80);
   });
 
-  it('sums token usage and bumps the approvals version when approvals may have changed', () => {
+  it('bumps the usage version on every model call and the approvals version when approvals may have changed', () => {
     const state = play([
       env({ type: 'usage', agent: 'lead', input: 10, output: 2, cached: 8 }),
       env({ type: 'usage', agent: 'x', input: 5, output: 1, cached: 0 }),
       env({ type: 'approval.required', interruptId: 'i', requests: [] }),
     ]);
-    expect(state.usage).toEqual({ input: 15, output: 3, cached: 8 });
+    expect(state.usageVersion).toBe(2);
     expect(state.approvalsVersion).toBe(1);
   });
 

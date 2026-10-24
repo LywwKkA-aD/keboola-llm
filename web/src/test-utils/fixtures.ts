@@ -1,4 +1,4 @@
-import type { TeamInfo, Thread } from '../api/types.ts';
+import type { TeamInfo, Thread, UsageReport, UsageTotals } from '../api/types.ts';
 import { SETUP_COMPLETE } from './setup-fixtures.ts';
 
 export const TEAM: TeamInfo = {
@@ -28,6 +28,14 @@ export const THREADS: Thread[] = [
   { id: 't2', title: 'Почему упал джоб?', createdAt: '2026-10-22T10:00:00Z', updatedAt: '2026-10-22T11:00:00Z' },
 ];
 
+const NO_USAGE: UsageTotals = { calls: 0, input: 0, cached: 0, cacheWrite: 0, output: 0 };
+
+/** A usage report with `today` (and the week and total) as given; no history. */
+export const usageReport = (today: Partial<UsageTotals> = {}, agents: UsageReport['agents'] = []): UsageReport => {
+  const totals = { ...NO_USAGE, ...today };
+  return { today: totals, week: totals, total: totals, days: [{ date: '2026-10-24', ...totals }], agents };
+};
+
 /** The routes every page needs; tests spread their own on top. */
 export const baseRoutes = {
   'GET /api/settings': { language: 'ru' },
@@ -44,4 +52,5 @@ export const baseRoutes = {
   'GET /api/threads/t2/policy': { allowSql: false },
   'GET /api/routines': { routines: [], loadErrors: [] },
   'GET /api/setup': SETUP_COMPLETE,
+  'GET /api/usage': usageReport(),
 };

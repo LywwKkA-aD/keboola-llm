@@ -8,6 +8,7 @@ import type { SystemStatus } from '../system/status.ts';
 import type { LoadError } from '../registry/types.ts';
 import type { DefinitionVersions } from '../versions/tracker.ts';
 import type { RoutinesApi } from '../routines/types.ts';
+import type { UsageReport } from '../usage/ledger.ts';
 import type { EventBus } from './bus.ts';
 import type { Allowed } from './guard.ts';
 import type { ChatEntry } from './history.ts';
@@ -66,4 +67,6 @@ export interface ServerDeps {
   readonly promotionPreview?: PromotionPreviewFn;
   /** First-run setup wizard (/api/setup); without it those routes do not exist. */
   readonly setup?: SetupService;
+  /** Tokens by day and agent (DATA_DIR/usage.json); without it /api/usage does not exist. */
+  readonly usage?: () => UsageReport;
 }

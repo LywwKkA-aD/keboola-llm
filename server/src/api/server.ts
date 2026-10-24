@@ -12,6 +12,7 @@ import { registerPromotionRoutes } from './routes/promotions.ts';
 import { registerSetupRoutes } from './routes/setup.ts';
 import { registerStaticRoutes } from './routes/static.ts';
 import { registerThreadRoutes } from './routes/threads.ts';
+import { registerUsageRoutes } from './routes/usage.ts';
 import { registerVersionRoutes } from './routes/versions.ts';
 import { registerWorkspaceRoutes } from './routes/workspace.ts';
 import type { RunErrorCode } from './runs.ts';
@@ -44,6 +45,7 @@ export async function createServer(deps: ServerDeps): Promise<FastifyInstance> {
   registerOnboardingRoutes(app, deps);
   if (deps.setup) registerSetupRoutes(app, deps.setup);
   if (deps.promotionPreview) registerPromotionRoutes(app, deps.promotionPreview);
+  if (deps.usage) registerUsageRoutes(app, deps.usage);
   registerEventRoutes(app, deps);
   if (deps.versions) registerVersionRoutes(app, deps.versions);
   registerRoutineRoutes(app, deps);

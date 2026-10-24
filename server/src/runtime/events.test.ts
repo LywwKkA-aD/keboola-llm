@@ -15,7 +15,7 @@ const leadCallsTask = [
           content: '',
           name: 'lead',
           tool_calls: [{ id: 'call-task', name: 'task', args: { subagent_type: 'knowledge-keeper', description: 'List notes' } }],
-          usage_metadata: { input_tokens: 100, output_tokens: 10, total_tokens: 110, input_token_details: { cache_read: 90 } },
+          usage_metadata: { input_tokens: 100, output_tokens: 10, total_tokens: 110, input_token_details: { cache_read: 90, cache_creation: 5 } },
         }),
       ],
     },
@@ -36,7 +36,7 @@ describe('mapChunk', () => {
   it('turns a task tool call into a delegation and reports usage', () => {
     const [, events] = mapChunk(initialMapperState('lead'), leadCallsTask);
     expect(events).toEqual([
-      { type: 'usage', agent: 'lead', input: 100, output: 10, cached: 90 },
+      { type: 'usage', agent: 'lead', input: 100, output: 10, cached: 90, cacheWrite: 5 },
       { type: 'delegate.start', agent: 'lead', callId: 'call-task', to: 'knowledge-keeper', task: 'List notes' },
     ]);
   });
