@@ -1,76 +1,84 @@
 #!/usr/bin/env node
-/** Check that everything the app needs is installed and reachable. Exits 1 on any failure. */
-import { execFile } from 'node:child_process';
+/**
+ * Check that everything the app needs is installed and reachable: Node, then the same checklist as the
+ * setup wizard on Home (server/src/setup/checks.ts), including one tiny test request to the model.
+ * Exits 1 on any failure.
+ */
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import { loadDotEnv } from './lib/dotenv.mjs';
 import { compareKbagent, snapshotVersion } from './lib/kbagent-version.mjs';
 import { isSupportedNode } from './lib/node-version.mjs';
-import { readOmniRouteConfig } from './lib/omniroute-config.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const ENV_PATH = join(ROOT, '.env');
+const ENV_PATH = process.env.ENV_FILE?.trim() || join(ROOT, '.env');
 const SNAPSHOT_PATH = join(ROOT, 'server', 'src', 'tools', 'kbagent', 'operations-snapshot.ts');
-const run = promisify(execFile);
 
-const ok = (label, detail) => ({ level: 'ok', label, detail });
-const warn = (label, detail) => ({ level: 'warn', label, detail });
-const fail = (label, detail) => ({ level: 'fail', label, detail });
+/** What to do about a failed step, in the terminal; the wizard shows the same in the UI. */
+const HINTS = {
+  unreachable: 'install it with "npm install -g omniroute", then start it with "omniroute"',
+  http: 'run "omniroute doctor" and restart OmniRoute',
+  keyMissing: 'create a key in the OmniRoute dashboard (Endpoints), then save it on Home or in Settings, Setup',
+  keyRejected: 'create a new key in the OmniRoute dashboard (Endpoints), then save it on Home or in Settings, Setup',
+  modelMissing: 'choose a model on Home or in Settings (or set OMNIROUTE_MODEL in .env)',
+  modelFailed: 'choose another model or check its provider in OmniRoute',
+  kbagentMissing: 'install it (see README), then restart the app',
+  projectsNone: 'run "kbagent project add --project <alias> --url <keboola-url> --token-stdin"',
+  projectsFailed: 'run "kbagent doctor"',
+  projectMissing: 'choose the project on Home or in Settings (or set KEBOOLA_PROJECT in .env)',
+  projectUnknown: 'choose a registered project on Home or in Settings (or fix KEBOOLA_PROJECT in .env)',
+};
 
-function checkNode() {
-  return isSupportedNode(process.version)
-    ? ok('Node.js', process.version)
-    : fail('Node.js', `${process.version} is not supported, install Node 24 LTS`);
-}
+const LEVELS = { ok: 'ok', fail: 'fail', blocked: 'skip' };
 
-function checkEnvFile() {
-  return existsSync(ENV_PATH) ? ok('.env', 'found') : fail('.env', 'missing: copy .env.example to .env');
-}
+const print = (level, label, detail) => console.log(`[${level}] ${label}: ${detail}`);
 
-async function checkOmniRoute({ baseUrl, apiKey, model }) {
-  const label = 'OmniRoute';
-  try {
-    const response = await fetch(`${baseUrl}/models`, {
-      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-      signal: AbortSignal.timeout(5000),
-    });
-    if (response.status === 401 || response.status === 403) {
-      return fail(label, `running at ${baseUrl}, but OMNIROUTE_API_KEY is missing or wrong`);
-    }
-    if (!response.ok) return fail(label, `${baseUrl}/models answered HTTP ${response.status}`);
-    const ids = ((await response.json()).data ?? []).map((entry) => entry.id);
-    if (!model) return warn(label, `${ids.length} models available, set OMNIROUTE_MODEL in .env`);
-    return ids.includes(model)
-      ? ok(label, `${ids.length} models, using ${model}`)
-      : warn(label, `${model} is not in /models (fine for combos, otherwise check the id)`);
-  } catch {
-    return fail(label, `not reachable at ${baseUrl}: start it with "omniroute"`);
-  }
-}
-
-async function checkKbagent() {
-  try {
-    const { stdout } = await run('kbagent', ['--version'], { timeout: 15000, env: { ...process.env, KBAGENT_AUTO_UPDATE: 'false' } });
-    const snapshot = snapshotVersion(readFileSync(SNAPSHOT_PATH, 'utf8'));
-    const { level, detail } = compareKbagent(stdout, snapshot);
-    return level === 'ok' ? ok('kbagent', detail) : warn('kbagent', detail);
-  } catch {
-    return warn('kbagent', 'not found on PATH: Keboola agents will be disabled (see README)');
-  }
+/** kbagent newer or older than the permission snapshot still works, but the snapshot needs a refresh. */
+function kbagentLine(step) {
+  if (step.status !== 'ok') return undefined;
+  const { level, detail } = compareKbagent(step.detail, snapshotVersion(readFileSync(SNAPSHOT_PATH, 'utf8')));
+  return level === 'ok' ? undefined : ['warn', detail];
 }
 
 async function main() {
+  if (!isSupportedNode(process.version)) {
+    print('fail', 'Node.js', `${process.version} is not supported, install Node 24 LTS`);
+    process.exitCode = 1;
+    return;
+  }
+  print('ok', 'Node.js', process.version);
   loadDotEnv(ENV_PATH);
-  const results = [
-    checkNode(),
-    checkEnvFile(),
-    await checkOmniRoute(readOmniRouteConfig(process.env)),
-    await checkKbagent(),
-  ];
-  results.forEach(({ level, label, detail }) => console.log(`[${level}] ${label}: ${detail}`));
-  process.exitCode = results.some((result) => result.level === 'fail') ? 1 : 0;
+  print(existsSync(ENV_PATH) ? 'ok' : 'warn', '.env', existsSync(ENV_PATH) ? 'found' : 'missing: the setup wizard creates it, or copy .env.example to .env');
+
+  // TypeScript modules of the server, loaded only once Node is known to run them.
+  const { readAppEnv } = await import('../server/src/config/env.ts');
+  const { loadSettings } = await import('../server/src/config/settings.ts');
+  const { runSetupChecks, STEP_LABELS } = await import('../server/src/setup/checks.ts');
+  const { probeOmniRoute, testModel } = await import('../server/src/setup/omniroute.ts');
+  const { kbagentVersion, listKeboolaProjects } = await import('../server/src/system/keboola.ts');
+
+  const env = readAppEnv(process.env, ROOT);
+  // The app lets Settings override the model and project from .env; check what it would really use.
+  const settings = loadSettings(join(env.dataDir, 'settings.json'));
+  const omniroute = { ...env.omniroute, model: settings.model || env.omniroute.model };
+  const { steps } = await runSetupChecks({
+    omniroute,
+    keboolaProject: settings.keboolaProject || env.keboolaProject,
+    probeOmniRoute: () => probeOmniRoute(omniroute),
+    testModel: () => testModel(omniroute),
+    kbagentVersion: () => kbagentVersion(),
+    keboolaProjects: () => listKeboolaProjects(),
+  });
+
+  steps.forEach((step) => {
+    const label = STEP_LABELS[step.id];
+    const hint = step.reason ? HINTS[step.reason] : undefined;
+    print(LEVELS[step.status], label, hint ? `${step.detail} -> ${hint}` : step.detail);
+    const extra = step.id === 'kbagent' ? kbagentLine(step) : undefined;
+    if (extra) print(extra[0], label, extra[1]);
+  });
+  process.exitCode = steps.some((step) => step.status !== 'ok') ? 1 : 0;
 }
 
 main();
