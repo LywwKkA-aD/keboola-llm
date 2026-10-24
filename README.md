@@ -116,6 +116,9 @@ once and the old folder can then be deleted.
 - Writes (Keboola changes, agent/skill files) wait for the user's approval in the UI. Pending approvals
   survive a server restart (`data/pending-approvals.json`, checked against the checkpoints on start).
   Listing or inspecting workspaces is a read and never asks; other SQL steps ask unless the chat allows SQL.
+- A run that fails (model or OmniRoute error, step limit) or is stopped keeps its progress: Continue in the chat
+  goes on from the last checkpoint. Chats a restart cut off midway are marked interrupted and only continue when
+  the user says so. Model calls retry 429, 5xx and dropped connections with backoff; auth and validation errors fail at once.
 - New or edited agents and skills (e.g. from agent-builder) join the team without a restart.
   Every change to `agents/*/AGENT.md` and `skills/*/SKILL.md`, whoever made it, is kept in `data/history`
   (last 50 versions per file); the Agents page shows the diff and restores an older version.
