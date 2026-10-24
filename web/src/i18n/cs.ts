@@ -355,4 +355,14 @@ export const cs: Record<StringKey, string> = {
   'memory.profilesHint': 'Píše je project-scout, když prozkoumá projekt v Keboole. Jen pro čtení: o obnovení profilu požádejte project-scout.',
   'memory.noProfiles': 'Zatím nebyl prozkoumán žádný projekt.',
   'memory.readOnly': 'Jen pro čtení',
+  'settings.notifications': 'Oznámení',
+  'settings.notificationsHint':
+    'Když je karta na pozadí, prohlížeč vám dá vědět, že je potřeba schválení, chat skončil nebo selhal, nebo doběhla pravidelná úloha. Oznámení uvádí agenta, chat a co se stalo, nikdy data.',
+  'settings.notify': 'Oznámení na ploše',
+  'settings.notifyBlocked': 'Prohlížeč pro tento web blokuje oznámení. Povolte je v nastavení webu (ikona vlevo od adresy) a pak přepínač zapněte znovu.',
+  'settings.notifyUnsupported': 'Tento prohlížeč neumí zobrazovat oznámení.',
+  'notify.approval': '{agent} čeká na vaše schválení',
+  'notify.finished': '{agent} skončil, odpověď je hotová',
+  'notify.failed': '{agent} skončil s chybou',
+  'notify.routineFinished': '{agent} dokončil pravidelnou úlohu',
 };

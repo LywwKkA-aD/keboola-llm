@@ -19,6 +19,8 @@ export interface Settings {
   /** Empty: the Keboola project from the server .env. */
   readonly keboolaProject: string;
   readonly allowSqlByDefault: boolean;
+  /** Desktop notifications while the tab is in the background (the browser must allow them too). */
+  readonly desktopNotifications: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -29,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   model: '',
   keboolaProject: '',
   allowSqlByDefault: false,
+  desktopNotifications: false,
 };
 
 export interface Thread {

@@ -2,8 +2,9 @@ import { useEffect } from 'react';
 import { useLive } from '../live/live-context.tsx';
 import { useSettings } from '../state/settings-context.tsx';
 import { tabTitle } from './tab-title.ts';
+import { useDesktopNotifications } from './useDesktopNotifications.ts';
 
-/** Lets a user in another tab or app see that the team waits: the count in the tab title. */
+/** Lets a user in another tab or app see that the team waits: the count in the tab title, and desktop notifications. */
 export function Attention() {
   const { approvals } = useLive();
   const { t } = useSettings();
@@ -16,5 +17,6 @@ export function Attention() {
     };
   }, [base, approvals.length]);
 
+  useDesktopNotifications();
   return null;
 }

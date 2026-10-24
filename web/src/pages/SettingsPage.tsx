@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { api } from '../api/client.ts';
 import type { KeboolaProject, Language, Quality, ReduceMotion, Settings, Theme } from '../api/types.ts';
 import { EnvSelect, Segmented, SelectField, SettingsSection } from '../components/settings/fields.tsx';
+import { NotificationsSection } from '../components/settings/NotificationsSection.tsx';
 import { RoutinesSection } from '../components/settings/RoutinesSection.tsx';
 import { SystemChecks } from '../components/settings/SystemChecks.tsx';
 import { SetupSection } from '../components/setup/SetupPanels.tsx';
@@ -118,6 +119,8 @@ export function SettingsPage() {
           <span>{t('settings.allowSql')}</span>
         </label>
       </SettingsSection>
+
+      <NotificationsSection onSave={save} />
 
       <RoutinesSection />
 

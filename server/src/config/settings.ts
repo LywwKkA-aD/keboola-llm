@@ -12,6 +12,8 @@ const fields = {
   // Empty means "use KEBOOLA_PROJECT from .env". Aliases are passed to kbagent, so keep them plain.
   keboolaProject: z.string().trim().max(100).regex(/^[A-Za-z0-9._-]*$/, 'letters, digits, dot, dash, underscore'),
   allowSqlByDefault: z.boolean(),
+  // Desktop notifications while the tab is in the background; the browser's own permission still applies.
+  desktopNotifications: z.boolean(),
 };
 
 const settingsSchema = z.object({
@@ -22,6 +24,7 @@ const settingsSchema = z.object({
   model: fields.model.default(''),
   keboolaProject: fields.keboolaProject.default(''),
   allowSqlByDefault: fields.allowSqlByDefault.default(false),
+  desktopNotifications: fields.desktopNotifications.default(false),
 });
 
 /** A partial update from the UI: only the sent fields, never defaults, nothing unknown. */

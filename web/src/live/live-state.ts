@@ -1,4 +1,5 @@
 import type { ApprovalRequest, Envelope } from '../api/types.ts';
+import { pushSignal, type Signal } from './signals.ts';
 
 export type FeedKind = 'delegate' | 'tool' | 'approval' | 'auto' | 'error';
 
@@ -25,6 +26,8 @@ export interface LiveState {
   readonly approvalsVersion: number;
   /** Bumped when agents or skills changed on disk: refetch the team. */
   readonly teamVersion: number;
+  /** Approvals asked and runs ended, oldest first: what desktop notifications announce. */
+  readonly signals: readonly Signal[];
 }
 
 const FEED_LIMIT = 80;
@@ -36,6 +39,7 @@ export const initialLive = (): LiveState => ({
   usage: { input: 0, output: 0, cached: 0 },
   approvalsVersion: 0,
   teamVersion: 0,
+  signals: [],
 });
 
 const without = (list: readonly string[], id: string) => list.filter((entry) => entry !== id);
@@ -64,7 +68,13 @@ function requestItems(kind: 'approval' | 'auto', requests: readonly ApprovalRequ
 }
 
 /** Fold one server event (any chat) into the live summary. Pure. */
-export function reduceLive(state: LiveState, { seq, threadId, event }: Envelope, at: number): LiveState {
+export function reduceLive(state: LiveState, envelope: Envelope, at: number): LiveState {
+  const next = reduceEvent(state, envelope, at);
+  const signals = pushSignal(state.signals, envelope);
+  return signals === state.signals ? next : { ...next, signals };
+}
+
+function reduceEvent(state: LiveState, { seq, threadId, event }: Envelope, at: number): LiveState {
   const base = { threadId, at };
   const item = (kind: FeedKind, agent: string, target: string, text: string): FeedItem => ({ ...base, id: String(seq), kind, agent, target, text });
   switch (event.type) {

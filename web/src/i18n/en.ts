@@ -353,6 +353,16 @@ export const en = {
   'memory.profilesHint': 'project-scout writes these when it surveys a Keboola project. Read-only: ask project-scout to refresh a profile.',
   'memory.noProfiles': 'No project has been profiled yet.',
   'memory.readOnly': 'Read-only',
+  'settings.notifications': 'Notifications',
+  'settings.notificationsHint':
+    'While this tab is in the background, the browser tells you when an approval is needed, a chat finishes or fails, or a routine run finishes. It names the agent, the chat and what happened, never data.',
+  'settings.notify': 'Desktop notifications',
+  'settings.notifyBlocked': 'The browser blocks notifications for this site. Allow them in the site settings (the icon left of the address), then switch this on again.',
+  'settings.notifyUnsupported': 'This browser cannot show notifications.',
+  'notify.approval': '{agent} needs your approval',
+  'notify.finished': '{agent} has finished, the answer is ready',
+  'notify.failed': '{agent} stopped with an error',
+  'notify.routineFinished': '{agent} has finished the routine run',
 } as const;
 
 export type StringKey = keyof typeof en;

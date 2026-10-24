@@ -41,7 +41,7 @@ describe('settings', () => {
     expect(loadSettings(join(makeTree({}), 'settings.json'))).toEqual(DEFAULT_SETTINGS);
   });
 
-  it('has safe defaults: dark theme, no SQL without asking, models and project from .env', () => {
+  it('has safe defaults: dark theme, no SQL without asking, models and project from .env, no desktop notifications', () => {
     expect(DEFAULT_SETTINGS).toEqual({
       language: 'ru',
       theme: 'dark',
@@ -50,6 +50,7 @@ describe('settings', () => {
       model: '',
       keboolaProject: '',
       allowSqlByDefault: false,
+      desktopNotifications: false,
     });
   });
 
@@ -90,5 +91,10 @@ describe('settingsPatchSchema', () => {
 
   it('rejects unknown fields', () => {
     expect(settingsPatchSchema.safeParse({ theme: 'light', apiKey: 'x' }).success).toBe(false);
+  });
+
+  it('accepts the desktop notifications switch, only as a boolean', () => {
+    expect(settingsPatchSchema.parse({ desktopNotifications: true })).toEqual({ desktopNotifications: true });
+    expect(settingsPatchSchema.safeParse({ desktopNotifications: 'yes' }).success).toBe(false);
   });
 });
