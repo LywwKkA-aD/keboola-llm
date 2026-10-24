@@ -49,18 +49,32 @@ Create the key in the OmniRoute dashboard under Endpoints.
 
 ```sh
 npm install
-cp .env.example .env        # then fill in OMNIROUTE_API_KEY, OMNIROUTE_MODEL, KEBOOLA_PROJECT
-npm run doctor              # checks Node, .env, OmniRoute, kbagent
+npm start                   # app on http://127.0.0.1:4800
+```
+
+Open the app: until everything works, Home shows a setup checklist (also in Settings, Setup). It checks
+that OmniRoute runs, takes your key and that the model answers, that kbagent is installed and has a Keboola
+project, and that the team has a project to work on. Each failed step shows the command to run (PowerShell
+on Windows) or a field to fill in. The OmniRoute key typed there is saved to `.env` and used at once, no
+restart; it is never shown again. The Keboola token is typed into kbagent in your own terminal, never into
+the app.
+
+Without the UI: `cp .env.example .env`, fill in `OMNIROUTE_API_KEY`, `OMNIROUTE_MODEL` and `KEBOOLA_PROJECT`,
+then:
+
+```sh
+npm run doctor              # the same checks as the setup checklist (sends one tiny request to the model)
 npm run smoke:omniroute     # checks tool calling through OmniRoute
-npm start                   # API on http://127.0.0.1:4800
 npm run chat                # or talk to the team in the terminal
 ```
+
+`ENV_FILE=<path>` makes the app and doctor read (and the setup checklist write) another file than `.env`.
 
 ## Scripts
 
 | Script | What it does |
 |---|---|
-| `npm run doctor` | Environment check |
+| `npm run doctor` | Environment check: Node plus the setup checklist of the app |
 | `npm run smoke:omniroute [-- <model>]` | Tool call, tool-result round trip and streamed tool call against OmniRoute |
 | `npm run vendor:sync` | Re-copy Keboola's official agents/skills at the pinned commits |
 | `npm run vendor:update` | Move the pins to the latest upstream commits, then sync |
