@@ -15,9 +15,12 @@ test('a question from the home composer opens the new chat in the popup over the
   await expect(popup.locator('.message--user')).toContainText(question);
   await expect(popup.locator('.message--assistant').last()).toContainText(PLAIN_REPLY);
   await expect(popup.locator('.message--pending')).toHaveCount(0);
-  // Still on Home, the aquarium next to the chat.
+  // Still on Home, the aquarium next to the chat: the scene makes room instead of hiding under it.
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByTestId('aquarium-view')).toBeVisible();
+  const scene = await page.getByTestId('aquarium-view').boundingBox();
+  const chat = await popup.boundingBox();
+  expect((scene?.x ?? 0) + (scene?.width ?? 0)).toBeLessThanOrEqual((chat?.x ?? 0) + 1);
 
   await popup.getByRole('link', { name: 'Открыть в чатах' }).click();
   await expect(page).toHaveURL(/\/chat\/[0-9a-f-]{36}$/);

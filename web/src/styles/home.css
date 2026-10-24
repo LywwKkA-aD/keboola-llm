@@ -21,6 +21,13 @@
   position: absolute;
 }
 
+/* With a chat open the scene makes room for it instead of hiding under it; the camera refits the hall. */
+@media (min-width: 641px) {
+  .home--chat .home__scene {
+    right: calc(var(--chat-width) + 2 * var(--hud-gap));
+  }
+}
+
 .home__overlay {
   display: flex;
   gap: var(--hud-gap);
