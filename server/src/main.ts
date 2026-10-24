@@ -16,6 +16,7 @@ import { saveSettings } from './config/settings.ts';
 import { createRoutines } from './routines/service.ts';
 import { createNoteStore, MAX_MEMORY_BYTES } from './knowledge/store.ts';
 import { watchFolders } from './runtime/watch.ts';
+import { createSetupService } from './setup/service.ts';
 import { kbagentVersion, listKeboolaProjects } from './system/keboola.ts';
 import { listModels } from './system/models.ts';
 import { onboardingStatus } from './system/onboarding.ts';
@@ -129,6 +130,19 @@ const server = await createServer({
   // The same folders the agents see as /knowledge/ and /memories/ (runtime/backend.ts).
   knowledge: createNoteStore(join(app.env.dataDir, 'knowledge')),
   memories: createNoteStore(join(app.env.dataDir, 'memories'), { maxBytes: MAX_MEMORY_BYTES }),
+  setup: createSetupService({
+    envFile: app.envFile,
+    envTemplate: join(app.env.rootDir, '.env.example'),
+    current: () => ({ omniroute: app.env.omniroute, ...team.effective }),
+    kbagentVersion: () => kbagentVersion(),
+    keboolaProjects: () => listKeboolaProjects(),
+    apply: (omniroute) => {
+      // The key form in the setup wizard: new models for the next runs, no restart.
+      app.setOmniRoute(omniroute);
+      team = app.buildTeam(settings);
+      console.log(`OmniRoute key saved to ${app.envFile} and in use`);
+    },
+  }),
 });
 
 const shutdown = async () => {

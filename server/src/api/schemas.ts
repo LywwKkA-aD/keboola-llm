@@ -41,3 +41,28 @@ export const noteBody = z.object({ path: relativePath, content: z.string() }).st
 export const uploadBody = z.object({ name: z.string().min(1).max(255), content: z.string(), folder: z.string().max(1000).optional() }).strict();
 
 export const memoryBody = z.object({ content: z.string() }).strict();
+// First-run setup. The OmniRoute key is write-only; printable ASCII without spaces or quotes keeps it
+// intact in .env. The address must be a plain http(s) URL: no credentials, query or fragment.
+const isRouterUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
+};
+
+export const omnirouteBody = z
+  .object({
+    apiKey: z
+      .string()
+      .trim()
+      .min(1)
+      .max(512)
+      .regex(/^[\x21-\x7E]+$/)
+      .refine((value) => !/['"`\\]/.test(value)),
+    baseUrl: z.string().trim().max(500).refine(isRouterUrl).optional(),
+  })
+  .strict();
+
+export const setupQuery = z.object({ retest: z.literal('1').optional() });
