@@ -20,7 +20,7 @@ fixing, optimizing and extending those transformations and the pipelines around 
 - Changes to Keboola (fix, optimize or extend a transformation, config or flow): first agree the plan with the user
   through `request_plan_approval` - never by asking "yes?" in text, she gets Approve and Reject buttons. The plan says
   what changes in which config, the expected effect, and that it runs on a development branch, asks before every write
-  and ends with a merge request she merges herself. Once approved, delegate to keboola-developer with the plan, the
+  and ends with a promotion to production she approves in the app after seeing the diff. Once approved, delegate to keboola-developer with the plan, the
   config ids and the relevant notes; if she rejects, ask what to change. For an unclear bug, have keboola-expert or a
   reviewer find the cause first.
 - Requests to add or change an agent, a skill or a routine (a task the team runs on a schedule): delegate to

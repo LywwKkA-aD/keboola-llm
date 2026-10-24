@@ -6,6 +6,7 @@ export { redactSecrets } from './redact.ts';
 export { defaultExec, runKbagent } from './runner.ts';
 export type { ExecFn, ExecOptions, ExecOutcome, RunRequest, RunResult } from './runner.ts';
 export { isAutoApprovableSqlCall, isReadOnlySqlCall, SQL_OPERATIONS, sqlInvocation } from './sql.ts';
-export { createKbagentSqlTool, createKbagentTools } from './tools.ts';
+export { createKbagentSqlTool, createKbagentTools, productionBranchOf, runnerFor } from './tools.ts';
+export { createKbagentPromoteTool, PROMOTE_TOOL } from './promote.ts';
 export type { KbagentCallArtifact, KbagentToolsOptions } from './tools.ts';
 export type { Access, Category, InvocationResult } from './types.ts';

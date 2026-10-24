@@ -27,6 +27,8 @@ import { createSetupService } from './setup/service.ts';
 import { kbagentVersion, listKeboolaProjects } from './system/keboola.ts';
 import { listModels } from './system/models.ts';
 import { onboardingStatus } from './system/onboarding.ts';
+import { previewPromotion } from './system/promotion.ts';
+import { productionBranchOf, runnerFor } from './tools/kbagent/index.ts';
 import { systemStatus } from './system/status.ts';
 import { createDefinitionVersions } from './versions/tracker.ts';
 
@@ -144,6 +146,12 @@ const server = await createServer({
   // The same folders the agents see as /knowledge/ and /memories/ (runtime/backend.ts).
   knowledge: createNoteStore(join(app.env.dataDir, 'knowledge')),
   memories: createNoteStore(join(app.env.dataDir, 'memories'), { maxBytes: MAX_MEMORY_BYTES }),
+  promotionPreview: (query) => {
+    const project = team.effective.keboolaProject || undefined;
+    const options = { access: 'read' as const, ...(project ? { project } : {}) };
+    const run = runnerFor(options);
+    return previewPromotion({ run, production: productionBranchOf(run, options), ...(project ? { project } : {}), ...query });
+  },
   setup: createSetupService({
     envFile: app.envFile,
     envTemplate: join(app.env.rootDir, '.env.example'),

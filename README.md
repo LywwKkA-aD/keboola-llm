@@ -110,9 +110,11 @@ once and the old folder can then be deleted.
 - Agents reach Keboola only through `kbagent`. Every call is checked against kbagent's own permission
   catalog: read-only agents run with `--deny-writes`; destructive and admin operations are always blocked;
   credential, file-path and project-switching flags are rejected.
-- Production is never written by agents: `kbagent_write` runs only with `--branch` pointing at a development branch
-  (the production branch id is looked up and refused, so is `--branch 0`), `branch merge` is blocked, and
-  keboola-developer ends a change with a merge request that the user merges in Keboola.
+- Production is never edited by agents: `kbagent_write` runs only with `--branch` pointing at a development branch
+  (the production branch id is looked up and refused, so is `--branch 0`) and `branch merge` is blocked. A verified
+  change reaches production only through `kbagent_promote`: the user sees production next to the branch in the app
+  and approves; the app then copies the branch configuration itself (no content from the agent) and refuses if
+  production changed since the agent read it. This works without Keboola's merge-request feature.
 - Writes (Keboola changes, agent/skill files) wait for the user's approval in the UI. Pending approvals
   survive a server restart (`data/pending-approvals.json`, checked against the checkpoints on start).
   Listing or inspecting workspaces is a read and never asks; other SQL steps ask unless the chat allows SQL.

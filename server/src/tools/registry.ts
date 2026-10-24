@@ -1,7 +1,7 @@
 import type { InterruptOnConfig } from 'langchain';
 import type { AgentDefinition } from '../registry/types.ts';
 import type { ToolFactory } from './catalog.ts';
-import { createKbagentSqlTool, createKbagentTools } from './kbagent/index.ts';
+import { createKbagentPromoteTool, createKbagentSqlTool, createKbagentTools, PROMOTE_TOOL } from './kbagent/index.ts';
 import { createPlanApprovalTool, PLAN_TOOL } from './plan.ts';
 
 const NO_APPROVALS: Readonly<Record<string, InterruptOnConfig>> = {};
@@ -34,6 +34,11 @@ export function createToolFactories({ defaultProject }: { defaultProject: string
       tools: [createKbagentSqlTool(scopeOf(agent, defaultProject))],
       interruptOn: SQL_APPROVAL,
     }),
+    // The only way to production: the user approves each promotion after seeing it; never auto-approved.
+    'kbagent-promote': (agent) =>
+      agent.keboola?.access === 'write'
+        ? { tools: [createKbagentPromoteTool(scopeOf(agent, defaultProject))], interruptOn: { [PROMOTE_TOOL]: { allowedDecisions: ['approve', 'reject'] } } }
+        : { tools: [], interruptOn: NO_APPROVALS },
     // Never auto-approved: agreeing a plan is the user's decision.
     'plan-approval': () => ({
       tools: [createPlanApprovalTool()],

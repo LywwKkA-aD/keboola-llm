@@ -1,6 +1,7 @@
 import type { Settings } from '../config/settings.ts';
 import type { NoteStore } from '../knowledge/store.ts';
 import type { SetupService } from '../setup/service.ts';
+import type { PromotionPreviewFn } from './routes/promotions.ts';
 import type { KeboolaProject } from '../system/keboola.ts';
 import type { OnboardingStatus } from '../system/onboarding.ts';
 import type { SystemStatus } from '../system/status.ts';
@@ -61,6 +62,8 @@ export interface ServerDeps {
   readonly knowledge: NoteStore;
   /** Shared memory (DATA_DIR/memories): AGENTS.md, which the user may edit, and project-scout's projects/<alias>.md. */
   readonly memories: NoteStore;
+  /** Production next to a branch for a promotion's approval card; without it the route does not exist. */
+  readonly promotionPreview?: PromotionPreviewFn;
   /** First-run setup wizard (/api/setup); without it those routes do not exist. */
   readonly setup?: SetupService;
 }

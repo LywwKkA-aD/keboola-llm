@@ -1,13 +1,13 @@
 ---
 name: keboola-change
-description: Make an agreed change to a Keboola project safely - a development branch, the edit (SQL transformation, config, flow), a run on the branch, verification against production and a merge request the user merges. Use for fixing, optimizing or extending transformations and pipelines.
+description: Make an agreed change to a Keboola project safely - a development branch, the edit (SQL transformation, config, flow), a run on the branch, verification against production, then a promotion to production the user approves in the app. Use for fixing, optimizing or extending transformations and pipelines.
 ---
 
 # Changing a Keboola project
 
-Production is never written. Every change happens on a development branch, every write waits for the user's
-approval, and the result reaches production only when the user merges your merge request in Keboola. The tools
-enforce this; the steps below make the change worth merging.
+Production is never edited directly. Every change happens on a development branch, every write waits for the user's
+approval, and the result reaches production only through `kbagent_promote`, which the user approves in the app after
+seeing production next to the branch. The tools enforce this; the steps below make the change worth promoting.
 
 ## 1. Understand before touching anything
 
@@ -15,7 +15,8 @@ enforce this; the steps below make the change worth merging.
   `/knowledge/data-model/<project-file>/` if they exist.
 - Fetch the current production code: `kbagent_read ["transformation", "show", "--config-id", K]` (ids renumber after
   edits; show again before every edit), or `["config", "detail", "--component-id", C, "--config-id", K]` for other
-  components.
+  components. Note the production `version` of every configuration you will change (from `config detail`): the
+  promotion in step 7 needs it and refuses if production moved on in the meantime.
 - Restate the change in one paragraph: what, where (config ids, block/code ids), why, expected effect on the data.
   If the brief does not match what you see, stop and report instead of guessing.
 
@@ -53,14 +54,20 @@ Runs cost Keboola credits: one run per meaningful version, not per tweak. On fai
   production (rows, columns, primary key).
 - The numbers from step 2 hold: say exactly which checks passed and which could not be run.
 
-## 7. Merge request
+## 7. Production
 
-`["merge-request", "create", "--branch", B, "--title", "<imperative summary>", "--description", "<markdown>"]` with:
-what changed and why, the before/after numbers, the job id on the branch, risks and what the user should look at.
-See `references/merge-request-workflow.md` in the kbagent skill. Never approve or merge it yourself.
+For every configuration you changed, call `kbagent_promote` with its component id, config id, your branch id, the
+production `version` from step 1 and a one-line summary for the configuration history. The user sees production
+next to the branch in the app and approves or rejects; the app copies the branch configuration itself. If it answers
+that production changed, read production again, redo the change on the branch if needed, and promote again. If it
+refuses because configuration rows changed, tell the user to merge that one in Keboola.
+
+Only when the user asks for a review in Keboola and the project has merge requests (`branches-merge-requests`), open
+one instead: `["merge-request", "create", "--branch", B, "--title", "...", "--description", "..."]` (see
+`references/merge-request-workflow.md`). Never approve or merge it yourself.
 
 ## Report
 
 Branch name and id, the change (a short diff of the SQL), the branch job id and status, the verification numbers,
-the merge request id and title, and how to discard the change (delete the branch in Keboola). If you stopped early,
-say where and why.
+and the promotion result (the new production version, or why it was refused or rejected). The branch can be deleted in
+Keboola afterwards. If you stopped early, say where and why.

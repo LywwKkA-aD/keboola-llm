@@ -52,4 +52,13 @@ describe('kbagent-sql tool id', () => {
     const result = await bundle?.tools[0]?.invoke({ title: 'Fix the shipping fan-out', plan: '1. Branch\n2. Edit' });
     expect(String(result)).toMatch(/approved/i);
   });
+
+  it('gives write-capable agents the promotion to production, always behind the user', () => {
+    const bundle = factories['kbagent-promote']?.(agent({ access: 'write' }));
+    expect(bundle?.tools.map((tool) => tool.name)).toEqual(['kbagent_promote']);
+    expect(bundle?.interruptOn).toEqual({ kbagent_promote: { allowedDecisions: ['approve', 'reject'] } });
+    // A read-only agent asking for it gets nothing.
+    expect(factories['kbagent-promote']?.(agent({ access: 'read' })).tools).toEqual([]);
+  });
 });
+

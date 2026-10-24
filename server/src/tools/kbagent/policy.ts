@@ -107,8 +107,8 @@ function scopeBranch(
 }
 
 /**
- * Without a pinned branch, writes must name a development branch: production changes only when the user merges a
- * merge request in Keboola. Creating a branch and workspace work never touch production data.
+ * Without a pinned branch, writes must name a development branch: production changes only through kbagent_promote,
+ * which the user approves. Creating a branch and workspace work never touch production data.
  */
 function checkProductionSafety(tokens: readonly string[], operation: OperationInfo, productionBranch: string | undefined) {
   if (BRANCH_AGNOSTIC_WRITES.has(operation.name)) return undefined;
@@ -123,7 +123,7 @@ function checkProductionSafety(tokens: readonly string[], operation: OperationIn
   }
   const production = branches.find((id) => id === '0' || id === productionBranch);
   if (production !== undefined) {
-    return `Branch ${production} is production. Writes run on a development branch only; the user merges the result through a merge request.`;
+    return `Branch ${production} is production. Writes run on a development branch only; production changes through a promotion the user approves.`;
   }
   return undefined;
 }

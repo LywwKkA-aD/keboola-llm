@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { initialRunState, reduceRun } from '../state/run-state.ts';
+import { stubApi } from '../test-utils/fake-api.ts';
 import { ApprovalCard } from './ApprovalCard.tsx';
 import { Composer } from './Composer.tsx';
 import { MessageBubble } from './MessageBubble.tsx';
@@ -75,6 +76,30 @@ describe('ApprovalCard', () => {
     expect(screen.queryByText('request_plan_approval')).toBeNull();
     expect(screen.getByText('Fix the shipping fan-out')).toBeInTheDocument();
     expect(screen.getByText('dev branch').tagName).toBe('STRONG');
+  });
+
+  it('shows a promotion to production as production next to the branch before the user decides', async () => {
+    const { callsTo } = stubApi({
+      'GET /api/promotions/preview': { productionVersion: 4, production: '-- Code: Orders\nSELECT 1;', branch: '-- Code: Orders\nSELECT 2;' },
+    });
+    const promotion = {
+      interruptId: 'p',
+      requests: [
+        {
+          tool: 'kbagent_promote',
+          agent: 'keboola-developer',
+          args: { component_id: 'keboola.google-bigquery-transformation', config_id: 'k1', branch_id: '99', production_version: 4, summary: 'Add the shipping fee once per order' },
+          decisions: ['approve', 'reject'],
+        },
+      ],
+    };
+    render(<ApprovalCard approval={promotion} onAnswer={() => {}} busy={false} />);
+    expect(screen.getByText('Перенос в прод')).toBeInTheDocument();
+    expect(screen.getByText('Add the shipping fee once per order')).toBeInTheDocument();
+    const diff = await screen.findByRole('list', { name: 'Сейчас в проде → будет' });
+    expect(within(diff).getByText('SELECT 1;').closest('li')).toHaveClass('diff__line--del');
+    expect(within(diff).getByText('SELECT 2;').closest('li')).toHaveClass('diff__line--add');
+    expect(callsTo('GET', '/api/promotions/preview')).toHaveLength(1);
   });
 
   it('falls back to raw JSON for other tools', () => {

@@ -8,6 +8,7 @@ import { registerMetaRoutes } from './routes/meta.ts';
 import { registerOnboardingRoutes } from './routes/onboarding.ts';
 import { registerPolicyRoutes } from './routes/policies.ts';
 import { registerRoutineRoutes } from './routes/routines.ts';
+import { registerPromotionRoutes } from './routes/promotions.ts';
 import { registerSetupRoutes } from './routes/setup.ts';
 import { registerStaticRoutes } from './routes/static.ts';
 import { registerThreadRoutes } from './routes/threads.ts';
@@ -42,6 +43,7 @@ export async function createServer(deps: ServerDeps): Promise<FastifyInstance> {
   registerWorkspaceRoutes(app, deps);
   registerOnboardingRoutes(app, deps);
   if (deps.setup) registerSetupRoutes(app, deps.setup);
+  if (deps.promotionPreview) registerPromotionRoutes(app, deps.promotionPreview);
   registerEventRoutes(app, deps);
   if (deps.versions) registerVersionRoutes(app, deps.versions);
   registerRoutineRoutes(app, deps);

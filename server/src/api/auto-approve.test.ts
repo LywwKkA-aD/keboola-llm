@@ -24,6 +24,7 @@ describe('createAutoApprover', () => {
   it('never approves other tools, other operations or malformed args', () => {
     expect(approve('allowed', { tool: 'kbagent_write', args: { args: ['workspace', 'query'] }, decisions: [] })).toBe(false);
     expect(approve('allowed', { tool: 'write_file', args: { file_path: '/agents/x.md' }, decisions: [] })).toBe(false);
+    expect(approve('allowed', { tool: 'kbagent_promote', args: { component_id: 'c', config_id: 'k', branch_id: '9' }, decisions: [] })).toBe(false);
     expect(approve('allowed', sql(['config', 'update', '--config-id', '1']))).toBe(false);
     expect(approve('allowed', sql(['workspace', 'delete', '--workspace-id', '7']))).toBe(false);
     expect(approve('allowed', sql('workspace query'))).toBe(false);

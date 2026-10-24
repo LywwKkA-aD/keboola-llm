@@ -68,7 +68,7 @@ const READ_DESCRIPTION = `Run a read-only kbagent (Keboola CLI) command and get 
 - ["job", "detail", "--job-id", "123", "--log-tail-lines", "200"]
 Use ["<command>", "--help"] to see a command's options. Writes are blocked here.`;
 
-const WRITE_DESCRIPTION = `Run a kbagent (Keboola CLI) command that changes the project; the user approves each call. Changes happen on a development branch only: create one with ["branch", "create", "--name", "..."] (its id is in the result) and pass "--branch", "<id>" to every write. Production cannot be written or merged here; the user merges your merge request in Keboola. Prefer --dry-run first when the command supports it. Destructive operations (deleting, terminating) are blocked: ask the user. Examples:
+const WRITE_DESCRIPTION = `Run a kbagent (Keboola CLI) command that changes the project; the user approves each call. Changes happen on a development branch only: create one with ["branch", "create", "--name", "..."] (its id is in the result) and pass "--branch", "<id>" to every write. Production cannot be written here: a verified change goes there through kbagent_promote, which the user approves. Prefer --dry-run first when the command supports it. Destructive operations (deleting, terminating) are blocked: ask the user. Examples:
 - ["branch", "create", "--name", "agent/fix-orders-fan-out"]
 - ["transformation", "edit", "--config-id", "123", "--change-description", "Fix shipping fan-out", "--op", "{\\"op\\": \\"str_replace\\", ...}", "--branch", "456", "--dry-run"]
 - ["job", "run", "--component-id", "keboola.snowflake-transformation", "--config-id", "123", "--branch", "456", "--wait", "--log-tail-lines", "50"]
@@ -96,7 +96,7 @@ function formatResult(result: RunResult): string {
 }
 
 type Invoke = (args: readonly string[], conversationId: string | undefined) => InvocationResult | Promise<InvocationResult>;
-type Run = (argv: readonly string[]) => Promise<RunResult>;
+export type Run = (argv: readonly string[]) => Promise<RunResult>;
 
 /** Policy for one tool: which access level, and optionally which operations only. */
 const invokeWith =
@@ -114,7 +114,7 @@ const invokeWith =
     });
   };
 
-function runnerFor(options: KbagentToolsOptions): Run {
+export function runnerFor(options: KbagentToolsOptions): Run {
   const env = buildChildEnv({
     parentEnv: options.env ?? process.env,
     ...(options.configDir === undefined ? {} : { configDir: options.configDir }),
@@ -131,10 +131,10 @@ function runnerFor(options: KbagentToolsOptions): Run {
     });
 }
 
-const projectArgs = (options: KbagentToolsOptions) => (options.project === undefined ? [] : ['--project', options.project]);
+export const projectArgs = (options: KbagentToolsOptions) => (options.project === undefined ? [] : ['--project', options.project]);
 
 /** Id of the default (production) branch from `branch list`, asked once; failures are retried on the next call. */
-function productionBranchOf(run: Run, options: KbagentToolsOptions): () => Promise<string | undefined> {
+export function productionBranchOf(run: Run, options: KbagentToolsOptions): () => Promise<string | undefined> {
   let known: string | undefined;
   return async () => {
     if (known !== undefined) return known;
@@ -184,7 +184,7 @@ function createTool(name: string, description: string, options: KbagentToolsOpti
 
 /**
  * kbagent_read always; kbagent_write only for write access (put it behind human approval). Unless the agent is pinned
- * to one branch, kbagent_write only runs on development branches: production changes through merge requests.
+ * to one branch, kbagent_write only runs on development branches: production changes through kbagent_promote.
  */
 export function createKbagentTools(options: KbagentToolsOptions) {
   const run = runnerFor(options);
