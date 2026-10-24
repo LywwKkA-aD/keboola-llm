@@ -1,0 +1,170 @@
+/* Version history of an agent or a skill: versions newest first, each opening a diff against the current file. */
+.versions__count {
+  font-size: var(--text-xs);
+}
+
+.versions__list {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.versions__list > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.versions__item {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  font: inherit;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  width: 100%;
+}
+
+.versions__item:hover {
+  background: var(--color-surface-2);
+}
+
+.versions__item--open {
+  background: var(--color-surface-2);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+.versions__when {
+  font-variant-numeric: tabular-nums;
+  min-width: 112px;
+}
+
+.versions__from,
+.versions__latest {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.versions__size {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  margin-left: auto;
+}
+
+.versions__detail {
+  background: var(--color-surface-2);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.versions__note {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.versions__restored {
+  color: var(--color-success);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-3);
+}
+
+.diff {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  max-height: 360px;
+  overflow: auto;
+}
+
+.diff__stats {
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+}
+
+.diff__added {
+  color: var(--color-success);
+}
+
+.diff__removed {
+  color: var(--color-danger);
+}
+
+.diff__lines {
+  font-size: var(--text-xs);
+  line-height: 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.diff__line {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  padding-right: var(--space-2);
+}
+
+.diff__line--add {
+  background: var(--color-success-soft);
+}
+
+.diff__line--del {
+  background: var(--color-danger-soft);
+}
+
+.diff__sign {
+  color: var(--color-text-faint);
+  text-align: center;
+  user-select: none;
+}
+
+.diff__line--add .diff__sign {
+  color: var(--color-success);
+}
+
+.diff__line--del .diff__sign {
+  color: var(--color-danger);
+}
+
+.diff__text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.diff__skip {
+  background: var(--color-surface-3);
+  color: var(--color-text-faint);
+  font-family: var(--font-sans);
+  padding: 0 var(--space-2) 0 18px;
+}
+
+/* In-app confirmation of a restore: the drawer stays usable, nothing modal. */
+.confirm {
+  background: var(--color-warning-soft);
+  border-left: 2px solid var(--color-warning);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.confirm p {
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.confirm__actions {
+  display: flex;
+  gap: var(--space-2);
+}

@@ -1,0 +1,124 @@
+/* Agents page extras: Agents/Skills tabs, why an agent is disabled, self-check, removed definitions. */
+.page__head--tabs {
+  padding-bottom: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+}
+
+.tabs__item {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 500;
+  margin-bottom: -1px;
+  padding: 0 0 var(--space-3);
+}
+
+.tabs__item:hover {
+  color: var(--color-text);
+}
+
+.tabs__item--on {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.tabs__count {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  margin-left: var(--space-1);
+}
+
+.agent-detail__disabled {
+  margin-bottom: var(--space-4);
+}
+
+.agent-detail__disabled p {
+  margin: var(--space-1) 0 0;
+}
+
+.table__hint--warning {
+  color: var(--color-warning);
+}
+
+.check-agent__hint,
+.skills__note {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-3);
+}
+
+.check-agent__status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.skills__empty {
+  margin-top: var(--space-4);
+}
+
+.removed {
+  margin-top: var(--space-6);
+}
+
+.removed__title {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  margin: 0;
+}
+
+.removed__hint {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin: var(--space-1) 0 var(--space-3);
+}
+
+.removed__list {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.removed__list > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.removed__item {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  width: 100%;
+}
+
+.removed__item:hover {
+  background: var(--color-surface-2);
+}
+
+.removed__when {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  margin-left: auto;
+}

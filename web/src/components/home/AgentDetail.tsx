@@ -3,10 +3,12 @@ import type { AgentInfo } from '../../api/types.ts';
 import { type AgentState, moodOf } from '../../aquarium/state.ts';
 import type { StringKey } from '../../i18n/strings.ts';
 import { groupOf } from '../../lib/agent-groups.ts';
+import { splitDisabled } from '../../lib/disabled-reason.ts';
 import { useLive } from '../../live/live-context.tsx';
 import { useSettings } from '../../state/settings-context.tsx';
 import { FeedList } from './FeedList.tsx';
 import { moodDot } from './mood.ts';
+import '../agents/agents.css';
 
 function Fact({ label, children }: { label: StringKey; children: ReactNode }) {
   const { t } = useSettings();
@@ -20,17 +22,19 @@ function Fact({ label, children }: { label: StringKey; children: ReactNode }) {
 
 const list = (items: readonly string[], none: string) => (items.length ? items.join(', ') : none);
 
-/** The right panel for a selected agent: what it is for, what it may do, what it is doing. */
-export function AgentDetail({ agent, current, now, onClose }: {
+/** The right panel for a selected agent: what it is for, what it may do, what it is doing. Children go below the role. */
+export function AgentDetail({ agent, current, now, onClose, children }: {
   agent: AgentInfo;
   current: AgentState | undefined;
   now: number;
   onClose: () => void;
+  children?: ReactNode;
 }) {
   const { t } = useSettings();
   const { live } = useLive();
   const mood = moodOf(current, now);
   const recent = live.feed.filter((item) => item.agent === agent.name || item.target === agent.name).slice(0, 15);
+  const { role, reason } = splitDisabled(agent.description);
 
   return (
     <div className="agent-detail">
@@ -49,8 +53,14 @@ export function AgentDetail({ agent, current, now, onClose }: {
         </div>
       </div>
       <div className="panel-section">
+        {!agent.enabled && (
+          <div className="notice agent-detail__disabled">
+            <span className="label">{t('agents.whyDisabled')}</span>
+            <p>{reason ?? t('agents.disabledNoReason')}</p>
+          </div>
+        )}
         <span className="label">{t('home.role')}</span>
-        <p className="agent-detail__description">{agent.description}</p>
+        <p className="agent-detail__description">{agent.enabled ? agent.description : role}</p>
         <dl className="facts">
           <Fact label="agents.access">{agent.access ? t(`access.${agent.access}` as StringKey) : t('agents.none')}</Fact>
           <Fact label="agents.skills">{list(agent.skills, t('agents.none'))}</Fact>
@@ -62,6 +72,7 @@ export function AgentDetail({ agent, current, now, onClose }: {
           )}
         </dl>
       </div>
+      {children}
       <div className="panel-section">
         <div className="panel-section__head">
           <span className="label">{t('home.recent')}</span>

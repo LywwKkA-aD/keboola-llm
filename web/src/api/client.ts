@@ -11,6 +11,7 @@ import type {
   Thread,
   ThreadPolicy,
 } from './types.ts';
+import type { DefinitionKind, TrackedDefinition, VersionDetail, VersionSummary } from './types.ts';
 import type { PendingApproval } from '../state/run-state.ts';
 
 export class ApiError extends Error {
@@ -63,3 +64,14 @@ export const api = {
 
 export const eventsUrl = (threadId?: string) =>
   threadId ? `/api/events?threadId=${encodeURIComponent(threadId)}` : '/api/events';
+
+const versionsPath = (kind: DefinitionKind, name: string) => `/api/definitions/${kind}/${encodeURIComponent(name)}/versions`;
+
+/** Version history and rollback of agents and custom skills. */
+export const versionsApi = {
+  tracked: (kind: DefinitionKind) => request<TrackedDefinition[]>(`/api/definitions/${kind}`),
+  list: (kind: DefinitionKind, name: string) => request<VersionSummary[]>(versionsPath(kind, name)),
+  get: (kind: DefinitionKind, name: string, id: number) => request<VersionDetail>(`${versionsPath(kind, name)}/${id}`),
+  restore: (kind: DefinitionKind, name: string, id: number) =>
+    request<{ changed: boolean; version?: VersionSummary }>(`${versionsPath(kind, name)}/${id}/restore`, 'POST'),
+};

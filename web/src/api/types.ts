@@ -160,3 +160,29 @@ export interface SystemStatus {
   readonly model: Check;
   readonly kbagent: Check;
 }
+
+/** Version history of agents and custom skills (server/src/versions/types.ts). */
+export type DefinitionKind = 'agents' | 'skills';
+
+export type ChangeType = 'baseline' | 'created' | 'changed' | 'deleted' | 'restored';
+
+export interface VersionSummary {
+  readonly id: number;
+  readonly at: string;
+  readonly change: ChangeType;
+  readonly size: number;
+  readonly restoredFrom?: number;
+}
+
+export interface VersionDetail extends VersionSummary {
+  /** Null for a deletion. */
+  readonly content: string | null;
+  /** The file on disk now; null when it is deleted. */
+  readonly current: string | null;
+}
+
+export interface TrackedDefinition {
+  readonly name: string;
+  readonly exists: boolean;
+  readonly last: VersionSummary;
+}
