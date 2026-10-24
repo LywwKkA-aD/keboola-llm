@@ -41,4 +41,5 @@ export const baseRoutes = {
   'GET /api/threads/t1/policy': { allowSql: false },
   'GET /api/threads/t2/messages': [],
   'GET /api/threads/t2/policy': { allowSql: false },
+  'GET /api/routines': { routines: [], loadErrors: [] },
 };

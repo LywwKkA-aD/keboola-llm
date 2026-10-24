@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.ts';
 import type { KeboolaProject, Language, Quality, ReduceMotion, Settings, Theme } from '../api/types.ts';
 import { EnvSelect, Segmented, SelectField, SettingsSection } from '../components/settings/fields.tsx';
+import { RoutinesSection } from '../components/settings/RoutinesSection.tsx';
 import { SystemChecks } from '../components/settings/SystemChecks.tsx';
 import { LANGUAGE_NAMES } from '../i18n/strings.ts';
 import { useSettings } from '../state/settings-context.tsx';
@@ -115,6 +116,8 @@ export function SettingsPage() {
           <span>{t('settings.allowSql')}</span>
         </label>
       </SettingsSection>
+
+      <RoutinesSection />
 
       <SettingsSection title={t('settings.memory')} hint={t('settings.memoryHint')}>
         {memory ? <pre className="memory">{memory}</pre> : <p className="empty">{memory === undefined ? '…' : t('settings.memoryEmpty')}</p>}

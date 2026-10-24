@@ -1,0 +1,71 @@
+/* Scheduled routines: the list in Settings and the latest runs on Home. */
+.routines {
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.routine {
+  align-items: start;
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: var(--space-3) 0;
+}
+
+.routine__head {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.routine__title {
+  font-weight: 600;
+}
+
+.routine__description {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.routine__meta {
+  color: var(--color-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-xs);
+  gap: var(--space-1) var(--space-4);
+}
+
+.routine__meta .mono {
+  color: var(--color-text);
+}
+
+.routine__actions {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.routine-runs__when {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .routine {
+    grid-template-columns: 1fr;
+  }
+
+  .routine__actions {
+    align-items: flex-start;
+    flex-direction: row;
+  }
+}

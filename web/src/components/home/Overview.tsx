@@ -9,6 +9,7 @@ import { RequestDetails } from '../approvals/RequestDetails.tsx';
 import { useAnswer } from '../approvals/useAnswer.ts';
 import { FeedList } from './FeedList.tsx';
 import { OnboardingCard } from './OnboardingCard.tsx';
+import { RoutineRuns } from './RoutineRuns.tsx';
 import { shortName } from './mood.ts';
 
 function Stat({ value, label, tone = '' }: { value: string | number; label: string; tone?: string }) {
@@ -101,6 +102,8 @@ export function Overview({ enabledAgents }: { enabledAgents: number }) {
           ))
         )}
       </section>
+
+      <RoutineRuns />
 
       <section className="panel-section">
         <div className="panel-section__head">
