@@ -95,6 +95,8 @@ data/                    local state, not in git: chats, checkpoints, shared mem
   survive a server restart (`data/pending-approvals.json`, checked against the checkpoints on start).
   Listing or inspecting workspaces is a read and never asks; other SQL steps ask unless the chat allows SQL.
 - New or edited agents and skills (e.g. from agent-builder) join the team without a restart.
+  Every change to `agents/*/AGENT.md` and `skills/*/SKILL.md`, whoever made it, is kept in `data/history`
+  (last 50 versions per file); the Agents page shows the diff and restores an older version.
 - The API listens on loopback only and rejects requests from other sites (Host/Origin check).
 
 ## Third-party content
