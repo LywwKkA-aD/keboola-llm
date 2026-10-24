@@ -4,6 +4,7 @@ import type { OnboardingStatus } from '../system/onboarding.ts';
 import type { SystemStatus } from '../system/status.ts';
 import type { LoadError } from '../registry/types.ts';
 import type { DefinitionVersions } from '../versions/tracker.ts';
+import type { RoutinesApi } from '../routines/types.ts';
 import type { EventBus } from './bus.ts';
 import type { Allowed } from './guard.ts';
 import type { ChatEntry } from './history.ts';
@@ -54,4 +55,6 @@ export interface ServerDeps {
   readonly version: string;
   /** Version history and rollback of agents and custom skills; without it the routes are not registered. */
   readonly versions?: DefinitionVersions;
+  /** Scheduled routines (routines/*.md); without it the /api/routines routes are not registered. */
+  readonly routines?: RoutinesApi;
 }

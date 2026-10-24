@@ -28,3 +28,5 @@ export const eventsQuery = z.object({
 export const definitionParams = z.object({ kind: z.enum(DEFINITION_KINDS), name: z.string().regex(NAME_RE) });
 
 export const versionParams = definitionParams.extend({ id: z.coerce.number().int().positive() });
+/** PUT /api/routines/:name: the user's switch for one routine. */
+export const routineBody = z.object({ enabled: z.boolean() }).strict();

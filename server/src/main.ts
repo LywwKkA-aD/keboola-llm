@@ -13,6 +13,7 @@ import { describeTeam } from './api/team-info.ts';
 import { createThreadStore } from './api/threads.ts';
 import { bootstrap } from './bootstrap.ts';
 import { saveSettings } from './config/settings.ts';
+import { createRoutines } from './routines/service.ts';
 import { watchFolders } from './runtime/watch.ts';
 import { kbagentVersion, listKeboolaProjects } from './system/keboola.ts';
 import { listModels } from './system/models.ts';
@@ -88,6 +89,9 @@ const stopWatching = watchFolders(
   { debounceMs: 400 },
 );
 
+// Scheduled routines (routines/*.md) open chats on their own; they start once the server listens.
+const routines = createRoutines({ rootDir: app.env.rootDir, dataDir: app.env.dataDir, threads, runs });
+
 const server = await createServer({
   bus,
   runs,
@@ -121,10 +125,12 @@ const server = await createServer({
     onboardingStatus({ memoriesDir: join(app.env.dataDir, 'memories'), project: team.effective.keboolaProject, projects: () => listKeboolaProjects() }),
   version,
   versions,
+  routines: routines.api,
 });
 
 const shutdown = async () => {
   stopWatching();
+  routines.stop();
   await server.close();
   process.exit(0);
 };
@@ -134,3 +140,4 @@ process.on('SIGTERM', shutdown);
 await server.listen({ host: app.env.host, port: app.env.port });
 console.log(`Agent team: ${team.spec.lead.name} + ${team.spec.subagents.length} subagents`);
 console.log(`Listening on http://${app.env.host}:${app.env.port}`);
+routines.start();
