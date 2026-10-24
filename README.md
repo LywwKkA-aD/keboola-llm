@@ -86,7 +86,10 @@ data/                    local state, not in git: chats, checkpoints, shared mem
 - Agents reach Keboola only through `kbagent`. Every call is checked against kbagent's own permission
   catalog: read-only agents run with `--deny-writes`; destructive and admin operations are always blocked;
   credential, file-path and project-switching flags are rejected.
-- Writes (Keboola changes, agent/skill files) wait for the user's approval in the UI.
+- Writes (Keboola changes, agent/skill files) wait for the user's approval in the UI. Pending approvals
+  survive a server restart (`data/pending-approvals.json`, checked against the checkpoints on start).
+  Listing or inspecting workspaces is a read and never asks; other SQL steps ask unless the chat allows SQL.
+- New or edited agents and skills (e.g. from agent-builder) join the team without a restart.
 - The API listens on loopback only and rejects requests from other sites (Host/Origin check).
 
 ## Third-party content
