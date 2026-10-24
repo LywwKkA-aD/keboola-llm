@@ -5,7 +5,7 @@ import type { OnboardingStatus } from '../../api/types.ts';
 import { useLive } from '../../live/live-context.tsx';
 import { useSettings } from '../../state/settings-context.tsx';
 
-/** First run: offer project-scout's survey of a Keboola project the team has not profiled yet. */
+/** First run: offer "init workspace" (map + documentation of production) for a project the team does not know yet. */
 export function OnboardingCard() {
   const { t } = useSettings();
   const { live } = useLive();
@@ -20,7 +20,8 @@ export function OnboardingCard() {
   // Recheck whenever a run starts or ends: the survey's end is when the profile appears.
   useEffect(load, [load, runningKey]);
 
-  if (!status?.project || status.profiled) return null;
+  // The map (profile) lands first; the card stays while the rest of the init still runs.
+  if (!status?.project || (status.profiled && !status.running)) return null;
   const { project } = status;
 
   const start = () => {

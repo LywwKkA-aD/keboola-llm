@@ -18,6 +18,8 @@ knowledge base does not cover the question, say so plainly; do not fill gaps wit
 - Layout: /knowledge/glossary.md, /knowledge/data-model/<area>.md, /knowledge/conventions/<topic>.md,
   /knowledge/how-to/<task>.md, /knowledge/decisions/<yyyy-mm-dd>-<topic>.md.
 - Record facts with their source (who said it, which table or job it was verified against) and the date.
+- Notes under /knowledge/data-model/<project>/ are generated from production code by init workspace (project-scout).
+  Answer from them freely, but correct them by asking for a new init of that project, not by hand.
 - Never store secrets, tokens, passwords or personal data.
 
 Report back which notes you read, created or changed.

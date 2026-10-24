@@ -36,24 +36,29 @@ describe('Home page', () => {
         return { threadId: 't9' };
       },
     });
-    const card = await screen.findByRole('region', { name: 'Знакомство с проектом' });
+    const card = await screen.findByRole('region', { name: 'Инициализация проекта' });
     expect(card).toHaveTextContent('sandbox');
 
-    await userEvent.click(within(card).getByRole('button', { name: 'Изучить проект' }));
+    await userEvent.click(within(card).getByRole('button', { name: 'Запустить инициализацию' }));
     expect(api.callsTo('POST', '/api/onboarding/start')[0]?.body).toEqual({ text: expect.stringContaining('sandbox') });
     expect(await within(card).findByRole('link', { name: 'Открыть чат' })).toHaveAttribute('href', '/chat/t9');
-    expect(within(card).queryByRole('button', { name: 'Изучить проект' })).toBeNull();
+    expect(within(card).queryByRole('button', { name: 'Запустить инициализацию' })).toBeNull();
 
-    status = { project: 'sandbox', profiled: true, running: false, updatedAt: '2026-10-24T10:00:00Z' };
+    // The profile is written early; the card stays until the whole init is over.
+    status = { project: 'sandbox', profiled: true, running: true, threadId: 't9', updatedAt: '2026-10-24T10:00:00Z' };
     act(() => FakeEventSource.global().emit({ type: 'run.started', runId: 'r' }, 't9'));
+    await waitFor(() => expect(api.callsTo('GET', '/api/onboarding').length).toBeGreaterThanOrEqual(2));
+    await act(async () => {});
+    expect(within(card).getByRole('link', { name: 'Открыть чат' })).toBeInTheDocument();
+    status = { project: 'sandbox', profiled: true, running: false, updatedAt: '2026-10-24T10:00:00Z' };
     act(() => FakeEventSource.global().emit({ type: 'run.finished', runId: 'r' }, 't9'));
-    await waitFor(() => expect(screen.queryByRole('region', { name: 'Знакомство с проектом' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Инициализация проекта' })).toBeNull());
   });
 
   it('offers no survey without a Keboola project or once the project is profiled', async () => {
     await openHome({ 'GET /api/onboarding': { project: '', profiled: false, running: false } });
     await act(async () => {});
-    expect(screen.queryByRole('region', { name: 'Знакомство с проектом' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Инициализация проекта' })).toBeNull();
   });
 
   it('shows the team by group next to the aquarium and an overview', async () => {
