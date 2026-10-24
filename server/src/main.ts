@@ -5,6 +5,8 @@ import { createAutoApprover } from './api/auto-approve.ts';
 import { createEventBus, SYSTEM_THREAD } from './api/bus.ts';
 import { allowedFor } from './api/guard.ts';
 import { toChatHistory } from './api/history.ts';
+import { createPendingStore } from './api/pending-store.ts';
+import { dropStaleApprovals, type InterruptReader, pendingInterruptIds } from './api/restore.ts';
 import { createRunManager } from './api/runs.ts';
 import { createServer } from './api/server.ts';
 import { describeTeam } from './api/team-info.ts';
@@ -36,7 +38,16 @@ const runs = createRunManager({
   getGraph: () => team.graph,
   leadName: () => team.spec.lead.name,
   autoApprove: createAutoApprover({ isSqlAllowed: (threadId) => threads.policy(threadId)?.allowSql === true }),
+  store: createPendingStore(join(app.env.dataDir, 'pending-approvals.json')),
 });
+// Approvals pending before a restart come back from disk; keep only those the checkpointer still waits on.
+const dropped = await dropStaleApprovals({
+  runs,
+  exists: (threadId) => threads.get(threadId) !== undefined,
+  interruptIds: (threadId) => pendingInterruptIds(team.graph as unknown as InterruptReader, threadId),
+});
+dropped.forEach((threadId) => console.warn(`[approvals] dropped stale pending approvals of ${threadId}`));
+if (runs.waitingThreads().length > 0) console.log(`Restored pending approvals in ${runs.waitingThreads().length} chat(s)`);
 bus.subscribe(({ threadId, event }) => {
   if (event.type === 'run.finished' || event.type === 'run.waiting') threads.touch(threadId);
   if (event.type === 'run.failed') console.error(`[run] ${threadId}: ${event.error}`);

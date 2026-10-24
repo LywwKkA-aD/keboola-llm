@@ -10,11 +10,13 @@ import { join } from 'node:path';
 
 const HOST = { host: '127.0.0.1:4800' };
 
-function fakeRuns(): RunManager & { started: Array<[string, unknown]> } {
+function fakeRuns(): RunManager & { started: Array<[string, unknown]>; discarded: string[] } {
   const started: Array<[string, unknown]> = [];
+  const discarded: string[] = [];
   const busy = new Set<string>();
   return {
     started,
+    discarded,
     start(threadId, input) {
       if (busy.has(threadId)) throw runError('RUN_CONFLICT', 'Thread is busy with another run');
       started.push([threadId, input]);
@@ -27,6 +29,10 @@ function fakeRuns(): RunManager & { started: Array<[string, unknown]> } {
     },
     pending: () => [],
     active: () => [],
+    waitingThreads: () => [],
+    discard: (threadId) => {
+      discarded.push(threadId);
+    },
     isBusy: (threadId) => busy.has(threadId),
     cancel: (threadId) => {
       busy.add(threadId);
@@ -116,7 +122,7 @@ describe('createServer', () => {
   });
 
   it('returns history, renames and deletes threads', async () => {
-    const { app } = await setup();
+    const { app, runs } = await setup();
     close = () => app.close();
     const { thread } = (await app.inject({ method: 'POST', url: '/api/threads', headers: HOST, payload: { text: 'a' } })).json();
 
@@ -125,6 +131,8 @@ describe('createServer', () => {
     expect((await app.inject({ url: '/api/threads', headers: HOST })).json()[0].title).toBe('Renamed');
     expect((await app.inject({ method: 'DELETE', url: `/api/threads/${thread.id}`, headers: HOST })).statusCode).toBe(204);
     expect((await app.inject({ url: '/api/threads', headers: HOST })).json()).toEqual([]);
+    // Approvals the deleted chat was waiting for must not outlive it (they are kept on disk).
+    expect(runs.discarded).toEqual([thread.id]);
   });
 
   it('forwards approval answers and validates them', async () => {

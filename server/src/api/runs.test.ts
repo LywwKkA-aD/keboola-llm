@@ -3,7 +3,7 @@ import { Command } from '@langchain/langgraph';
 import { describe, expect, it } from 'vitest';
 import type { ApprovalRequest } from '../runtime/events.ts';
 import { createEventBus, type Envelope } from './bus.ts';
-import { createRunManager, MAX_AUTO_RESUMES, type StreamingGraph } from './runs.ts';
+import { createRunManager, MAX_AUTO_RESUMES, type PendingStore, type StreamingGraph, type Waiting } from './runs.ts';
 
 const finalMessage = [[], 'updates', { model_request: { messages: [new AIMessage({ content: 'Hi!', name: 'lead' })] } }];
 const interrupt = [
@@ -31,12 +31,32 @@ function fakeGraph(script: (input: unknown) => unknown[] | Error) {
   return { graph, inputs };
 }
 
-function setup(script: (input: unknown) => unknown[] | Error, autoApprove?: (threadId: string, request: ApprovalRequest) => boolean) {
+/** A PendingStore that keeps what was saved in memory, like the file one keeps it on disk. */
+function memoryStore(initial: ReadonlyMap<string, Waiting> = new Map()) {
+  const saved: ReadonlyMap<string, Waiting>[] = [];
+  const store: PendingStore = {
+    load: () => initial,
+    save: (waiting) => saved.push(new Map(waiting)),
+  };
+  return { store, saved, last: () => saved.at(-1) ?? initial };
+}
+
+function setup(
+  script: (input: unknown) => unknown[] | Error,
+  autoApprove?: (threadId: string, request: ApprovalRequest) => boolean,
+  store?: PendingStore,
+) {
   const bus = createEventBus({ historyPerThread: 100 });
   const events: Envelope[] = [];
   bus.subscribe((envelope) => events.push(envelope));
   const { graph, inputs } = fakeGraph(script);
-  const runs = createRunManager({ bus, getGraph: () => graph, leadName: () => 'lead', ...(autoApprove ? { autoApprove } : {}) });
+  const runs = createRunManager({
+    bus,
+    getGraph: () => graph,
+    leadName: () => 'lead',
+    ...(autoApprove ? { autoApprove } : {}),
+    ...(store ? { store } : {}),
+  });
   const types = () => events.map((envelope) => envelope.event.type);
   return { runs, events, inputs, types };
 }
@@ -119,6 +139,47 @@ describe('createRunManager', () => {
     await done;
     expect(runs.isBusy('t1')).toBe(false);
     expect(runs.cancel('t1')).toBe(false);
+  });
+});
+
+describe('createRunManager with a pending store', () => {
+  const paused: Waiting = {
+    human: [{ type: 'approval.required', interruptId: 'w1', requests: [{ tool: 'write_file', agent: 'agent-builder', args: {}, decisions: ['approve', 'reject'] }] }],
+    auto: [{ interruptId: 's1', decisions: [{ type: 'approve' }] }],
+  };
+
+  it('saves a paused run and clears it once answered', async () => {
+    const { store, last } = memoryStore();
+    const { runs } = setup((input) => (input instanceof Command ? [finalMessage] : [interrupt]), undefined, store);
+    await runs.start('t1', {}).done;
+    expect([...last().keys()]).toEqual(['t1']);
+    expect(last().get('t1')?.human.map((approval) => approval.interruptId)).toEqual(['int-1']);
+
+    await runs.answer('t1', [{ interruptId: 'int-1', decisions: [{ type: 'approve' }] }]).done;
+    expect(last().size).toBe(0);
+  });
+
+  it('restores approvals that were pending before a restart and resumes them with the auto answers', async () => {
+    const { store, last } = memoryStore(new Map([['t1', paused]]));
+    const { runs, inputs, types } = setup(() => [finalMessage], undefined, store);
+
+    expect(runs.waitingThreads()).toEqual(['t1']);
+    expect(runs.pending('t1')).toEqual(paused.human);
+    expect(runs.isBusy('t1')).toBe(true);
+
+    await runs.answer('t1', [{ interruptId: 'w1', decisions: [{ type: 'approve' }] }]).done;
+    expect((inputs[0] as Command).resume).toEqual({ s1: { decisions: [{ type: 'approve' }] }, w1: { decisions: [{ type: 'approve' }] } });
+    expect(types()).toEqual(['run.started', 'message', 'run.finished']);
+    expect(last().size).toBe(0);
+  });
+
+  it('can discard a paused run, e.g. when its chat is deleted', () => {
+    const { store, last } = memoryStore(new Map([['t1', paused]]));
+    const { runs } = setup(() => [finalMessage], undefined, store);
+    runs.discard('t1');
+    expect(runs.pending('t1')).toEqual([]);
+    expect(runs.isBusy('t1')).toBe(false);
+    expect(last().size).toBe(0);
   });
 });
 

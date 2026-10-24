@@ -61,6 +61,7 @@ export function registerThreadRoutes(app: FastifyInstance, { runs, threads, hist
   app.delete<{ Params: { id: string } }>('/api/threads/:id', async (request, reply) => {
     if (!findThread(request.params.id, reply)) return reply;
     if (runs.isBusy(request.params.id)) runs.cancel(request.params.id);
+    runs.discard(request.params.id);
     await deleteThread(request.params.id);
     threads.remove(request.params.id);
     return reply.code(204).send();

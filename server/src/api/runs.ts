@@ -12,10 +12,17 @@ export type AutoApprove = (threadId: string, request: ApprovalRequest) => boolea
 /** Upper bound of automatic resumes in one run, so a looping agent cannot spin forever unattended. */
 export const MAX_AUTO_RESUMES = 25;
 
-interface Waiting {
+/** A run paused on interrupts, until the user answers. */
+export interface Waiting {
   readonly human: readonly PendingApproval[];
   // Auto-approved interrupts from the same pause; they are resumed together with the human answers.
   readonly auto: readonly InterruptAnswer[];
+}
+
+/** Keeps paused runs across server restarts; the graph state itself is in the checkpointer. */
+export interface PendingStore {
+  load(): ReadonlyMap<string, Waiting>;
+  save(waiting: ReadonlyMap<string, Waiting>): void;
 }
 
 const approveAll = (approval: PendingApproval): InterruptAnswer => ({
@@ -41,6 +48,10 @@ export interface RunManager {
   cancel(threadId: string): boolean;
   /** Threads with a run executing now (not counting ones paused for approval). */
   active(): readonly string[];
+  /** Threads paused for approval, including ones restored after a restart. */
+  waitingThreads(): readonly string[];
+  /** Forget a paused run without resuming it (its chat was deleted or its interrupts are gone). */
+  discard(threadId: string): void;
 }
 
 const RECURSION_LIMIT = 200;
@@ -56,14 +67,22 @@ export const runError = (code: RunErrorCode, message: string): Error & { code: R
  * With autoApprove, interrupts whose every request it accepts are answered without the user
  * (announced as approval.auto) and the run continues under the same run id.
  */
-export function createRunManager({ bus, getGraph, leadName, autoApprove }: {
+export function createRunManager({ bus, getGraph, leadName, autoApprove, store }: {
   bus: EventBus;
   getGraph: () => StreamingGraph;
   leadName: () => string;
   autoApprove?: AutoApprove;
+  store?: PendingStore;
 }): RunManager {
   const running = new Map<string, AbortController>();
-  const waiting = new Map<string, Waiting>();
+  const waiting = new Map<string, Waiting>(store?.load());
+  const pause = (threadId: string, paused: Waiting) => {
+    waiting.set(threadId, paused);
+    store?.save(waiting);
+  };
+  const unpause = (threadId: string) => {
+    if (waiting.delete(threadId)) store?.save(waiting);
+  };
 
   const isAutomatic = (threadId: string, approval: PendingApproval) =>
     autoApprove !== undefined &&
@@ -108,7 +127,7 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove }: {
       for (let resumes = 0; ; resumes += 1) {
         const paused = await streamSegment(threadId, input, controller, mapEvents);
         if (paused.human.length > 0) {
-          waiting.set(threadId, paused);
+          pause(threadId, paused);
           bus.publish(threadId, { type: 'run.waiting', runId });
           return;
         }
@@ -155,12 +174,14 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove }: {
           throw runError('RUN_INVALID', `Interrupt ${approval.interruptId} needs ${approval.requests.length} decision(s)`);
         }
       });
-      waiting.delete(threadId);
+      unpause(threadId);
       return launch(threadId, new Command({ resume: toResumeValue([...paused.auto, ...answers]) }));
     },
     pending: (threadId) => waiting.get(threadId)?.human ?? [],
     isBusy: (threadId) => running.has(threadId) || waiting.has(threadId),
     active: () => [...running.keys()],
+    waitingThreads: () => [...waiting.keys()],
+    discard: unpause,
     cancel(threadId) {
       const controller = running.get(threadId);
       controller?.abort();
