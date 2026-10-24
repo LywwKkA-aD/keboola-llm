@@ -9,10 +9,10 @@ test('the lead delegates to the knowledge keeper and the steps show it', async (
   const delegation = steps.filter({ hasText: 'Поручение' });
   await expect(delegation).toContainText('lead');
   await expect(delegation).toContainText('→ knowledge-keeper');
-  await expect(delegation).toContainText('готово');
+  await expect(delegation).toContainText('Готово');
 
   const listing = steps.filter({ hasText: 'knowledge-keeper ls' });
-  await expect(listing).toContainText('готово');
+  await expect(listing).toContainText('Готово');
   await listing.getByRole('button').click();
   await expect(listing).toContainText('/knowledge');
 });
