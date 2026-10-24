@@ -104,10 +104,10 @@ describe('StepRows', () => {
     expect(rows[0]).toHaveTextContent('lead → sql-reviewer');
     expect(rows[1]).toHaveTextContent('Чтение');
     expect(rows[1]).toHaveTextContent('List configs');
-    expect(rows[1]).toHaveTextContent('готово');
+    expect(rows[1]).toHaveTextContent('Готово');
     expect(rows[1]).toHaveTextContent('240 ms');
     expect(rows[2]).toHaveTextContent('SQL');
-    expect(rows[2]).toHaveTextContent('идёт');
+    expect(rows[2]).toHaveTextContent('Идёт');
   });
 
   it('expands a step into its arguments and result', async () => {

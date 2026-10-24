@@ -144,9 +144,7 @@
 
 .conversation__status {
   color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 0.06em;
+  font-size: var(--text-sm);
 }
 
 .conversation__status--working::before {
@@ -308,11 +306,8 @@
 .step__status,
 .step__duration {
   color: var(--color-text-faint);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.06em;
+  font-size: var(--text-xs);
   text-align: right;
-  text-transform: uppercase;
 }
 
 .step__status--running {
@@ -350,7 +345,7 @@
 .composer__input {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--color-text);
   flex: 1;
   font: inherit;

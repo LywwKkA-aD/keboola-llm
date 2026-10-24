@@ -83,8 +83,7 @@
 
 .team-row__hint {
   color: var(--color-text-faint);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
