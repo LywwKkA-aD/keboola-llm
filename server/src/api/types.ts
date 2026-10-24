@@ -1,5 +1,6 @@
 import type { Settings } from '../config/settings.ts';
 import type { KeboolaProject } from '../system/keboola.ts';
+import type { OnboardingStatus } from '../system/onboarding.ts';
 import type { SystemStatus } from '../system/status.ts';
 import type { LoadError } from '../registry/types.ts';
 import type { EventBus } from './bus.ts';
@@ -47,5 +48,7 @@ export interface ServerDeps {
   readonly system: () => Promise<SystemStatus>;
   /** Model and Keboola project in use after settings overrides. */
   readonly effective: () => { readonly model: string; readonly keboolaProject: string };
+  /** Whether project-scout has profiled the project in use (drives the first-run card on Home). */
+  readonly onboarding: () => Promise<OnboardingStatus>;
   readonly version: string;
 }

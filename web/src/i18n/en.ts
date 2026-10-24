@@ -43,6 +43,12 @@ export const en = {
   'home.now': 'Now',
   'home.recent': 'Recent activity of this agent',
   'home.hint': 'Click an octopus or a name to see what it does. Drag to look around.',
+  'onboarding.title': 'Get to know the project',
+  'onboarding.text': 'The team has not surveyed {project} yet. project-scout walks through it read-only (data layers, transformations, flows, recent jobs) and writes a profile every agent reads first. Takes a few minutes and no Keboola credits.',
+  'onboarding.start': 'Survey the project',
+  'onboarding.running': 'project-scout is surveying the project.',
+  'onboarding.open': 'Open the chat',
+  'onboarding.prompt': 'Get to know the Keboola project "{project}": have project-scout survey it and write its profile, then tell me briefly what is in it.',
 
   'chat.label': 'Chat',
   'chat.new': 'New chat',

@@ -8,6 +8,7 @@ import { useSettings } from '../../state/settings-context.tsx';
 import { RequestDetails } from '../approvals/RequestDetails.tsx';
 import { useAnswer } from '../approvals/useAnswer.ts';
 import { FeedList } from './FeedList.tsx';
+import { OnboardingCard } from './OnboardingCard.tsx';
 import { shortName } from './mood.ts';
 
 function Stat({ value, label, tone = '' }: { value: string | number; label: string; tone?: string }) {
@@ -35,6 +36,7 @@ export function Overview({ enabledAgents }: { enabledAgents: number }) {
 
   return (
     <div className="overview">
+      <OnboardingCard />
       <div className="stats">
         <Stat value={live.running.length} label={t('top.runs')} tone={live.running.length ? 'blue' : ''} />
         <Stat value={approvals.length} label={t('top.waiting')} tone={approvals.length ? 'amber' : ''} />

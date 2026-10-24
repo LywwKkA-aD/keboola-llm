@@ -31,6 +31,35 @@ afterEach(() => {
 });
 
 describe('Home page', () => {
+  it('offers to survey a project the team does not know yet, once, and hides the offer when it is done', async () => {
+    let status: Record<string, unknown> = { project: 'sandbox', profiled: false, running: false };
+    const api = await openHome({
+      'GET /api/onboarding': () => status,
+      'POST /api/onboarding/start': () => {
+        status = { ...status, threadId: 't9', running: true };
+        return { threadId: 't9' };
+      },
+    });
+    const card = await screen.findByRole('region', { name: 'Знакомство с проектом' });
+    expect(card).toHaveTextContent('sandbox');
+
+    await userEvent.click(within(card).getByRole('button', { name: 'Изучить проект' }));
+    expect(api.callsTo('POST', '/api/onboarding/start')[0]?.body).toEqual({ text: expect.stringContaining('sandbox') });
+    expect(await within(card).findByRole('link', { name: 'Открыть чат' })).toHaveAttribute('href', '/chat/t9');
+    expect(within(card).queryByRole('button', { name: 'Изучить проект' })).toBeNull();
+
+    status = { project: 'sandbox', profiled: true, running: false, updatedAt: '2026-10-24T10:00:00Z' };
+    act(() => FakeEventSource.global().emit({ type: 'run.started', runId: 'r' }, 't9'));
+    act(() => FakeEventSource.global().emit({ type: 'run.finished', runId: 'r' }, 't9'));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Знакомство с проектом' })).toBeNull());
+  });
+
+  it('offers no survey without a Keboola project or once the project is profiled', async () => {
+    await openHome({ 'GET /api/onboarding': { project: '', profiled: false, running: false } });
+    await act(async () => {});
+    expect(screen.queryByRole('region', { name: 'Знакомство с проектом' })).toBeNull();
+  });
+
   it('shows the team by group next to the aquarium and an overview', async () => {
     await openHome();
     expect(within(team()).getByText('Лид')).toBeInTheDocument();

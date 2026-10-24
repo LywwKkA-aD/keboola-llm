@@ -123,6 +123,15 @@ export interface PendingApprovalEntry {
   readonly requests: readonly ApprovalRequest[];
 }
 
+/** Whether project-scout has profiled the Keboola project in use, and its survey chat if one was started. */
+export interface OnboardingStatus {
+  readonly project: string;
+  readonly profiled: boolean;
+  readonly updatedAt?: string;
+  readonly threadId?: string;
+  readonly running: boolean;
+}
+
 export interface AppStatus {
   readonly model: string;
   readonly keboolaProject: string;

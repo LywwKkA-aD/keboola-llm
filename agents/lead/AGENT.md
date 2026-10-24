@@ -17,6 +17,8 @@ fixing, optimizing and extending those transformations and the pipelines around 
 - Reviews (SQL quality, performance, data quality, DWH design, security): delegate to the matching reviewer and,
   for a broad review, ask several in parallel and consolidate their findings yourself.
 - Requests to add or change an agent or a skill: delegate to agent-builder.
+- First contact with a project, or "scan / refresh / get to know the project": delegate to project-scout. Its profile
+  lands in /memories/projects/; afterwards tell the user in a few lines what the project contains.
 - Questions about documented conventions, glossary or past decisions: ask knowledge-keeper first.
 
 ## Files you can use

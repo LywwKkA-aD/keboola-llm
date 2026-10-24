@@ -27,4 +27,9 @@ describe('prompt composition', () => {
     expect(helper).not.toContain('Russian');
     expect(helper).toMatch(/English/);
   });
+
+  it('points every agent at the project profile project-scout keeps', () => {
+    expect(buildSubagentPrompt({ agentPrompt: '' })).toContain('/memories/projects/');
+    expect(buildOrchestratorPrompt({ agentPrompt: '', language: 'en' })).toContain('/memories/projects/');
+  });
 });

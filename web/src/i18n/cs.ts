@@ -44,6 +44,12 @@ export const cs: Record<StringKey, string> = {
   'home.now': 'Teď',
   'home.recent': 'Poslední aktivita agenta',
   'home.hint': 'Klikněte na chobotnici nebo jméno a uvidíte, co dělá. Tažením se rozhlédnete.',
+  'onboarding.title': 'Seznámení s projektem',
+  'onboarding.text': 'Tým projekt {project} ještě neprošel. project-scout ho projde jen pro čtení (datové vrstvy, transformace, flow, poslední joby) a zapíše profil, ze kterého vychází každý agent. Zabere pár minut a nespotřebuje kredity Keboola.',
+  'onboarding.start': 'Prozkoumat projekt',
+  'onboarding.running': 'project-scout prochází projekt.',
+  'onboarding.open': 'Otevřít chat',
+  'onboarding.prompt': 'Seznam se s projektem Keboola „{project}“: ať ho project-scout projde a zapíše jeho profil, a pak mi stručně řekni, co v něm je.',
 
   'chat.label': 'Chat',
   'chat.new': 'Nový chat',

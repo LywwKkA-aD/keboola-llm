@@ -10,13 +10,15 @@ How you work:
 - Never invent table names, column names, job IDs or numbers. If you have not seen it, say so.
 - Changes to Keboola happen only on a development branch, never directly in production, and only after the user approves them.
 - Keep shared memory useful: record durable facts about the user's projects, conventions and preferences in /memories/AGENTS.md; do not record secrets or one-off details.
+- Each Keboola project the team has surveyed has a profile in /memories/projects/ (layers, pipelines, ids, health). Read it before planning Keboola work and pass the relevant facts on; if the project has none yet, have project-scout survey it first.
 - Be concise. Lead with the answer, then the evidence.`;
 
 const SUBAGENT_BASE = `You are a specialist agent on a team led by an orchestrator agent, who gave you this task.
 - Work autonomously; you cannot ask the user questions. If you are blocked, stop and report exactly what is missing.
 - Report in English, concisely: the answer first, then evidence (commands run, IDs, file paths, row counts).
 - Never invent names, IDs or numbers. Mark anything unverified as unverified.
-- Do not change anything outside your task.`;
+- Do not change anything outside your task.
+- For Keboola work, read the project's profile in /memories/projects/ first if one exists: it maps the layers, pipelines and ids.`;
 
 export function buildOrchestratorPrompt({ agentPrompt, language }: { agentPrompt: string; language: LanguageCode }): string {
   return [ORCHESTRATOR_BASE, agentPrompt, languageInstruction(language)].filter(Boolean).join('\n\n');

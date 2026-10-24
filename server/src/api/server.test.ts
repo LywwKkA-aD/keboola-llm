@@ -10,13 +10,14 @@ import { join } from 'node:path';
 
 const HOST = { host: '127.0.0.1:4800' };
 
-function fakeRuns(): RunManager & { started: Array<[string, unknown]>; discarded: string[] } {
+function fakeRuns(): RunManager & { started: Array<[string, unknown]>; discarded: string[]; busy: Set<string> } {
   const started: Array<[string, unknown]> = [];
   const discarded: string[] = [];
   const busy = new Set<string>();
   return {
     started,
     discarded,
+    busy,
     start(threadId, input) {
       if (busy.has(threadId)) throw runError('RUN_CONFLICT', 'Thread is busy with another run');
       started.push([threadId, input]);
@@ -70,6 +71,7 @@ async function setup(overrides: Partial<ServerDeps> = {}) {
       kbagent: { ok: false, detail: 'not installed' },
     }),
     effective: () => ({ model: 'a/model', keboolaProject: 'sandbox' }),
+    onboarding: async () => ({ project: 'sandbox', profiled: false }),
     version: '0.1.0',
     ...overrides,
   };
@@ -175,6 +177,44 @@ describe('createServer', () => {
     deps.settings.set({ allowSqlByDefault: true });
     const { thread } = (await app.inject({ method: 'POST', url: '/api/threads', headers: HOST, payload: { text: 'a' } })).json();
     expect(deps.threads.policy(thread.id)).toEqual({ allowSql: true });
+  });
+
+  it('tells whether the team has profiled the Keboola project yet', async () => {
+    const { app } = await setup();
+    close = () => app.close();
+    expect((await app.inject({ url: '/api/onboarding', headers: HOST })).json()).toEqual({ project: 'sandbox', profiled: false, running: false });
+  });
+
+  it('starts one project survey chat at a time', async () => {
+    const { app, runs } = await setup();
+    close = () => app.close();
+    const start = () => app.inject({ method: 'POST', url: '/api/onboarding/start', headers: HOST, payload: { text: 'Get to know the project' } });
+
+    const first = await start();
+    expect(first.statusCode).toBe(201);
+    const { threadId } = first.json();
+    expect(runs.started).toEqual([[threadId, { messages: [{ role: 'user', content: 'Get to know the project' }] }]]);
+    expect((await app.inject({ url: '/api/threads', headers: HOST })).json()[0]).toMatchObject({ id: threadId, title: 'Get to know the project' });
+
+    // A double click or a reload while the survey runs must not start a second one.
+    runs.busy.add(threadId);
+    expect((await app.inject({ url: '/api/onboarding', headers: HOST })).json()).toMatchObject({ threadId, running: true });
+    const again = await start();
+    expect(again.statusCode).toBe(200);
+    expect(again.json()).toEqual({ threadId });
+    expect(runs.started).toHaveLength(1);
+
+    // Once it is over, the user may run it again (e.g. the scout failed to write the profile).
+    runs.busy.delete(threadId);
+    expect((await start()).statusCode).toBe(201);
+    expect(runs.started).toHaveLength(2);
+  });
+
+  it('refuses a survey when no Keboola project is set up', async () => {
+    const { app } = await setup({ onboarding: async () => ({ project: '', profiled: false }) });
+    close = () => app.close();
+    const response = await app.inject({ method: 'POST', url: '/api/onboarding/start', headers: HOST, payload: { text: 'x' } });
+    expect(response.statusCode).toBe(409);
   });
 
   it('lists pending approvals across chats with the chat title', async () => {

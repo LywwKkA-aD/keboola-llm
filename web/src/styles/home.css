@@ -345,3 +345,27 @@
   overflow-y: auto;
   padding: var(--space-3) var(--space-4);
 }
+
+/* First-run offer to survey the Keboola project, above the stats. */
+.onboarding {
+  background: var(--color-primary-soft);
+  border-left: 3px solid var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.onboarding__title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin: 0;
+}
+
+.onboarding__text {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.onboarding .btn {
+  align-self: flex-start;
+}

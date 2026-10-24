@@ -3,6 +3,7 @@ import type {
   ChatEntry,
   InterruptAnswer,
   KeboolaProject,
+  OnboardingStatus,
   PendingApprovalEntry,
   Settings,
   SystemStatus,
@@ -54,6 +55,8 @@ export const api = {
   status: () => request<AppStatus>('/api/status'),
   models: () => request<{ models: string[]; current: string }>('/api/models'),
   keboolaProjects: () => request<{ projects: KeboolaProject[]; current: string }>('/api/keboola/projects'),
+  onboarding: () => request<OnboardingStatus>('/api/onboarding'),
+  startOnboarding: (text: string) => request<{ threadId: string }>('/api/onboarding/start', 'POST', { text }),
   memory: () => request<{ content: string }>('/api/memory'),
   system: () => request<SystemStatus>('/api/system'),
 };

@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { isAllowedRequest } from './guard.ts';
 import { registerEventRoutes } from './routes/events.ts';
 import { registerMetaRoutes } from './routes/meta.ts';
+import { registerOnboardingRoutes } from './routes/onboarding.ts';
 import { registerPolicyRoutes } from './routes/policies.ts';
 import { registerStaticRoutes } from './routes/static.ts';
 import { registerThreadRoutes } from './routes/threads.ts';
@@ -34,6 +35,7 @@ export async function createServer(deps: ServerDeps): Promise<FastifyInstance> {
   registerThreadRoutes(app, deps);
   registerPolicyRoutes(app, deps);
   registerWorkspaceRoutes(app, deps);
+  registerOnboardingRoutes(app, deps);
   registerEventRoutes(app, deps);
   await registerStaticRoutes(app, deps.staticDir);
   return app;

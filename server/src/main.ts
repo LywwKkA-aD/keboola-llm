@@ -16,6 +16,7 @@ import { saveSettings } from './config/settings.ts';
 import { watchFolders } from './runtime/watch.ts';
 import { kbagentVersion, listKeboolaProjects } from './system/keboola.ts';
 import { listModels } from './system/models.ts';
+import { onboardingStatus } from './system/onboarding.ts';
 import { systemStatus } from './system/status.ts';
 
 interface StateReader {
@@ -102,6 +103,8 @@ const server = await createServer({
   memory: () => readFile(join(app.env.dataDir, 'memories', 'AGENTS.md'), 'utf8').catch(() => ''),
   system: () => systemStatus({ version, models, kbagent: () => kbagentVersion(), model: team.effective.model }),
   effective: () => team.effective,
+  onboarding: () =>
+    onboardingStatus({ memoriesDir: join(app.env.dataDir, 'memories'), project: team.effective.keboolaProject, projects: () => listKeboolaProjects() }),
   version,
 });
 
