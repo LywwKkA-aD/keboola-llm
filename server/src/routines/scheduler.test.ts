@@ -1,9 +1,9 @@
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeClock } from '../test-utils/clock.ts';
 import { makeTree } from '../test-utils/tree.ts';
 import { parseCron } from './cron.ts';
-import { createScheduler, MAX_SLEEP_MS, type ScheduledRoutine } from './scheduler.ts';
+import { createScheduler, MAX_SLEEP_MS, type ScheduledRoutine, systemClock } from './scheduler.ts';
 import { createRoutineStateStore, type RoutineState } from './state-store.ts';
 
 const MINUTE = 60_000;
@@ -54,6 +54,24 @@ function setup(start: string, { routines = [weekdays()], state = {} }: { routine
     },
   };
 }
+
+describe('systemClock', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('calls back after the delay unless cancelled', () => {
+    vi.useFakeTimers({ now: Date.parse('2026-10-26T08:00:00Z') });
+    const fired: string[] = [];
+    systemClock.setTimer(() => fired.push('kept'), 1000);
+    const cancel = systemClock.setTimer(() => fired.push('cancelled'), 1000);
+    cancel();
+    vi.advanceTimersByTime(1000);
+
+    expect(fired).toEqual(['kept']);
+    expect(systemClock.now()).toBe(Date.parse('2026-10-26T08:00:01Z'));
+  });
+});
 
 describe('createScheduler', () => {
   it('runs a routine at each scheduled time and not in between', () => {
