@@ -33,7 +33,18 @@ function StepRow({ step, open, onToggle }: { step: Activity; open: boolean; onTo
       </button>
       {open && expandable && (
         <div className="step__details">
-          {step.args && Object.keys(step.args).length > 0 && (
+          {step.target === 'write_todos' && Array.isArray(step.args?.todos) ? (
+            <ul className="plan-list" aria-label={t('kind.plan')}>
+              {(step.args.todos as { content?: unknown; status?: unknown }[]).map((todo, index) => {
+                const status = todo.status === 'completed' || todo.status === 'in_progress' ? todo.status : 'pending';
+                return (
+                  <li key={index} className={`plan-list__item plan-list__item--${status}`}>
+                    <span className="plan-list__status">{t(`plan.${status}` as StringKey)}:</span> {String(todo.content ?? '')}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : step.args && Object.keys(step.args).length > 0 && (
             <>
               <span className="label">{t('chat.args')}</span>
               <pre className="request__code">{JSON.stringify(step.args, null, 2)}</pre>

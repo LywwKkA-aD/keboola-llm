@@ -53,7 +53,8 @@ describe('kindOf', () => {
     ['tool', 'edit_file', 'write'],
     ['tool', 'read_file', 'file'],
     ['tool', 'grep', 'file'],
-    ['tool', 'write_todos', 'tool'],
+    ['tool', 'write_todos', 'plan'],
+    ['tool', 'request_plan_approval', 'plan'],
     ['auto', 'kbagent_sql', 'auto'],
   ] as const)('%s %s -> %s', (kind, target, expected) => {
     expect(kindOf({ kind, target })).toBe(expected);

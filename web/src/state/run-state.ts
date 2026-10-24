@@ -53,7 +53,21 @@ export const initialRunState = (lead: string): RunState => ({
   turns: 0,
 });
 
+interface Todo {
+  readonly content?: unknown;
+  readonly status?: unknown;
+}
+
+/** "1/3 · Document Shop 01": how far the agent's to-do list is and what it works on now. */
+function todoLabel(todos: readonly Todo[]): string {
+  const done = todos.filter((todo) => todo.status === 'completed').length;
+  const current = todos.find((todo) => todo.status === 'in_progress') ?? todos.find((todo) => todo.status === 'pending');
+  return `${done}/${todos.length}${typeof current?.content === 'string' ? ` · ${current.content}` : ''}`;
+}
+
 function labelFor(tool: string, args: Readonly<Record<string, unknown>>): string {
+  if (tool === 'write_todos' && Array.isArray(args.todos)) return todoLabel(args.todos as Todo[]);
+  if (tool === 'request_plan_approval' && typeof args.title === 'string') return args.title;
   const hint = [args.purpose, args.file_path, args.path, args.pattern].find((value) => typeof value === 'string');
   return typeof hint === 'string' && hint ? hint : tool;
 }

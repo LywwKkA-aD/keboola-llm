@@ -404,3 +404,30 @@
 .toggle input {
   accent-color: var(--color-primary);
 }
+
+/* An agent's to-do list (write_todos), expanded from its step row. */
+.plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.plan-list__status {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.plan-list__item--completed {
+  color: var(--color-text-muted);
+}
+
+.plan-list__item--completed .plan-list__status {
+  color: var(--color-success);
+}
+
+.plan-list__item--in_progress .plan-list__status {
+  color: var(--color-primary);
+}

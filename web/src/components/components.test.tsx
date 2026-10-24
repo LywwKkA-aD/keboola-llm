@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { initialRunState, reduceRun } from '../state/run-state.ts';
@@ -138,6 +138,21 @@ describe('StepRows', () => {
     expect(screen.getByText('[{"id":"1"}]')).toBeInTheDocument();
     await userEvent.click(toolRow as HTMLElement);
     expect(screen.queryByText(/"list"/)).toBeNull();
+  });
+
+  it('shows an agent plan as a checklist with its progress', async () => {
+    const todos = [
+      { content: 'Map the project', status: 'completed' },
+      { content: 'Document Shop 01', status: 'in_progress' },
+      { content: 'Write the glossary', status: 'pending' },
+    ];
+    const state = reduceRun(initialRunState('lead'), { type: 'tool.start', agent: 'lead', callId: 'p', tool: 'write_todos', args: { todos } }, 1);
+    render(<StepRows steps={state.activities} />);
+    const row = screen.getByRole('button', { name: /План/ });
+    expect(row).toHaveTextContent('1/3 · Document Shop 01');
+    await userEvent.click(row);
+    const items = within(screen.getByRole('list', { name: 'План' })).getAllByRole('listitem');
+    expect(items.map((item) => item.textContent)).toEqual(['Готово: Map the project', 'Идёт: Document Shop 01', 'Впереди: Write the glossary']);
   });
 
   it('renders nothing without steps', () => {
