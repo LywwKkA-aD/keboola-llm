@@ -1,6 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { completion, splitText, streamChunks } from './chunks.mjs';
-import { APPROVED_REPLY, DELEGATE_REPLY, MODEL_ID, PLAIN_REPLY, planReply, readTurn, REJECTED_REPLY, SKILL_PATH } from './scenarios.mjs';
+import { brokenChunks, completion, splitText, STREAM_ERROR, streamChunks } from './chunks.mjs';
+import {
+  APPROVED_REPLY,
+  DELEGATE_REPLY,
+  MODEL_ID,
+  PLAIN_REPLY,
+  planReply,
+  readTurn,
+  REJECTED_REPLY,
+  RESUMED_REPLY,
+  SKILL_PATH,
+} from './scenarios.mjs';
 import { startStubLlm } from './server.mjs';
 
 const lead = { role: 'system', content: 'You are the lead agent of a small team of AI agents.' };
@@ -40,6 +50,10 @@ describe('planReply', () => {
     expect(planReply({ messages: [lead, user('e2e-approval'), tool('The user rejected the write')] })).toEqual({ text: REJECTED_REPLY });
     expect(planReply({ messages: [lead, user('e2e-approval'), tool(`Created ${SKILL_PATH}.`)] })).toEqual({ text: APPROVED_REPLY });
   });
+
+  it('has the lead answer the fail-once question with a reply that breaks off the first time', () => {
+    expect(planReply({ messages: [lead, user('e2e-fail-once: count orders')] })).toEqual({ text: RESUMED_REPLY, failOnce: true });
+  });
 });
 
 describe('chunks', () => {
@@ -57,6 +71,13 @@ describe('chunks', () => {
     expect(calls[0]).toMatchObject({ index: 0, type: 'function', function: { name: 'ls', arguments: '' } });
     expect(JSON.parse(calls.slice(1).map((c) => c?.function.arguments).join(''))).toEqual({ path: '/knowledge' });
     expect(chunks.at(-2)?.choices[0]?.finish_reason).toBe('tool_calls');
+  });
+
+  it('breaks a stream off after its first piece with an upstream error event', () => {
+    const chunks = brokenChunks({ text: 'a'.repeat(30) }, meta);
+    expect(chunks[0]?.choices[0]?.delta).toEqual({ role: 'assistant', content: '' });
+    expect(chunks[1]?.choices[0]?.delta.content).toBe('a'.repeat(12));
+    expect(chunks.at(-1)).toEqual(STREAM_ERROR);
   });
 
   it('builds the non-streaming form and splits text evenly', () => {
@@ -77,6 +98,21 @@ describe('startStubLlm', () => {
   it('lists the model and rejects calls without a key', async () => {
     expect(await (await fetch(`${stub.url}/models`, { headers: auth })).json()).toMatchObject({ data: [{ id: MODEL_ID }] });
     expect((await fetch(`${stub.url}/models`)).status).toBe(401);
+  });
+
+  it('breaks off the first stream of a fail-once question and completes the next one', async () => {
+    const ask = () =>
+      fetch(`${stub.url}/chat/completions`, {
+        method: 'POST',
+        headers: { ...auth, 'content-type': 'application/json' },
+        body: JSON.stringify({ model: MODEL_ID, stream: true, messages: [lead, user('e2e-fail-once: unit test')] }),
+      }).then((response) => response.text());
+    const first = await ask();
+    expect(first).toContain(JSON.stringify(STREAM_ERROR));
+    expect(first).not.toContain('[DONE]');
+    const second = await ask();
+    expect(second).not.toContain('"error"');
+    expect(second.trim().endsWith('data: [DONE]')).toBe(true);
   });
 
   it('streams server-sent events ending with [DONE]', async () => {

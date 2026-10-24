@@ -1,5 +1,6 @@
 /**
- * Scripted answers of the stub LLM. A reply is either { text } or { toolCalls: [{ name, args }] }.
+ * Scripted answers of the stub LLM. A reply is either { text } or { toolCalls: [{ name, args }] };
+ * with failOnce the server breaks its first stream for that question off with an upstream error.
  * The scenario is picked by a keyword in the last user message; the step by whether the caller is
  * the lead or a subagent and by the tool results that followed that message.
  */
@@ -10,6 +11,7 @@ export const PLAIN_REPLY = 'Команда на связи. Это потоко�
 export const DELEGATE_REPLY = 'Хранитель знаний проверил базу: в /knowledge лежит README.md.';
 export const APPROVED_REPLY = 'Скилл e2e-skill создан.';
 export const REJECTED_REPLY = 'Пользователь отклонил запись скилла, файл не создан.';
+export const RESUMED_REPLY = 'Команда продолжила с того же места и закончила ответ.';
 
 export const SKILL_PATH = '/skills/custom/e2e-skill/SKILL.md';
 export const SKILL_CONTENT = `---
@@ -66,6 +68,12 @@ const SCENARIOS = [
         ? say('The user rejected the write; e2e-skill was not created.')
         : say(`Created ${SKILL_PATH}.`);
     },
+  },
+  {
+    // The answer breaks off the first time (not retried: the stream had started); Continue completes it.
+    keyword: 'e2e-fail-once',
+    lead: () => ({ ...say(RESUMED_REPLY), failOnce: true }),
+    subagent: () => say('Done.'),
   },
 ];
 

@@ -41,6 +41,14 @@ export function streamChunks(reply, { id, model, created }) {
   ];
 }
 
+/** What an OpenAI-compatible router sends when the upstream model gives up in the middle of an answer. */
+export const STREAM_ERROR = { error: { message: 'e2e: upstream overloaded', type: 'server_error', code: 'overloaded' } };
+
+/** A stream that starts like streamChunks, then breaks off after the first piece with STREAM_ERROR. */
+export function brokenChunks(reply, meta) {
+  return [...streamChunks(reply, meta).slice(0, 2), STREAM_ERROR];
+}
+
 /** The non-streaming chat.completion object for the same reply. */
 export function completion(reply, { id, model, created }) {
   const calls = toolCallsOf(reply, (index) => `call_${id}_${index}`);

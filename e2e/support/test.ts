@@ -24,6 +24,10 @@ export const RU = {
   approve: 'Разрешить',
   reject: 'Отклонить',
   steps: 'Шаги',
+  chats: 'Чаты',
+  continue: 'Продолжить',
+  interrupted: 'Прервано',
+  modelUnavailable: 'Модель не ответила: она перегружена или недоступна.',
 } as const;
 
 /** Start a chat from the Chats page; resolves once the browser is on the new chat. */

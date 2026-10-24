@@ -8,8 +8,8 @@ import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
-import { completion, streamChunks } from './chunks.mjs';
-import { MODEL_ID, planReply } from './scenarios.mjs';
+import { brokenChunks, completion, streamChunks } from './chunks.mjs';
+import { MODEL_ID, planReply, readTurn } from './scenarios.mjs';
 
 const json = (response, status, body) => {
   response.writeHead(status, { 'content-type': 'application/json' });
@@ -22,7 +22,15 @@ async function readJson(request) {
   return JSON.parse(Buffer.concat(parts).toString('utf8') || '{}');
 }
 
-async function answer(request, response, chunkDelayMs) {
+/** Whether this request is the first try of a fail-once question; remembers it in `failed`. */
+function breaksOff(reply, body, failed) {
+  const { ask } = readTurn(body.messages);
+  if (!reply.failOnce || failed.has(ask)) return false;
+  failed.add(ask);
+  return true;
+}
+
+async function answer(request, response, { chunkDelayMs, failed }) {
   const body = await readJson(request);
   const reply = planReply(body);
   const meta = { id: `chatcmpl-${randomUUID().slice(0, 8)}`, model: body.model ?? MODEL_ID, created: Math.floor(Date.now() / 1000) };
@@ -30,16 +38,19 @@ async function answer(request, response, chunkDelayMs) {
     json(response, 200, completion(reply, meta));
     return;
   }
+  const broken = breaksOff(reply, body, failed);
   response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
-  for (const chunk of streamChunks(reply, meta)) {
+  for (const chunk of broken ? brokenChunks(reply, meta) : streamChunks(reply, meta)) {
     response.write(`data: ${JSON.stringify(chunk)}\n\n`);
     if (chunkDelayMs > 0) await delay(chunkDelayMs);
   }
-  response.end('data: [DONE]\n\n');
+  response.end(broken ? '' : 'data: [DONE]\n\n');
 }
 
 /** Start the stub; port 0 picks a free one. Resolves to its /v1 base URL and a close function. */
 export async function startStubLlm({ port = 0, host = '127.0.0.1', chunkDelayMs = 5 } = {}) {
+  // Fail-once questions already answered with a broken stream, for the life of this stub.
+  const failed = new Set();
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '/', 'http://stub').pathname;
     if (!request.headers.authorization?.startsWith('Bearer ')) return json(response, 401, { error: { message: 'missing API key' } });
@@ -47,7 +58,7 @@ export async function startStubLlm({ port = 0, host = '127.0.0.1', chunkDelayMs 
       return json(response, 200, { object: 'list', data: [{ id: MODEL_ID, object: 'model', owned_by: 'e2e' }] });
     }
     if (request.method === 'POST' && path === '/v1/chat/completions') {
-      return void answer(request, response, chunkDelayMs).catch((error) => {
+      return void answer(request, response, { chunkDelayMs, failed }).catch((error) => {
         if (!response.headersSent) json(response, 400, { error: { message: String(error) } });
         else response.destroy(error);
       });
