@@ -1,4 +1,5 @@
 import type { ApprovalRequest, Envelope } from '../api/types.ts';
+import { trimArgs, trimText } from './feed-detail.ts';
 import { pushSignal, type Signal } from './signals.ts';
 
 export type FeedKind = 'delegate' | 'tool' | 'approval' | 'auto' | 'error';
@@ -13,6 +14,16 @@ export interface FeedItem {
   /** Delegated-to agent or tool name. */
   readonly target: string;
   readonly text: string;
+  /** Matches the end of a tool call or a delegation to its start. */
+  readonly callId?: string;
+  /** Tool or request arguments ({ task } for a delegation), long strings cut. */
+  readonly args?: Readonly<Record<string, unknown>>;
+  /** How it ended: the tool's result preview, or the delegate's answer. Absent while it runs. */
+  readonly result?: { readonly ok: boolean; readonly preview: string };
+  /** A delegate's latest answer, until the delegation ends. */
+  readonly outcome?: string;
+  /** The approval to answer. */
+  readonly interruptId?: string;
 }
 
 /** What is happening across all chats, for the top bar and the home overview. */
@@ -55,7 +66,7 @@ function pushFeed(state: LiveState, items: readonly FeedItem[]): LiveState {
   return { ...state, feed: [...items.toReversed(), ...state.feed].slice(0, FEED_LIMIT) };
 }
 
-function requestItems(kind: 'approval' | 'auto', requests: readonly ApprovalRequest[], base: Omit<FeedItem, 'kind' | 'agent' | 'target' | 'text' | 'id'>, seq: number) {
+function requestItems(kind: 'approval' | 'auto', requests: readonly ApprovalRequest[], base: Pick<FeedItem, 'threadId' | 'at' | 'interruptId'>, seq: number) {
   return requests.map(
     (request, index): FeedItem => ({
       ...base,
@@ -64,8 +75,16 @@ function requestItems(kind: 'approval' | 'auto', requests: readonly ApprovalRequ
       agent: request.agent ?? '',
       target: request.tool,
       text: hintOf(request.args),
+      args: trimArgs(request.args),
     }),
   );
+}
+
+/** Change the newest feed item of a chat that `match` picks; the same state when there is none. */
+function updateItem(state: LiveState, threadId: string, match: (item: FeedItem) => boolean, change: (item: FeedItem) => FeedItem): LiveState {
+  const index = state.feed.findIndex((item) => item.threadId === threadId && match(item));
+  const found = state.feed[index];
+  return found ? { ...state, feed: state.feed.with(index, change(found)) } : state;
 }
 
 /** Fold one server event (any chat) into the live summary. Pure. */
@@ -88,11 +107,36 @@ function reduceEvent(state: LiveState, { seq, threadId, event }: Envelope, at: n
     case 'run.failed':
       return pushFeed({ ...state, running: without(state.running, threadId), waiting: without(state.waiting, threadId) }, [item('error', '', '', event.error)]);
     case 'delegate.start':
-      return pushFeed(state, [item('delegate', event.agent, event.to, event.task)]);
+      return pushFeed(state, [{ ...item('delegate', event.agent, event.to, event.task), callId: event.callId, args: { task: trimText(event.task) } }]);
+    case 'message':
+      // The delegate's own answer becomes the outcome of the delegation it is working on.
+      return updateItem(
+        state,
+        threadId,
+        (entry) => entry.kind === 'delegate' && entry.target === event.agent && !entry.result,
+        (entry) => ({ ...entry, outcome: trimText(event.text) }),
+      );
+    case 'delegate.end':
+      return updateItem(
+        state,
+        threadId,
+        (entry) => entry.kind === 'delegate' && entry.callId === event.callId,
+        ({ outcome, ...entry }) => ({ ...entry, result: { ok: event.ok, preview: outcome ?? '' } }),
+      );
     case 'tool.start':
-      return pushFeed(state, [item('tool', event.agent, event.tool, hintOf(event.args))]);
+      return pushFeed(state, [{ ...item('tool', event.agent, event.tool, hintOf(event.args)), callId: event.callId, args: trimArgs(event.args) }]);
+    case 'tool.end':
+      return updateItem(
+        state,
+        threadId,
+        (entry) => entry.kind === 'tool' && entry.callId === event.callId,
+        (entry) => ({ ...entry, result: { ok: event.ok, preview: trimText(event.preview) } }),
+      );
     case 'approval.required':
-      return { ...pushFeed(state, requestItems('approval', event.requests, base, seq)), approvalsVersion: state.approvalsVersion + 1 };
+      return {
+        ...pushFeed(state, requestItems('approval', event.requests, { ...base, interruptId: event.interruptId }, seq)),
+        approvalsVersion: state.approvalsVersion + 1,
+      };
     case 'approval.auto':
       return pushFeed(state, requestItems('auto', event.requests, base, seq));
     case 'usage':
