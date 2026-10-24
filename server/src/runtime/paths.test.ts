@@ -12,7 +12,7 @@ describe('skillPath', () => {
 describe('permissionsFor', () => {
   it('denies writes to every protected root by default', () => {
     expect(permissionsFor([])).toEqual([
-      { operations: ['write'], paths: ['/skills/**', '/agents/**', '/knowledge/**', '/memories/**'], mode: 'deny' },
+      { operations: ['write'], paths: ['/skills/**', '/agents/**', '/knowledge/**', '/memories/**', '/routines/**'], mode: 'deny' },
     ]);
   });
 

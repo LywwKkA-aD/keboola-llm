@@ -5,7 +5,7 @@ import type { SkillInfo } from '../registry/types.ts';
 export const MEMORY_FILE = '/memories/AGENTS.md';
 
 /** Virtual roots that agents may read but only write when their definition allows it. */
-export const PROTECTED_ROOTS = ['/skills/', '/agents/', '/knowledge/', '/memories/'] as const;
+export const PROTECTED_ROOTS = ['/skills/', '/agents/', '/knowledge/', '/memories/', '/routines/'] as const;
 
 export const skillPath = (skill: SkillInfo): string => `/skills/${skill.sourceId}/${skill.folder}/`;
 

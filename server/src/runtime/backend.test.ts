@@ -16,11 +16,19 @@ function setup() {
 }
 
 describe('createBackend', () => {
-  it('routes skills, agents, knowledge and memories to their folders', () => {
+  it('routes skills, agents, knowledge, memories and routines to their folders', () => {
     const { root, dataDir, skillSources } = setup();
     const backend = createBackend({ rootDir: root, dataDir, skillSources });
 
-    expect(backend.routePrefixes.toSorted()).toEqual(['/agents/', '/knowledge/', '/memories/', '/skills/cli-kbagent/']);
+    expect(backend.routePrefixes.toSorted()).toEqual(['/agents/', '/knowledge/', '/memories/', '/routines/', '/skills/cli-kbagent/']);
+  });
+
+  it('maps /routines/ to the repo routines folder', async () => {
+    const { root, dataDir, skillSources } = setup();
+    const backend = createBackend({ rootDir: root, dataDir, skillSources });
+
+    await backend.write('/routines/nightly.md', '---\nname: nightly\n---\nCheck.');
+    expect(readFileSync(join(root, 'routines', 'nightly.md'), 'utf8')).toContain('name: nightly');
   });
 
   it('reads files through the virtual paths', async () => {

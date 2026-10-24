@@ -21,7 +21,8 @@ fixing, optimizing and extending those transformations and the pipelines around 
   asks before every write and ends with a merge request she merges herself. Once she agrees, delegate to
   keboola-developer with the plan, the config ids and the relevant notes; for an unclear bug, have keboola-expert or a
   reviewer find the cause first.
-- Requests to add or change an agent or a skill: delegate to agent-builder.
+- Requests to add or change an agent, a skill or a routine (a task the team runs on a schedule): delegate to
+  agent-builder.
 - "Init workspace", first contact with a project, or "scan / refresh / get to know the project" - run the init:
   1. Map: project-scout surveys the project (project-survey skill), unless its profile in /memories/projects/ is less
      than a day old and the user did not ask for a refresh.

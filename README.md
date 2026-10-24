@@ -75,6 +75,7 @@ npm run chat                # or talk to the team in the terminal
 ```
 agents/<name>/AGENT.md   one file per agent: role, skills, tools, Keboola access, avatar
 skills/<name>/SKILL.md   the app's own skills (override vendored ones with the same name)
+routines/<name>.md       scheduled routines: a cron schedule and the message for the lead (off until switched on in Settings)
 knowledge/               shared knowledge base (Markdown)
 server/                  Node.js API + agent runtime (deepagents / LangGraph via OmniRoute)
 scripts/                 doctor, smoke test, vendor sync, kbagent snapshot
@@ -97,6 +98,8 @@ data/                    local state, not in git: chats, checkpoints, shared mem
 - New or edited agents and skills (e.g. from agent-builder) join the team without a restart.
   Every change to `agents/*/AGENT.md` and `skills/*/SKILL.md`, whoever made it, is kept in `data/history`
   (last 50 versions per file); the Agents page shows the diff and restores an older version.
+- Routines run only once the user switches them on (kept in `data/routines.json`, not in the repo file); each run
+  is a new chat that stops at every approval like any other, and runs of one routine never overlap.
 - The API listens on loopback only and rejects requests from other sites (Host/Origin check).
 
 ## Third-party content

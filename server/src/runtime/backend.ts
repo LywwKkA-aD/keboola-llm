@@ -20,6 +20,7 @@ const folder = (rootDir: string) => {
  *   /agents/           agent definitions (agent-builder writes here)
  *   /knowledge/        shared knowledge base
  *   /memories/         shared long-term memory (data dir, not in git)
+ *   /routines/         scheduled routines (agent-builder writes here)
  *   anything else      per-thread scratch space kept in the checkpoint
  */
 export function createBackend({ rootDir, dataDir, skillSources }: {
@@ -34,6 +35,7 @@ export function createBackend({ rootDir, dataDir, skillSources }: {
     '/agents/': folder(join(rootDir, 'agents')),
     '/knowledge/': folder(join(rootDir, 'knowledge')),
     '/memories/': folder(memoriesDir),
+    '/routines/': folder(join(rootDir, 'routines')),
   };
   if (!existsSync(memoryFile)) writeFileSync(memoryFile, MEMORY_TEMPLATE);
   return new CompositeBackend(new StateBackend(), routes);
