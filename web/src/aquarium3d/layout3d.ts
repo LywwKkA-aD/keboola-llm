@@ -1,6 +1,7 @@
 import type { AgentActivity } from '../aquarium/state.ts';
-import { IDLE_SPOTS, type Spot, STATION_FACING, STATION_SPOTS, type StationId } from './floorplan.ts';
+import { type Spot, STATION_FACING, STATION_SPOTS, type StationId } from './floorplan.ts';
 import type { Vec3 } from './mascot.ts';
+import { briefingSpot, pastimes } from './pastimes.ts';
 
 export type { Spot, StationId } from './floorplan.ts';
 
@@ -42,32 +43,40 @@ function placeAt(id: StationId, slot: number): Vec3 {
   return [x - Math.sin(facing) * back, y, z - Math.cos(facing) * back];
 }
 
-/** Resting places in the aisles; past the last one, agents share an aisle spot a step to the side. */
-export function restSpot(index: number): Spot {
-  const spot = IDLE_SPOTS[index % IDLE_SPOTS.length] as Spot;
-  const lap = Math.floor(index / IDLE_SPOTS.length);
-  if (lap === 0) return spot;
-  const [x, y, z] = spot.position;
-  return { position: [x, y, z + (lap % 2 === 1 ? 0.9 : -0.9) * Math.ceil(lap / 2)], facing: spot.facing };
-}
+/** Moods that leave an agent free for a pastime; a fresh ink cloud does not send it anywhere new either. */
+const AT_REST: ReadonlySet<AgentActivity> = new Set(['idle', 'error']);
 
-/** Where every octopus should be for the activities it is placed by. Pure and deterministic. */
-export function layout3d({ names, lead, moods }: {
+/**
+ * Where every octopus should be for the activities it is placed by. Pure and deterministic for the same time: busy
+ * agents go to their station, a delegate that has a task but no station yet stands at the lead's dais, and resting
+ * agents follow their pastime (pastimes.ts).
+ */
+export function layout3d({ names, lead, moods, now = 0 }: {
   names: readonly string[];
   lead: string;
   moods: Readonly<Record<string, AgentActivity>>;
+  now?: number;
 }): Record<string, Spot> {
   const others = names.filter((name) => name !== lead);
-  const home = (name: string): Spot => (name === lead ? STATIONS_3D.command : restSpot(others.indexOf(name)));
+  const moodOf = (name: string): AgentActivity => moods[name] ?? 'idle';
+  const stationOf = (name: string) => {
+    const id = STATION_FOR[moodOf(name)];
+    return id === 'command' && name !== lead ? undefined : id;
+  };
+  const resting = others.filter((name) => !stationOf(name) && AT_REST.has(moodOf(name)));
+  const briefed = others.filter((name) => !stationOf(name) && !AT_REST.has(moodOf(name)));
+  const leisure = pastimes(resting, now);
   const used = new Map<StationId, number>();
 
   return Object.fromEntries(
-    [lead, ...others].filter((name) => names.includes(name)).map((name) => {
-      const stationId = STATION_FOR[moods[name] ?? 'idle'];
-      if (!stationId || stationId === 'command') return [name, home(name)];
+    [lead, ...others].filter((name) => names.includes(name)).flatMap((name): [string, Spot][] => {
+      if (name === lead && !stationOf(name)) return [[name, STATIONS_3D.command]];
+      const stationId = stationOf(name);
+      if (stationId === 'command') return [[name, STATIONS_3D.command]];
+      if (!stationId) return [[name, leisure[name] ?? briefingSpot(Math.max(0, briefed.indexOf(name)))]];
       const slot = used.get(stationId) ?? 0;
       used.set(stationId, slot + 1);
-      return [name, { position: placeAt(stationId, slot), facing: STATION_FACING[stationId] }];
+      return [[name, { position: placeAt(stationId, slot), facing: STATION_FACING[stationId] }]];
     }),
   );
 }

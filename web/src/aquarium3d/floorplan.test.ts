@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { IDLE_SPOTS, RACK_ROWS, rackPlacements, route, STATION_SPOTS } from './floorplan.ts';
+import { DAIS, RACK_ROWS, rackPlacements, route, STATION_SPOTS } from './floorplan.ts';
+import { BRIEFING_SPOTS, INSPECT_SPOTS, MEETING_POINTS, STROLL_PATHS } from './pastimes.ts';
 import type { Vec3 } from './mascot.ts';
 
 /** Footprints of all racks on the floor (x/z boxes), slightly shrunk so touching an edge is not a crossing. */
@@ -24,7 +25,12 @@ function crossesRack(path: readonly Vec3[]): boolean {
   });
 }
 
-const places: Vec3[] = [...Object.values(STATION_SPOTS).flat(), ...IDLE_SPOTS.map((spot) => spot.position)];
+const places: Vec3[] = [
+  ...Object.values(STATION_SPOTS).flat(),
+  ...[...INSPECT_SPOTS, ...BRIEFING_SPOTS].map((spot) => spot.position),
+  ...MEETING_POINTS,
+  ...STROLL_PATHS.flat(),
+];
 
 describe('floorplan', () => {
   it('lays racks out in straight rows, not around a stage', () => {
@@ -59,6 +65,22 @@ describe('floorplan', () => {
       return sum + Math.hypot(end[0] - start[0], end[2] - start[2]);
     }, 0);
     expect(length).toBeLessThan(Math.hypot(to[0] - from[0], to[2] - from[2]) * 3 + 6);
+  });
+
+  it('walks around the lead\'s dais, except on the way to the lead\'s own place on it', () => {
+    const command = STATION_SPOTS.command[0] as Vec3;
+    const crossesDais = (path: readonly Vec3[]) =>
+      path.slice(1).some((end, i) => {
+        const start = path[i] as Vec3;
+        return Array.from({ length: 21 }, (_, k) => k / 20).some((t) => {
+          const x = start[0] + (end[0] - start[0]) * t;
+          const z = start[2] + (end[2] - start[2]) * t;
+          return Math.hypot(x - DAIS.x, z - DAIS.z) < DAIS.radius - 0.05;
+        });
+      });
+    const others = places.filter((place) => place !== command);
+    others.forEach((from) => others.forEach((to) => expect(crossesDais(route(from, to)), `${from.join()} -> ${to.join()}`).toBe(false)));
+    others.forEach((to) => expect(route(command, to).at(-1)).toEqual(to));
   });
 
   it('goes straight when nothing is in the way', () => {

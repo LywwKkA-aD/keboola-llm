@@ -20,6 +20,7 @@ describe('activityForTool', () => {
     ['kbagent_sql', {}, 'querying'],
     ['kbagent_write', {}, 'computing'],
     ['write_todos', {}, 'planning'],
+    ['request_plan_approval', { summary: 'Plan' }, 'planning'],
     ['something_else', {}, 'working'],
   ])('%s -> %s', (tool, args, expected) => {
     expect(activityForTool(tool, args)).toBe(expected);
@@ -84,6 +85,40 @@ describe('reduceAquarium', () => {
       env({ type: 'token', agent: 'helper', text: 'x' }),
     ]);
     expect(waiting.agents.helper?.activity).toBe('waiting');
+  });
+
+  it('sends the approved agent on to the station of its tool when the run resumes, the lead still delegating', () => {
+    const resumed = play([
+      env({ type: 'run.started', runId: 'r1' }),
+      env({ type: 'delegate.start', agent: 'lead', callId: 'd', to: 'keboola-developer', task: 'Fix the join' }),
+      env({ type: 'tool.start', agent: 'keboola-developer', callId: 'w', tool: 'kbagent_write', args: { purpose: 'Run the job' } }),
+      env({ type: 'approval.required', interruptId: 'i', requests: [{ tool: 'kbagent_write', args: {}, decisions: ['approve'] }] }),
+      env({ type: 'run.waiting', runId: 'r1' }),
+      env({ type: 'run.started', runId: 'r2', resume: true }),
+    ]);
+    expect(resumed.agents['keboola-developer']).toMatchObject({ activity: 'computing', work: 'computing' });
+    expect(resumed.agents.lead).toMatchObject({ activity: 'delegating', partner: 'keboola-developer' });
+
+    const thinking = reduceAquarium(resumed, env({ type: 'token', agent: 'keboola-developer', text: 'done' }), at);
+    expect(thinking.agents['keboola-developer']).toMatchObject({ activity: 'thinking', work: 'computing' });
+  });
+
+  it('wakes the lead when a stopped run is continued', () => {
+    const state = play([
+      env({ type: 'run.started', runId: 'r1' }),
+      env({ type: 'run.failed', runId: 'r1', error: 'x' }),
+      env({ type: 'run.started', runId: 'r2', resume: true }),
+    ]);
+    expect(state.agents.lead).toMatchObject({ activity: 'thinking' });
+  });
+
+  it('leaves agents waiting in other chats alone when a run resumes', () => {
+    const state = play([
+      env({ type: 'tool.start', agent: 'helper', callId: 'w', tool: 'write_file', args: {} }, 't2'),
+      env({ type: 'approval.required', interruptId: 'i', requests: [{ tool: 'write_file', args: {}, decisions: [] }] }, 't2'),
+      env({ type: 'run.started', runId: 'r', resume: true }, 't1'),
+    ]);
+    expect(state.agents.helper?.activity).toBe('waiting');
   });
 
   it('sends everyone from the finished thread to rest, but not agents busy elsewhere', () => {

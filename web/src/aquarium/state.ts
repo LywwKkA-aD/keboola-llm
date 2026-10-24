@@ -41,6 +41,7 @@ export const initialAquarium = (lead: string): AquariumState => ({ lead, agents:
 
 const READ_TOOLS = new Set(['read_file', 'ls', 'glob', 'grep']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
+const PLAN_TOOLS = new Set(['write_todos', 'request_plan_approval']);
 
 /** Activities that put an agent at a station for the rest of its task (planning only does for the lead). */
 const STATION_WORK: ReadonlySet<AgentActivity> = new Set(['reading', 'writing', 'computing', 'querying', 'working']);
@@ -50,7 +51,7 @@ export function activityForTool(tool: string, _args: Readonly<Record<string, unk
   if (WRITE_TOOLS.has(tool)) return 'writing';
   if (tool === 'kbagent_sql') return 'querying';
   if (tool.startsWith('kbagent')) return 'computing';
-  if (tool === 'write_todos') return 'planning';
+  if (PLAN_TOOLS.has(tool)) return 'planning';
   return 'working';
 }
 
@@ -74,11 +75,29 @@ function settleThread(state: AquariumState, threadId: string, activity: 'idle' |
   return { ...state, agents };
 }
 
+/**
+ * A paused run goes on after the user answered: whoever waited at the bell walks on to the station of the approved
+ * tool (it runs now, a job may take minutes). Continuing a stopped run wakes the lead, as a new run does.
+ */
+function resumeThread(state: AquariumState, threadId: string, now: number): AquariumState {
+  const busy = Object.values(state.agents).some((agent) => agent.threadId === threadId && agent.activity !== 'idle' && agent.activity !== 'error');
+  if (!busy) return set(state, state.lead, { activity: 'thinking', label: '', threadId }, now);
+  const agents = Object.fromEntries(
+    Object.entries(state.agents).map(([name, agent]) => {
+      if (agent.threadId !== threadId || agent.activity !== 'waiting') return [name, agent];
+      const activity = activityForTool(agent.label, {});
+      const work = STATION_WORK.has(activity) ? { work: activity } : workOf(agent);
+      return [name, { activity, label: agent.label, since: now, threadId, ...(agent.partner ? { partner: agent.partner } : {}), ...work }];
+    }),
+  );
+  return { ...state, agents };
+}
+
 /** Fold one server event (from any chat) into what every octopus is doing. Pure. */
 export function reduceAquarium(state: AquariumState, { threadId, event }: Envelope, now: number): AquariumState {
   switch (event.type) {
     case 'run.started':
-      return set(state, state.lead, { activity: 'thinking', label: '', threadId }, now);
+      return event.resume ? resumeThread(state, threadId, now) : set(state, state.lead, { activity: 'thinking', label: '', threadId }, now);
     case 'run.finished':
       return settleThread(state, threadId, 'idle', now);
     case 'run.failed':

@@ -48,5 +48,5 @@ export function buildSceneModel({ agents, lead, state, now }: {
     (name) => name !== lead && moods[name] !== 'idle' && moods[name] !== 'error' && leadThread !== undefined && state.agents[name]?.threadId === leadThread,
   );
   const captions = Object.fromEntries(names.map((name) => [name, moods[name] === 'idle' ? '' : (state.agents[name]?.label ?? '')]));
-  return { moods, spots: layout3d({ names, lead, moods: placements }), stations, occupancy, links, captions };
+  return { moods, spots: layout3d({ names, lead, moods: placements, now }), stations, occupancy, links, captions };
 }

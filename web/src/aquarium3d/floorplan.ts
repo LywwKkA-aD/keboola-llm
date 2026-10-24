@@ -3,15 +3,21 @@ import type { Vec3 } from './mascot.ts';
 /**
  * The data-centre hall seen from the front (camera on +z): six rows of racks running away from the camera, aisles
  * between them, a corridor along the front and the back, walkways along both walls, and an open operations floor in
- * front. Agents rest in the aisles and walk along the corridors, never through racks.
+ * front. Agents walk along the aisles and corridors, never through racks; pastimes.ts says where they rest.
  */
 
 export type StationId = 'command' | 'archive' | 'console' | 'forge' | 'beacon';
+
+/** What a resting agent does at its spot (pastimes.ts). */
+export type Pastime = 'inspect' | 'chat' | 'stroll';
 
 export interface Spot {
   readonly position: Vec3;
   /** Yaw (radians); 0 faces the camera side (+z), PI/2 faces +x. */
   readonly facing: number;
+  /** Top walking speed on the way there; errands use the default. */
+  readonly pace?: number;
+  readonly pastime?: Pastime;
 }
 
 export interface RackPlacement {
@@ -45,8 +51,8 @@ const AISLES = [-6.7, -3.3, 0, 3.3, 6.7] as const;
 const FRONT_Z = -1.2;
 const BACK_Z = -12.8;
 const SIDE_X = 10;
-/** The front floor: a cross corridor in front of the racks and the station columns at its ends. */
-const FLOOR_Z = 2.0;
+/** The front floor: a cross corridor in front of the lead's dais, the station columns at its ends. */
+const FLOOR_Z = 4.4;
 const STATION_COLUMN_X = 8.3;
 
 /** Every rack in the hall, row by row, back to front. */
@@ -84,11 +90,6 @@ export const STATION_FACING: Readonly<Record<StationId, number>> = {
   beacon: Math.PI / 2,
 };
 
-/** Resting places in the aisles, nearest the camera first, spread across the hall; agents face a rack. */
-export const IDLE_SPOTS: readonly Spot[] = [-3.6, -5.8, -8.0, -10.2].flatMap((z, row) =>
-  [0, -3.3, 3.3, -6.7, 6.7].map((x, column) => ({ position: at(x, z), facing: ((row + column) % 2 === 0 ? 1 : -1) * (Math.PI / 2) })),
-);
-
 // ---- Routing ---------------------------------------------------------------------------------------------------
 
 type Point = readonly [number, number];
@@ -107,7 +108,9 @@ const CORRIDORS: readonly Segment[] = [
   segment([-STATION_COLUMN_X, FLOOR_Z], [STATION_COLUMN_X, FLOOR_Z]),
   segment([-SIDE_X, BACK_Z], [-SIDE_X, FRONT_Z]),
   segment([SIDE_X, BACK_Z], [SIDE_X, FRONT_Z]),
-  ...AISLES.map((x) => segment([x, BACK_Z], [x, x === 0 ? FLOOR_Z : FRONT_Z])),
+  ...AISLES.map((x) => segment([x, BACK_Z], [x, FRONT_Z])),
+  // Up to the lead's place on the dais; nobody else crosses the dais.
+  segment([0, FRONT_Z], [0, 1.8]),
   segment([-STATION_COLUMN_X, FRONT_Z], [-STATION_COLUMN_X, 4.6]),
   segment([STATION_COLUMN_X, FRONT_Z], [STATION_COLUMN_X, 4.6]),
 ];
@@ -139,7 +142,6 @@ function hitsBox(p: Point, q: Point, box: (typeof OBSTACLES)[number]): boolean {
   return true;
 }
 
-const clear = (p: Point, q: Point) => OBSTACLES.every((box) => !hitsBox(p, q, box));
 
 function nearestOn({ a, b }: Segment, p: Point): Point {
   const [dx, dz] = [b[0] - a[0], b[1] - a[1]];
@@ -151,9 +153,22 @@ const distance = (p: Point, q: Point) => Math.hypot(p[0] - q[0], p[1] - q[1]);
 const same = (p: Point, q: Point) => distance(p, q) < 1e-6;
 const onSegment = (s: Segment, p: Point) => distance(nearestOn(s, p), p) < 1e-6;
 
-/** The point on the corridor network nearest to p. */
+/** The lead's dais, grown by an octopus' half width: walks go around it (only the lead's own way crosses it). */
+export const DAIS = { x: 0, z: 1.8, radius: 1.62 + 0.32 } as const;
+
+/** Does the segment p-q come closer to the dais centre than its radius? */
+function hitsDais(p: Point, q: Point): boolean {
+  const centre: Point = [DAIS.x, DAIS.z];
+  const closest = same(p, q) ? p : nearestOn({ a: p, b: q }, centre);
+  return distance(closest, centre) < DAIS.radius;
+}
+
+const clear = (p: Point, q: Point) => !hitsDais(p, q) && OBSTACLES.every((box) => !hitsBox(p, q, box));
+
+/** The nearest point on the corridor network that p reaches in a straight, clear line (or that p is on). */
 function entryOf(p: Point): Point {
-  return CORRIDORS.map((s) => nearestOn(s, p)).reduce((best, q) => (distance(q, p) < distance(best, p) ? q : best));
+  const candidates = CORRIDORS.map((s) => nearestOn(s, p)).toSorted((a, b) => distance(a, p) - distance(b, p));
+  return candidates.find((q) => distance(q, p) < 1e-6 || clear(p, q)) ?? (candidates[0] as Point);
 }
 
 /** Corridor crossings and ends: the fixed nodes of the walking graph. */
@@ -223,7 +238,7 @@ function smooth(points: readonly Point[]): Point[] {
 export function route(from: Vec3, to: Vec3): Vec3[] {
   const p: Point = [from[0], from[2]];
   const q: Point = [to[0], to[2]];
-  if (clear(p, q)) return [from, to];
+  if (same(p, q) || clear(p, q)) return [from, to];
   const entry = entryOf(p);
   const exit = entryOf(q);
   const points = [p, ...corridorPath(entry, exit), q].filter((point, i, all) => i === 0 || !same(point, all[i - 1] as Point));

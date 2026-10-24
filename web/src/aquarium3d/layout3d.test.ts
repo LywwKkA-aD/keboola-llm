@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { IDLE_SPOTS, STATION_SPOTS } from './floorplan.ts';
+import { STATION_SPOTS } from './floorplan.ts';
 import { layout3d, STATIONS_3D, stationSlots } from './layout3d.ts';
+import { briefingSpot, pastimes } from './pastimes.ts';
 import { auraFor } from './status.ts';
 
 const names = ['lead', 'a', 'b', 'c', 'd'];
@@ -9,10 +10,18 @@ const apart = (positions: readonly (readonly number[])[], min: number) =>
   positions.forEach((p, i) => positions.slice(i + 1).forEach((q) => expect(dist(p, q)).toBeGreaterThan(min)));
 
 describe('layout3d', () => {
-  it('keeps the lead at the command dais and rests the others in the aisles, in order', () => {
-    const spots = layout3d({ names, lead: 'lead', moods: {} });
+  it('keeps the lead at the command dais and gives the others a pastime', () => {
+    const spots = layout3d({ names, lead: 'lead', moods: {}, now: 5_000 });
     expect(spots.lead?.position).toEqual(STATIONS_3D.command.position);
-    ['a', 'b', 'c', 'd'].forEach((name, i) => expect(spots[name]).toEqual(IDLE_SPOTS[i]));
+    const leisure = pastimes(['a', 'b', 'c', 'd'], 5_000);
+    ['a', 'b', 'c', 'd'].forEach((name) => expect(spots[name]).toEqual(leisure[name]));
+  });
+
+  it('brings a delegate that has a task but no station yet to the lead, not to an empty aisle', () => {
+    const spots = layout3d({ names, lead: 'lead', moods: { lead: 'delegating', a: 'thinking', b: 'thinking', c: 'error' } });
+    expect(spots.a).toEqual(briefingSpot(0));
+    expect(spots.b).toEqual(briefingSpot(1));
+    expect(spots.c?.pastime).toBeDefined();
   });
 
   it('sends busy agents to the station of their work, one place each', () => {
