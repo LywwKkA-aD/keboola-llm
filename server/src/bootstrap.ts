@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite';
-import { type AppEnv, readAppEnv } from './config/env.ts';
+import { type AppEnv, type OmniRouteConfig, readAppEnv } from './config/env.ts';
 import { loadSettings, type Settings } from './config/settings.ts';
 import { createModelFactory } from './llm/model.ts';
 import { loadAgents } from './registry/agents.ts';
@@ -26,6 +26,10 @@ export interface App {
   readonly buildTeam: (settings: Settings) => Team;
   /** Re-read agents and skills from disk; the next buildTeam uses them. */
   readonly reloadDefinitions: () => void;
+  /** The .env file config came from: ENV_FILE, else <root>/.env. The setup wizard saves the OmniRoute key here. */
+  readonly envFile: string;
+  /** Use new OmniRoute settings from now on (the setup wizard's key form); the next buildTeam uses them. */
+  readonly setOmniRoute: (omniroute: OmniRouteConfig) => void;
 }
 
 /** Model and Keboola project actually in use: settings override .env, empty means .env. */
@@ -50,8 +54,9 @@ function loadDotEnv(file: string): void {
 
 /** Read config, agents and skills from disk and prepare everything needed to build the team. */
 export function bootstrap(rootDir: string = ROOT_DIR): App {
-  loadDotEnv(join(rootDir, '.env'));
-  const env = readAppEnv(process.env, rootDir);
+  const envFile = (process.env.ENV_FILE ?? '').trim() || join(rootDir, '.env');
+  loadDotEnv(envFile);
+  let env = readAppEnv(process.env, rootDir);
   mkdirSync(env.dataDir, { recursive: true });
 
   const skillSources = discoverSkillSources(rootDir);
@@ -61,10 +66,17 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
 
   const checkpointer = SqliteSaver.fromConnString(join(env.dataDir, 'checkpoints.sqlite'));
   const backend = createBackend({ rootDir, dataDir: env.dataDir, skillSources });
-  const createModel = createModelFactory(env.omniroute);
+  let createModel = createModelFactory(env.omniroute);
 
   return {
-    env,
+    get env() {
+      return env;
+    },
+    envFile,
+    setOmniRoute: (omniroute) => {
+      env = { ...env, omniroute };
+      createModel = createModelFactory(omniroute);
+    },
     checkpointer,
     settingsFile,
     get agents() {

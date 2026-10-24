@@ -5,7 +5,7 @@ import { bootstrap } from './bootstrap.ts';
 import { DEFAULT_SETTINGS } from './config/settings.ts';
 import { agentMd, makeTree } from './test-utils/tree.ts';
 
-const ENV_KEYS = ['OMNIROUTE_API_KEY', 'OMNIROUTE_MODEL', 'OMNIROUTE_BASE_URL', 'KEBOOLA_PROJECT', 'DATA_DIR', 'PORT', 'HOST'];
+const ENV_KEYS = ['OMNIROUTE_API_KEY', 'OMNIROUTE_MODEL', 'OMNIROUTE_BASE_URL', 'KEBOOLA_PROJECT', 'DATA_DIR', 'PORT', 'HOST', 'ENV_FILE'];
 let saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -94,8 +94,28 @@ describe('bootstrap', () => {
     expect(spec.warnings).toEqual([]);
   });
 
-  it('fails fast without an OmniRoute key', () => {
+  it('starts without an OmniRoute key or model, so the setup wizard can ask for them', () => {
     const root = makeTree({ 'agents/lead/AGENT.md': agentMd('name: lead\nrole: orchestrator\ndescription: Leads the team here.') });
-    expect(() => bootstrap(root)).toThrow(/OMNIROUTE_API_KEY/);
+    const app = bootstrap(root);
+    expect(app.env.omniroute).toMatchObject({ apiKey: '', model: '' });
+    expect(app.envFile).toBe(join(root, '.env'));
+    expect(() => app.buildTeam(DEFAULT_SETTINGS)).not.toThrow();
+  });
+
+  it('reads .env from ENV_FILE when it is set', () => {
+    const root = repo();
+    const other = makeTree({ 'custom.env': 'OMNIROUTE_API_KEY=other-key\n' });
+    process.env.ENV_FILE = join(other, 'custom.env');
+    const app = bootstrap(root);
+    expect(app.envFile).toBe(join(other, 'custom.env'));
+    expect(app.env.omniroute.apiKey).toBe('other-key');
+  });
+
+  it('switches to new OmniRoute settings without a restart', () => {
+    const app = bootstrap(repo());
+    app.setOmniRoute({ baseUrl: 'http://127.0.0.1:20129/v1', apiKey: 'new-key', model: 'cc/test' });
+    expect(app.env.omniroute).toEqual({ baseUrl: 'http://127.0.0.1:20129/v1', apiKey: 'new-key', model: 'cc/test' });
+    expect(app.env.keboolaProject).toBe('sandbox');
+    expect(app.buildTeam(DEFAULT_SETTINGS).effective.model).toBe('cc/test');
   });
 });

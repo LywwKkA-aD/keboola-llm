@@ -4,13 +4,15 @@ import { createModelFactory } from './model.ts';
 const config = { baseUrl: 'http://127.0.0.1:20128/v1', apiKey: 'test-key', model: 'cc/default' };
 
 describe('createModelFactory', () => {
-  it('refuses to start without an API key', () => {
-    expect(() => createModelFactory({ ...config, apiKey: '' })).toThrow(/OMNIROUTE_API_KEY/);
+  it('builds models without a key, so the app starts and the setup wizard can ask for one', async () => {
+    const model = createModelFactory({ ...config, apiKey: '' })();
+    expect(model.model).toBe('cc/default');
+    await expect(model.invoke('hi')).rejects.toThrow(/OMNIROUTE_API_KEY is not set/);
   });
 
-  it('refuses to build a model without a model id', () => {
-    const createModel = createModelFactory({ ...config, model: '' });
-    expect(() => createModel()).toThrow(/OMNIROUTE_MODEL/);
+  it('builds a model without a model id that asks to choose one when called', async () => {
+    const model = createModelFactory({ ...config, model: '' })();
+    await expect(model.invoke('hi')).rejects.toThrow(/No model is chosen/);
   });
 
   it('points the OpenAI client at OmniRoute with the keepalive filter', () => {
