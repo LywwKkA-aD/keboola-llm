@@ -6,6 +6,7 @@ import { type RunManager, runError } from './runs.ts';
 import { createServer, type ServerDeps } from './server.ts';
 import { createThreadStore } from './threads.ts';
 import { makeTree } from '../test-utils/tree.ts';
+import { createNoteStore } from '../knowledge/store.ts';
 import { join } from 'node:path';
 
 const HOST = { host: '127.0.0.1:4800' };
@@ -62,7 +63,8 @@ async function setup(overrides: Partial<ServerDeps> = {}) {
     allowed: allowedFor({ port: 4800, devPort: 5173 }),
     models: async () => ['a/model', 'b/model'],
     keboolaProjects: async () => [{ alias: 'sandbox', name: 'Sandbox', id: 1, stackUrl: 'https://x', isDefault: true }],
-    memory: async () => '# Shared memory',
+    knowledge: createNoteStore(makeTree({ 'README.md': '# Knowledge base' })),
+    memories: createNoteStore(makeTree({ 'AGENTS.md': '# Shared memory' })),
     system: async () => ({
       app: { ok: true, detail: '0.1.0' },
       node: { ok: true, detail: 'v24' },
@@ -243,7 +245,8 @@ describe('createServer', () => {
     close = () => app.close();
     expect((await app.inject({ url: '/api/models', headers: HOST })).json()).toEqual({ models: ['a/model', 'b/model'], current: 'a/model' });
     expect((await app.inject({ url: '/api/keboola/projects', headers: HOST })).json()).toMatchObject({ current: 'sandbox', projects: [{ alias: 'sandbox' }] });
-    expect((await app.inject({ url: '/api/memory', headers: HOST })).json()).toEqual({ content: '# Shared memory' });
+    expect((await app.inject({ url: '/api/memory', headers: HOST })).json()).toMatchObject({ content: '# Shared memory' });
+    expect((await app.inject({ url: '/api/knowledge', headers: HOST })).json()).toMatchObject({ notes: [{ path: 'README.md', title: 'Knowledge base' }] });
     expect((await app.inject({ url: '/api/system', headers: HOST })).json()).toMatchObject({ kbagent: { ok: false } });
   });
 

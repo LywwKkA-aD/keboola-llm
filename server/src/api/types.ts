@@ -1,4 +1,5 @@
 import type { Settings } from '../config/settings.ts';
+import type { NoteStore } from '../knowledge/store.ts';
 import type { KeboolaProject } from '../system/keboola.ts';
 import type { OnboardingStatus } from '../system/onboarding.ts';
 import type { SystemStatus } from '../system/status.ts';
@@ -45,8 +46,6 @@ export interface ServerDeps {
   readonly models: () => Promise<readonly string[]>;
   /** Projects registered in kbagent, without tokens. */
   readonly keboolaProjects: () => Promise<readonly KeboolaProject[]>;
-  /** The shared memory file the lead agent keeps. */
-  readonly memory: () => Promise<string>;
   readonly system: () => Promise<SystemStatus>;
   /** Model and Keboola project in use after settings overrides. */
   readonly effective: () => { readonly model: string; readonly keboolaProject: string };
@@ -57,4 +56,8 @@ export interface ServerDeps {
   readonly versions?: DefinitionVersions;
   /** Scheduled routines (routines/*.md); without it the /api/routines routes are not registered. */
   readonly routines?: RoutinesApi;
+  /** The knowledge base the agents see as /knowledge/ (DATA_DIR/knowledge). */
+  readonly knowledge: NoteStore;
+  /** Shared memory (DATA_DIR/memories): AGENTS.md, which the user may edit, and project-scout's projects/<alias>.md. */
+  readonly memories: NoteStore;
 }

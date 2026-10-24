@@ -2,6 +2,8 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 import { isAllowedRequest } from './guard.ts';
 import { registerEventRoutes } from './routes/events.ts';
+import { registerKnowledgeRoutes } from './routes/knowledge.ts';
+import { registerMemoryRoutes } from './routes/memory.ts';
 import { registerMetaRoutes } from './routes/meta.ts';
 import { registerOnboardingRoutes } from './routes/onboarding.ts';
 import { registerPolicyRoutes } from './routes/policies.ts';
@@ -41,6 +43,8 @@ export async function createServer(deps: ServerDeps): Promise<FastifyInstance> {
   registerEventRoutes(app, deps);
   if (deps.versions) registerVersionRoutes(app, deps.versions);
   registerRoutineRoutes(app, deps);
+  registerKnowledgeRoutes(app, deps);
+  registerMemoryRoutes(app, deps);
   await registerStaticRoutes(app, deps.staticDir);
   return app;
 }

@@ -30,3 +30,14 @@ export const definitionParams = z.object({ kind: z.enum(DEFINITION_KINDS), name:
 export const versionParams = definitionParams.extend({ id: z.coerce.number().int().positive() });
 /** PUT /api/routines/:name: the user's switch for one routine. */
 export const routineBody = z.object({ enabled: z.boolean() }).strict();
+// Knowledge base and shared memory: these fix the shape only. Paths and sizes (in bytes) are checked by the
+// note store, server/src/knowledge/, which every read and write goes through.
+const relativePath = z.string().min(1).max(1000);
+
+export const notePathQuery = z.object({ path: relativePath });
+
+export const noteBody = z.object({ path: relativePath, content: z.string() }).strict();
+
+export const uploadBody = z.object({ name: z.string().min(1).max(255), content: z.string(), folder: z.string().max(1000).optional() }).strict();
+
+export const memoryBody = z.object({ content: z.string() }).strict();

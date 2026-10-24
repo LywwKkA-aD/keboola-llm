@@ -42,7 +42,5 @@ export function registerWorkspaceRoutes(app: FastifyInstance, deps: ServerDeps):
     upstream(reply, async () => ({ projects: await deps.keboolaProjects(), current: deps.effective().keboolaProject })),
   );
 
-  app.get('/api/memory', async () => ({ content: await deps.memory() }));
-
   app.get('/api/system', async () => deps.system());
 }

@@ -14,6 +14,7 @@ import { createThreadStore } from './api/threads.ts';
 import { bootstrap } from './bootstrap.ts';
 import { saveSettings } from './config/settings.ts';
 import { createRoutines } from './routines/service.ts';
+import { createNoteStore, MAX_MEMORY_BYTES } from './knowledge/store.ts';
 import { watchFolders } from './runtime/watch.ts';
 import { kbagentVersion, listKeboolaProjects } from './system/keboola.ts';
 import { listModels } from './system/models.ts';
@@ -118,7 +119,6 @@ const server = await createServer({
   staticDir: join(app.env.rootDir, 'web', 'dist'),
   models,
   keboolaProjects: () => listKeboolaProjects(),
-  memory: () => readFile(join(app.env.dataDir, 'memories', 'AGENTS.md'), 'utf8').catch(() => ''),
   system: () => systemStatus({ version, models, kbagent: () => kbagentVersion(), model: team.effective.model }),
   effective: () => team.effective,
   onboarding: () =>
@@ -126,6 +126,9 @@ const server = await createServer({
   version,
   versions,
   routines: routines.api,
+  // The same folders the agents see as /knowledge/ and /memories/ (runtime/backend.ts).
+  knowledge: createNoteStore(join(app.env.dataDir, 'knowledge')),
+  memories: createNoteStore(join(app.env.dataDir, 'memories'), { maxBytes: MAX_MEMORY_BYTES }),
 });
 
 const shutdown = async () => {
