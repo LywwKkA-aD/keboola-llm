@@ -195,7 +195,8 @@ describe('Chat page', () => {
 
     await waitFor(() => expect(callsTo('POST', '/api/threads')[0]?.body).toEqual({ text: 'Новый вопрос' }));
     await waitFor(() => expect(window.location.pathname).toBe('/chat/t9'));
-    expect(FakeEventSource.forThread('t9').url).toBe('/api/events?threadId=t9');
+    // The chat opens its event stream in an effect after the route changes.
+    await waitFor(() => expect(FakeEventSource.forThread('t9').url).toBe('/api/events?threadId=t9'));
   });
 
   it('reports a failure to start a chat', async () => {
