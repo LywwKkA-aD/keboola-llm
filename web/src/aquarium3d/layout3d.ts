@@ -13,8 +13,8 @@ export type StationId = 'command' | 'archive' | 'console' | 'forge' | 'beacon';
 export const STATIONS_3D: Readonly<Record<StationId, Spot & { readonly label: string }>> = {
   command: { position: [0, 0.4, 1.2], facing: 0, label: 'command' },
   archive: { position: [-7.6, 0.2, 0.2], facing: -Math.PI / 2, label: 'archive' },
-  // Right side; turned a little toward the viewer so the screens behind the desks stay visible.
-  console: { position: [7.4, 0.2, 0.6], facing: Math.PI / 2 + 0.5, label: 'console' },
+  // Mirror of the knowledge archive on the right side.
+  console: { position: [7.6, 0.2, 0.2], facing: Math.PI / 2, label: 'console' },
   forge: { position: [-3.9, 0.2, 6.0], facing: -Math.PI / 4, label: 'forge' },
   beacon: { position: [5.1, 0.2, 6.1], facing: -0.3, label: 'beacon' },
 };
