@@ -9,15 +9,36 @@ export interface Spot {
 
 export type StationId = 'command' | 'archive' | 'console' | 'forge' | 'beacon';
 
-/** Work stations on the seabed. Position is where the first octopus floats; facing turns it to the station. */
+const FORGE: Spot = { position: [-3.9, 0.2, 6.0], facing: -Math.PI / 4 };
+
+/** How far ahead of the build agent the fabricator stands. */
+export const BUILD_AHEAD = 1.6;
+
+/** The approvals dais mirrors the build fabricator across the hall's centre line (x = 0). */
+export const APPROVAL_DAIS: Vec3 = [
+  -(FORGE.position[0] + Math.sin(FORGE.facing) * BUILD_AHEAD),
+  -0.6,
+  FORGE.position[2] + Math.cos(FORGE.facing) * BUILD_AHEAD,
+];
+
+/** Waiting agents stand this far from the dais, looking toward the centre of the hall. */
+export const WAIT_GAP = 1.7;
+// A diagonal column: straight down the line of sight the waiting agents would hide each other.
+const WAIT_FACING = -1.2;
+
+/** Work stations on the floor. Position is where the first agent stands; facing turns it to the station. */
 export const STATIONS_3D: Readonly<Record<StationId, Spot & { readonly label: string }>> = {
   command: { position: [0, 0.4, 1.2], facing: 0, label: 'command' },
   archive: { position: [-7.6, 0.2, 0.2], facing: -Math.PI / 2, label: 'archive' },
   // Mirror of the knowledge archive on the right side.
   console: { position: [7.6, 0.2, 0.2], facing: Math.PI / 2, label: 'console' },
-  forge: { position: [-3.9, 0.2, 6.0], facing: -Math.PI / 4, label: 'forge' },
-  // Turned to the left: three pads in a column, waiting agents look toward the centre of the hall.
-  beacon: { position: [5.1, 0.2, 6.1], facing: -1.2, label: 'beacon' },
+  forge: { ...FORGE, label: 'forge' },
+  // Three pads in a column left of the dais; waiting agents look toward the centre of the hall.
+  beacon: {
+    position: [APPROVAL_DAIS[0] + Math.sin(WAIT_FACING) * WAIT_GAP, 0.2, APPROVAL_DAIS[2] + Math.cos(WAIT_FACING) * WAIT_GAP],
+    facing: WAIT_FACING,
+    label: 'beacon',
+  },
 };
 
 const STATION_FOR: Partial<Record<AgentActivity, StationId>> = {
@@ -47,7 +68,8 @@ function slotAt(station: Spot, slot: number): Vec3 {
 /** Stations with fixed places (desks, pads), as offsets along the station's tangent; the first is the station spot. */
 const SLOT_OFFSETS: Partial<Record<StationId, readonly number[]>> = {
   console: [0, -1.9, 1.9],
-  beacon: [0, -1.25, 1.25],
+  // Extends back toward the centre, so nearer agents never hide farther ones and nothing leaves the frame.
+  beacon: [0, -1.55, -3.1],
 };
 const QUEUE_GAP = 1.2;
 

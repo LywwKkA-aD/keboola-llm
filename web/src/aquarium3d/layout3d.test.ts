@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layout3d, STATIONS_3D, stationSlots } from './layout3d.ts';
+import { APPROVAL_DAIS, BUILD_AHEAD, layout3d, STATIONS_3D, stationSlots, WAIT_GAP } from './layout3d.ts';
 import { auraFor } from './status.ts';
 
 const names = ['lead', 'a', 'b', 'c', 'd'];
@@ -49,6 +49,18 @@ describe('layout3d', () => {
     expect(pads.length).toBeGreaterThanOrEqual(3);
     expect(dist(spots.a!.position, pads[0]!)).toBeLessThan(1e-9);
     expect(dist(spots.b!.position, pads[1]!)).toBeLessThan(1e-9);
+  });
+
+  it('mirrors the approvals dais to the build fabricator across the centre line', () => {
+    const forge = STATIONS_3D.forge;
+    const fabricator = [forge.position[0] + Math.sin(forge.facing) * BUILD_AHEAD, forge.position[2] + Math.cos(forge.facing) * BUILD_AHEAD];
+    expect(APPROVAL_DAIS[0]).toBeCloseTo(-(fabricator[0] ?? 0));
+    expect(APPROVAL_DAIS[2]).toBeCloseTo(fabricator[1] ?? 0);
+    // Waiting agents stand left of the dais, WAIT_GAP away, and look toward the centre of the hall.
+    const [bx, , bz] = STATIONS_3D.beacon.position;
+    expect(bx).toBeLessThan(APPROVAL_DAIS[0]);
+    expect(Math.hypot(bx - APPROVAL_DAIS[0], bz - APPROVAL_DAIS[2])).toBeCloseTo(WAIT_GAP);
+    expect(Math.sin(STATIONS_3D.beacon.facing)).toBeLessThan(0);
   });
 
   it('places many resting agents without collisions', () => {

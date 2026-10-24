@@ -1,13 +1,12 @@
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { AdditiveBlending, Color, type Group, type MeshBasicMaterial } from 'three';
-import { STATIONS_3D, stationSlots } from '../../layout3d.ts';
+import { APPROVAL_DAIS, STATIONS_3D, stationSlots } from '../../layout3d.ts';
 
 const FLOOR = -0.6;
 const METAL = { color: '#0d1520', metalness: 0.75, roughness: 0.35 } as const;
 const AMBER = new Color('#f5b53d');
 const IDLE = new Color('#2a4c6e');
-const DAIS_BEHIND = 1.7;
 
 /**
  * Approvals: a waiting area. Agents waiting for the user stand on their own pads in front of a low dais;
@@ -21,8 +20,8 @@ export function WaitingArea({ waiting, motion }: { waiting: number; motion: bool
   const hexMaterial = useRef<MeshBasicMaterial>(null);
   const column = useRef<MeshBasicMaterial>(null);
   const color = useMemo(() => new Color(), []);
-  const { position, facing } = STATIONS_3D.beacon;
-  const center: [number, number, number] = [position[0] - Math.sin(facing) * DAIS_BEHIND, FLOOR, position[2] - Math.cos(facing) * DAIS_BEHIND];
+  const { facing } = STATIONS_3D.beacon;
+  const center: [number, number, number] = [APPROVAL_DAIS[0], FLOOR, APPROVAL_DAIS[2]];
   const active = waiting > 0;
 
   useFrame(({ clock }, delta) => {

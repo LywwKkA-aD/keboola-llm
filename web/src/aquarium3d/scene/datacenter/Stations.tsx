@@ -2,7 +2,7 @@ import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import { Color, type Group, type InstancedMesh, type MeshBasicMaterial, Object3D } from 'three';
-import { STATIONS_3D, type StationId } from '../../layout3d.ts';
+import { APPROVAL_DAIS, BUILD_AHEAD, STATIONS_3D, type StationId } from '../../layout3d.ts';
 import { Fabricator } from './Fabricator.tsx';
 import { WaitingArea } from './WaitingArea.tsx';
 import { Workstations } from './Workstations.tsx';
@@ -120,12 +120,12 @@ export function Stations({ active, occupancy, motion }: { active: StationActivit
       <StorageRacks active={active.archive} motion={motion} />
       <Workstations occupied={occupancy.console} motion={motion} />
       <Tag text="KEBOOLA" position={ahead('console', -1.2)} />
-      <group position={ahead('forge', 1.6)} rotation={[0, STATIONS_3D.forge.facing + Math.PI * 0.75, 0]}>
+      <group position={ahead('forge', BUILD_AHEAD)} rotation={[0, STATIONS_3D.forge.facing + Math.PI * 0.75, 0]}>
         <Fabricator active={active.forge} motion={motion} />
-        <Tag text="BUILD" position={[0, 0.1, 1.5]} />
       </group>
+      <Tag text="BUILD" position={[-(APPROVAL_DAIS[0] + 0.2), -0.5, APPROVAL_DAIS[2] + 1.6]} />
       <WaitingArea waiting={occupancy.beacon} motion={motion} />
-      <Tag text="APPROVALS" position={ahead('beacon', 1.1)} />
+      <Tag text="APPROVALS" position={[APPROVAL_DAIS[0] + 0.2, -0.5, APPROVAL_DAIS[2] + 1.6]} />
     </group>
   );
 }
