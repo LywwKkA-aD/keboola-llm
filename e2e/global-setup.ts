@@ -94,6 +94,14 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
   try {
     await waitForHealth(app, () => log);
+    // CI runners render WebGL in software on two cores: the light scene keeps the browser's main thread
+    // responsive enough to navigate while the aquarium is up.
+    const saved = await fetch(`${BASE_URL}/api/settings`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ quality: 'low' }),
+    });
+    if (!saved.ok) throw new Error(`Could not set the aquarium quality: HTTP ${saved.status}`);
   } catch (error) {
     await teardown();
     throw error;

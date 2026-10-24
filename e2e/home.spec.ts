@@ -33,7 +33,8 @@ test('leaving the aquarium tears the 3D view down without page errors', async ({
   await expect(page.getByTestId('aquarium-view').getByText('LEAD', { exact: true })).toBeVisible(SCENE);
 
   await page.getByRole('navigation', { name: RU.appNav }).getByRole('link', { name: 'Чаты' }).click();
-  await expect(page.getByRole('button', { name: 'Новый чат' })).toBeVisible();
+  // Tearing the scene down shares the main thread with software WebGL: same budget as building it.
+  await expect(page.getByRole('button', { name: 'Новый чат' })).toBeVisible(SCENE);
   await expect(page.getByTestId('aquarium-view')).toHaveCount(0);
   // The pageErrors fixture fails the test if unmounting the scene threw.
 });
