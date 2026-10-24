@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { Attention } from './attention/Attention.tsx';
 import { TopBar } from './components/shell/TopBar.tsx';
 import { LiveProvider } from './live/live-context.tsx';
 import { AgentsPage } from './pages/AgentsPage.tsx';
@@ -16,6 +17,7 @@ export function App() {
       <TeamProvider>
         <LiveProvider>
           <BrowserRouter>
+            <Attention />
             <div className="app">
               <TopBar />
               <main className="app__main">
