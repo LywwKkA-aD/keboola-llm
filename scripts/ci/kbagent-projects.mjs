@@ -7,7 +7,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 if (process.env.CI !== 'true') {
   console.error("Runs only in CI: it overwrites kbagent's config.");
@@ -45,7 +45,7 @@ if (plain.status !== 0) console.log(plain.stdout, plain.stderr);
 
 // The app's own path: `npm start` runs the server from server/.
 process.chdir(join(ROOT, 'server'));
-const { kbagentVersion, listKeboolaProjects } = await import(join(ROOT, 'server', 'src', 'system', 'keboola.ts'));
+const { kbagentVersion, listKeboolaProjects } = await import(pathToFileURL(join(ROOT, 'server', 'src', 'system', 'keboola.ts')).href);
 console.log(`app: ${await kbagentVersion()}`);
 const projects = await listKeboolaProjects();
 const aliases = projects.map((entry) => entry.alias).toSorted();
