@@ -20,9 +20,9 @@ afterEach(() => {
   });
 });
 
-function repo() {
+function repo(project = 'sandbox') {
   return makeTree({
-    '.env': 'OMNIROUTE_API_KEY=test-key\nOMNIROUTE_MODEL=cc/test\nKEBOOLA_PROJECT=sandbox\n',
+    '.env': `OMNIROUTE_API_KEY=test-key\nOMNIROUTE_MODEL=cc/test\nKEBOOLA_PROJECT=${project}\n`,
     'agents/lead/AGENT.md': agentMd('name: lead\nrole: orchestrator\ndescription: Leads the team and talks to the user.'),
     'agents/helper/AGENT.md': agentMd('name: helper\ndescription: Answers Keboola questions.\nskills: [house-style, ghost]\ntools: [kbagent]'),
     'agents/broken/AGENT.md': agentMd('name: broken\ndescription: short'),
@@ -117,6 +117,14 @@ describe('bootstrap', () => {
     expect(app.env.omniroute).toEqual({ baseUrl: 'http://127.0.0.1:20129/v1', apiKey: 'new-key', model: 'cc/test' });
     expect(app.env.keboolaProject).toBe('sandbox');
     expect(app.buildTeam(DEFAULT_SETTINGS).effective.model).toBe('cc/test');
+  });
+
+  it('works with the project the access was read for when none is chosen (kbagent\'s default)', () => {
+    const app = bootstrap(repo(''));
+    expect(app.buildTeam(DEFAULT_SETTINGS).effective.keboolaProject).toBe('');
+    app.setKeboolaAccess({ project: 'main', backend: 'snowflake', role: 'admin', mergeRequests: false, protectedProduction: false, changePath: 'promote', sql: true });
+    expect(app.buildTeam(DEFAULT_SETTINGS).effective.keboolaProject).toBe('main');
+    expect(app.buildTeam({ ...DEFAULT_SETTINGS, keboolaProject: 'chosen' }).effective.keboolaProject).toBe('chosen');
   });
 
   it('builds the team for the analyst Keboola access once the app has read it', () => {

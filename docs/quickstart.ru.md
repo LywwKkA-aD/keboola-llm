@@ -35,6 +35,12 @@ node -v
    ```
 
 4. Закройте и снова откройте PowerShell и проверьте `node -v`.
+5. Снимите с файлов Node.js пометку «скачано из интернета», иначе PowerShell при каждом `npm` будет спрашивать
+   «Security warning … Do you want to run npm.ps1?» (администратор не нужен):
+
+   ```powershell
+   Get-ChildItem (Split-Path (Get-Command node).Source) -Recurse | Unblock-File
+   ```
 
 ## 2. OmniRoute (доступ к моделям)
 
@@ -222,6 +228,9 @@ continue); в Git: `git stash`, `git pull`, `git stash pop`.
 ## Если что-то не так
 
 - `npm run doctor` — те же проверки, что в карточке настройки, в терминале.
+- PowerShell при каждом `npm` спрашивает «Security warning … Do you want to run …npm.ps1?»: один раз выполните
+  `Get-ChildItem (Split-Path (Get-Command node).Source) -Recurse | Unblock-File` (и то же для
+  `$env:APPDATA\npm`, если спрашивает про `omniroute.ps1`).
 - PowerShell пишет «running scripts is disabled on this system»: выполните
   `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (администратор не нужен) и откройте PowerShell заново.
 - `npm install` падает на `better-sqlite3`: нужен доступ к GitHub (оттуда скачивается готовая сборка) и Node.js 24.

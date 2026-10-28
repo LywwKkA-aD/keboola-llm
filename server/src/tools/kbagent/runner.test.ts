@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { defaultExec, runKbagent } from './runner.ts';
-import type { ExecFn, ExecOutcome } from './runner.ts';
+import { defaultExec, describeFailure, runKbagent } from './runner.ts';
+import type { ExecFn, ExecOutcome, RunResult } from './runner.ts';
 
 const fakeExec =
   (outcome: Partial<ExecOutcome>, calls: unknown[][] = []): ExecFn =>
@@ -114,5 +114,27 @@ describe('defaultExec', () => {
   it('reports spawn errors such as a missing binary', async () => {
     const outcome = await defaultExec('definitely-not-kbagent-binary', [], options);
     expect(outcome).toMatchObject({ exitCode: null, spawnError: 'ENOENT' });
+  });
+});
+
+describe('describeFailure', () => {
+  const failed = (output: unknown, stderr?: string): RunResult => ({ ok: false, exitCode: 2, output, truncated: false, ...(stderr ? { stderr } : {}) });
+
+  it('takes the error out of the framed panel kbagent prints for a usage error', () => {
+    const panel = [
+      'Usage: kbagent project info [OPTIONS]',
+      "Try 'kbagent project info --help' for help.",
+      '╭─ Error ──────────────────────────────────╮',
+      "│ Missing option '--project'.              │",
+      '╰──────────────────────────────────────────╯',
+    ].join('\n');
+    expect(describeFailure(failed('', panel))).toBe("Missing option '--project'.");
+    expect(describeFailure(failed('', panel.replace(/[╭╰]/g, '└').replace(/[╮╯]/g, '┘')))).toBe("Missing option '--project'.");
+  });
+
+  it('prefers kbagent\'s JSON error, then the last plain line', () => {
+    expect(describeFailure(failed({ status: 'error', error: { message: 'no config' } }))).toBe('no config');
+    expect(describeFailure(failed('first\nlast line'))).toBe('last line');
+    expect(describeFailure({ ok: false, exitCode: null, output: '', truncated: false, hint: 'kbagent is not installed' })).toBe('kbagent is not installed');
   });
 });

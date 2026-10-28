@@ -101,7 +101,8 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
     },
     buildTeam: (settings) => {
       const { agents, skills } = definitions;
-      const effective = { model: settings.model || env.omniroute.model, keboolaProject: settings.keboolaProject || env.keboolaProject };
+      // Without a chosen project, the one the access was read for (kbagent's default): agents and the top bar name it.
+      const effective = { model: settings.model || env.omniroute.model, keboolaProject: settings.keboolaProject || env.keboolaProject || access?.project || '' };
       const resolveTools = createToolResolver(
         createToolFactories({ defaultProject: effective.keboolaProject, ...(access ? { changePath: access.changePath } : {}) }),
       );

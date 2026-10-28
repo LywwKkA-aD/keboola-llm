@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ExecFn } from '../tools/kbagent/index.ts';
-import { kbagentConfigSource, kbagentVersion, listKeboolaProjects } from './keboola.ts';
+import { kbagentConfigSource, kbagentVersion, keboolaAccess, listKeboolaProjects, pickProject } from './keboola.ts';
 import { listModels, modelsOfProvider } from './models.ts';
 import { systemStatus } from './status.ts';
 
@@ -116,6 +116,36 @@ describe('listKeboolaProjects', () => {
 
   it('tells an empty list apart from a failure', async () => {
     await expect(listKeboolaProjects({ exec: execReturning('{"status":"ok","data":[]}') })).resolves.toEqual([]);
+  });
+});
+
+describe('keboolaAccess without a chosen project', () => {
+  const projects = (entries: object[]) => JSON.stringify({ status: 'ok', data: entries });
+  const info = JSON.stringify({ status: 'ok', data: { alias: 'prod', project_id: 2, default_backend: 'snowflake', auth_mode: 'token', features: [] } });
+
+  it('reads the access of kbagent\'s default project, naming it: project info requires --project', async () => {
+    const calls: string[][] = [];
+    const exec: ExecFn = async (_file, args) => {
+      calls.push([...args]);
+      const stdout = args.includes('list') ? projects([{ alias: 'dev', is_default: false }, { alias: 'prod', is_default: true }]) : info;
+      return { stdout, stderr: '', exitCode: 0, timedOut: false };
+    };
+    const access = await keboolaAccess(undefined, { exec });
+    expect(access.project).toBe('prod');
+    expect(calls.at(-1)).toEqual(['--json', '--deny-writes', 'project', 'info', '--project', 'prod']);
+  });
+
+  it('asks to choose one in Settings when several are registered and none is the default', async () => {
+    const exec: ExecFn = async () => ({ stdout: projects([{ alias: 'dev' }, { alias: 'prod' }]), stderr: '', exitCode: 0, timedOut: false });
+    await expect(keboolaAccess(undefined, { exec })).rejects.toThrow(/2 are registered in kbagent and none is its default: choose one in Settings/);
+  });
+
+  it('picks the default project, else the only one', () => {
+    const project = (alias: string, isDefault = false) => ({ alias, name: alias, id: 1, stackUrl: 'https://c', isDefault });
+    expect(pickProject([project('a'), project('b', true)])).toBe('b');
+    expect(pickProject([project('solo')])).toBe('solo');
+    expect(pickProject([project('a'), project('b')])).toBeUndefined();
+    expect(pickProject([])).toBeUndefined();
   });
 });
 

@@ -76,7 +76,26 @@ export async function kbagentVersion(options: Options = {}): Promise<string> {
   return String(result.output).trim();
 }
 
-/** What the analyst may do in the project (role, features, how changes reach production); read-only calls. */
-export function keboolaAccess(project: string | undefined, options: Options = {}): Promise<KeboolaAccess> {
-  return readKeboolaAccess({ run: (argv) => run(argv, options), ...(project ? { project } : {}) });
+/** The project kbagent works with when the app has none chosen: kbagent's default one, else the only one registered. */
+export const pickProject = (projects: readonly KeboolaProject[]): string | undefined =>
+  projects.find((project) => project.isDefault)?.alias ?? (projects.length === 1 ? projects[0]?.alias : undefined);
+
+/**
+ * What the analyst may do in the project (role, features, how changes reach production); read-only calls. Without a
+ * chosen project it reads kbagent's default (or only) one, by name: `project info` requires --project.
+ */
+export async function keboolaAccess(project: string | undefined, options: Options = {}): Promise<KeboolaAccess> {
+  let alias = project;
+  if (!alias) {
+    const projects = await listKeboolaProjects(options);
+    alias = pickProject(projects);
+    if (!alias) {
+      throw new Error(
+        projects.length === 0
+          ? 'no Keboola project is registered in kbagent'
+          : `no project chosen: ${projects.length} are registered in kbagent and none is its default: choose one in Settings`,
+      );
+    }
+  }
+  return readKeboolaAccess({ run: (argv) => run(argv, options), project: alias });
 }
