@@ -22,7 +22,8 @@
     "chat": "npm run chat -w server --",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w web && tsc --noEmit -p e2e",
     "kbagent:snapshot": "node scripts/kbagent-snapshot.mjs",
-    "build": "npm run build -w web"
+    "build": "npm run build -w web",
+    "check:first-start": "node scripts/first-start.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

@@ -1,10 +1,23 @@
 # keboola-llm
 
-A local web app for orchestrating AI agents that help a data analyst work with Keboola:
-an orchestrator plus specialized agents (Keboola navigator, SQL engineer, job doctor, reviewers, docs),
-shared memory, skills, and an "aquarium" where every agent is an animated octopus.
+Agent Studio: a local web app where a team of AI agents helps a data analyst work with Keboola. A lead takes the
+request and hands it to specialists (Keboola expert, configuration analyst, project scout, reviewers for SQL,
+performance, data quality, DWH design, security and more, a developer that changes things on a development branch,
+a knowledge keeper and an agent builder). The team shares memory, a knowledge base and skills; Home shows it at work
+in a 3D data-centre hall.
 
-Status: the agent runtime and HTTP API work (terminal chat for now). The web UI and the aquarium are next.
+**Analyst's step-by-step guide (Windows, in Russian): [docs/quickstart.ru.md](docs/quickstart.ru.md).**
+
+What it does:
+
+- Chat with the team, with `/` commands (`/skill`, `/agent`, `/plan`, `/init`, `/sql`, `/new`, `/help`); every step
+  of a run opens to what it did (command, SQL, diff, task).
+- Init workspace: project-scout maps the project and documents its production transformations in the knowledge base.
+- Changes only on a development branch, every write approved in the app; a verified change reaches production
+  through an in-app promotion the analyst approves after seeing the diff (or merge requests / the Keboola UI,
+  depending on her role and the project's features, which the app reads).
+- Knowledge base and shared memory pages, agent version history with rollback, scheduled routines, token usage with
+  the prompt-cache share, a setup checklist that needs no file editing.
 
 ## Requirements
 
@@ -84,6 +97,8 @@ npm run chat                # or talk to the team in the terminal
 | `npm test` / `npm run typecheck` | Unit tests / TypeScript check |
 | `npm run test:e2e` | Build the web app, then Playwright tests of the real app against a stub LLM on port 4900 (no OmniRoute, no kbagent) |
 | `npm run eval [-- --only id]` | Ask the running team the questions in `evals/shop.json` (real model and Keboola project, read-only) and grade the answers; report in `data/evals/` |
+| `npm run eval:routing [-- --only id]` | Check whom the lead hands each request in `evals/routing.json` to; stops each run at the first hand-off, approves nothing |
+| `npm run check:first-start` | Start the built app like a fresh install (no `.env`, empty data folder) and check the UI, setup checklist and team (CI runs it on Windows and Linux) |
 
 ## Layout
 
@@ -96,10 +111,14 @@ scripts/                 doctor, smoke test, vendor sync, kbagent snapshot
 e2e/                     Playwright specs and the scripted OpenAI-compatible stub LLM they run against
 evals/                   question sets with expected findings for `npm run eval` (shop.json targets fixtures/keboola-shop)
 vendor/keboola/          Keboola's official agents and skills (generated, do not edit)
-data/                    local state, not in git: chats, checkpoints, settings, and what the team knows:
+data/                    local state, never in git: chats, checkpoints, settings, usage, version history, and what the team knows:
   knowledge/             knowledge base, Markdown notes (agents see /knowledge/; edit them on the Knowledge page)
   memories/              shared memory AGENTS.md and project profiles in projects/ (agents see /memories/)
+docs/                    the analyst's quick start
 ```
+
+Back up `data/` (with the app stopped) to keep the team's knowledge. Agents, skills and routines that agent-builder
+creates or edits are written to `agents/`, `skills/` and `routines/` in the working copy; the app never runs git.
 
 The knowledge base holds company notes, so it lives in `data/` (or `DATA_DIR`) and never in git. The first
 start creates it with a README; notes an older version kept in the repo's `knowledge/` folder are copied over

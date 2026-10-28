@@ -31,6 +31,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # The app as a new user starts it: built UI, no .env, empty data folder.
+      - run: npm run check:first-start
 
   e2e:
     name: E2E (stub LLM)
