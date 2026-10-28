@@ -1,5 +1,5 @@
 /**
- * Snapshot of kbagent v0.100.2 operations, generated from `kbagent --json permissions list`
+ * Snapshot of kbagent v0.100.4 operations, generated from `kbagent --json permissions list`
  * (risk category) and each command's `--help` (scope flags). Scope: p = accepts --project,
  * b = accepts --branch. Regenerate when upgrading kbagent; unknown operations are rejected.
  */

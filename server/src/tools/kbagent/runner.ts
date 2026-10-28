@@ -141,3 +141,12 @@ export async function runKbagent(request: RunRequest): Promise<RunResult> {
     ...(!ok && stderr !== '' && source !== stderr ? { stderr: stderr.slice(-STDERR_TAIL_CHARS) } : {}),
   };
 }
+
+/** What kbagent said when a call failed: its JSON error, else the last line of its output or stderr, else the hint. */
+export function describeFailure(result: RunResult): string {
+  const error = (result.output as { error?: { message?: unknown } } | undefined)?.error?.message;
+  if (typeof error === 'string' && error) return error;
+  const text = [typeof result.output === 'string' ? result.output : '', result.stderr ?? ''].join('\n');
+  const last = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).at(-1);
+  return (last ?? result.hint ?? 'no output').slice(0, 300);
+}

@@ -79,8 +79,17 @@ describe('readKeboolaAccess', () => {
     expect(calls).toEqual(['--json --deny-writes project info --project shop', '--json --deny-writes auth status']);
   });
 
-  it('fails clearly when kbagent cannot read the project', async () => {
-    const run = async (): Promise<RunResult> => ({ ok: false, exitCode: 1, output: 'boom', truncated: false });
-    await expect(readKeboolaAccess({ run, project: 'shop' })).rejects.toThrow(/could not read/i);
+  it('fails with the command and what kbagent answered, so the setup step shows why', async () => {
+    const json = async (): Promise<RunResult> => ({
+      ok: false,
+      exitCode: 4,
+      output: { status: 'error', error: { code: 'NETWORK_ERROR', message: 'SSL: CERTIFICATE_VERIFY_FAILED' } },
+      truncated: false,
+    });
+    await expect(readKeboolaAccess({ run: json, project: 'shop' })).rejects.toThrow(
+      'kbagent could not read the project (kbagent project info --project shop, exit 4): SSL: CERTIFICATE_VERIFY_FAILED',
+    );
+    const text = async (): Promise<RunResult> => ({ ok: false, exitCode: 1, output: 'boom', truncated: false });
+    await expect(readKeboolaAccess({ run: text })).rejects.toThrow('kbagent could not read the project (kbagent project info, exit 1): boom');
   });
 });

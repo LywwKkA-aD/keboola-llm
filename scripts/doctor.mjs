@@ -56,20 +56,23 @@ async function main() {
   const { loadSettings } = await import('../server/src/config/settings.ts');
   const { runSetupChecks, STEP_LABELS } = await import('../server/src/setup/checks.ts');
   const { probeOmniRoute, testModel } = await import('../server/src/setup/omniroute.ts');
-  const { kbagentConfigSource, kbagentVersion, listKeboolaProjects } = await import('../server/src/system/keboola.ts');
+  const { kbagentConfigSource, kbagentVersion, keboolaAccess, listKeboolaProjects } = await import('../server/src/system/keboola.ts');
 
   const env = readAppEnv(process.env, ROOT);
   // The app lets Settings override the model and project from .env; check what it would really use.
   const settings = loadSettings(join(env.dataDir, 'settings.json'));
   const omniroute = { ...env.omniroute, model: settings.model || env.omniroute.model };
+  const keboolaProject = settings.keboolaProject || env.keboolaProject;
   const { steps } = await runSetupChecks({
     omniroute,
-    keboolaProject: settings.keboolaProject || env.keboolaProject,
+    keboolaProject,
     probeOmniRoute: () => probeOmniRoute(omniroute),
     testModel: () => testModel(omniroute),
     kbagentVersion: () => kbagentVersion(),
     keboolaProjects: () => listKeboolaProjects(),
     kbagentConfig: () => kbagentConfigSource(),
+    // Read-only: the analyst's role and the project's features, as the app reads them.
+    keboolaAccess: () => keboolaAccess(keboolaProject || undefined),
   });
 
   steps.forEach((step) => {

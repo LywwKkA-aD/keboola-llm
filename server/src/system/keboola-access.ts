@@ -3,7 +3,7 @@
  * cannot know her company's setup in advance, so it reads it (read-only kbagent calls) and picks the way changes
  * reach production: a promotion in the app, a merge request, the Keboola UI, or no changes at all.
  */
-import type { RunResult } from '../tools/kbagent/runner.ts';
+import { describeFailure, type RunResult } from '../tools/kbagent/runner.ts';
 
 /** How a verified change on a development branch gets to production. */
 export type ChangePath = 'promote' | 'merge-request' | 'keboola-ui' | 'read-only';
@@ -119,8 +119,10 @@ const dataOf = <T>(result: RunResult): T | undefined => (result.ok ? (result.out
 
 /** Read the access with kbagent (read-only calls only). */
 export async function readKeboolaAccess({ run, project }: { run: (argv: readonly string[]) => Promise<RunResult>; project?: string }): Promise<KeboolaAccess> {
-  const info = dataOf<ProjectInfo>(await run(['--json', '--deny-writes', 'project', 'info', ...(project ? ['--project', project] : [])]));
-  if (!info) throw new Error('kbagent could not read the project');
+  const argv = ['--json', '--deny-writes', 'project', 'info', ...(project ? ['--project', project] : [])];
+  const result = await run(argv);
+  const info = dataOf<ProjectInfo>(result);
+  if (!info) throw new Error(`kbagent could not read the project (kbagent ${argv.slice(2).join(' ')}, exit ${String(result.exitCode)}): ${describeFailure(result)}`);
   const auth = info.auth_mode === 'session' ? dataOf<AuthStatus>(await run(['--json', '--deny-writes', 'auth', 'status'])) : undefined;
   return deriveAccess({ info, ...(auth ? { auth } : {}) });
 }

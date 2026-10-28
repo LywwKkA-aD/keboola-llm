@@ -1,6 +1,6 @@
 // The runner and env only, not the agent tools: `npm run doctor` loads this file without LangChain.
 import { buildChildEnv } from '../tools/kbagent/env.ts';
-import { type ExecFn, type RunResult, runKbagent } from '../tools/kbagent/runner.ts';
+import { describeFailure, type ExecFn, runKbagent } from '../tools/kbagent/runner.ts';
 import { type KeboolaAccess, readKeboolaAccess } from './keboola-access.ts';
 
 export interface KeboolaProject {
@@ -24,14 +24,6 @@ const run = (argv: readonly string[], { exec, env = process.env }: Options) =>
 
 const str = (value: unknown) => (typeof value === 'string' ? value : '');
 
-/** What kbagent said when a call failed: its JSON error, else the last line of its stderr, else the runner's hint. */
-function failureOf(result: RunResult): string {
-  const error = (result.output as { error?: { message?: unknown } } | undefined)?.error?.message;
-  if (typeof error === 'string' && error) return error;
-  const text = [typeof result.output === 'string' ? result.output : '', result.stderr ?? ''].join('\n');
-  const last = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).at(-1);
-  return (last ?? result.hint ?? 'no output').slice(0, 300);
-}
 
 type Entry = Record<string, unknown>;
 const isEntry = (value: unknown): value is Entry => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -53,7 +45,7 @@ function projectEntries(data: unknown): Entry[] | undefined {
 export async function listKeboolaProjects(options: Options = {}): Promise<KeboolaProject[]> {
   const result = await run(['--json', 'project', 'list'], options);
   const entries = result.ok ? projectEntries((result.output as { data?: unknown } | undefined)?.data) : undefined;
-  if (!entries) throw new Error(`kbagent project list failed (exit ${String(result.exitCode)}): ${failureOf(result)}`);
+  if (!entries) throw new Error(`kbagent project list failed (exit ${String(result.exitCode)}): ${describeFailure(result)}`);
   return entries
     .map((entry) => ({
       alias: str(entry.alias),
