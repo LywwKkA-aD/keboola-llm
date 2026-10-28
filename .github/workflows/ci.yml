@@ -53,6 +53,17 @@ jobs:
       - name: Run it in Windows PowerShell 5.1
         shell: cmd
         run: powershell -NoProfile -ExecutionPolicy Bypass -File "%RUNNER_TEMP%\install-kbagent.ps1"
+      # Later steps do not see the PATH the block saved for new windows.
+      - name: Put kbagent on PATH for the next steps
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.local\bin"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: The app lists the projects kbagent has
+        run: node scripts/ci/kbagent-projects.mjs
 
   e2e:
     name: E2E (stub LLM)

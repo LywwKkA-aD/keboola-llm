@@ -96,8 +96,18 @@ describe('listKeboolaProjects', () => {
     expect(exec.mock.calls[0]?.[1]).toEqual(['--json', 'project', 'list']);
   });
 
-  it('reports kbagent failures', async () => {
-    await expect(listKeboolaProjects({ exec: execReturning('{"status":"error","error":{"message":"no config"}}', 5) })).rejects.toThrow(/kbagent/);
+  it('reports kbagent failures with what kbagent said, so the setup step can show it', async () => {
+    await expect(listKeboolaProjects({ exec: execReturning('{"status":"error","error":{"message":"no config"}}', 5) })).rejects.toThrow(
+      'kbagent project list failed (exit 5): no config',
+    );
+    const stderrOnly: ExecFn = async () => ({ stdout: '', stderr: 'Traceback ...\nOSError: No username set in the environment\n', exitCode: 1, timedOut: false });
+    await expect(listKeboolaProjects({ exec: stderrOnly })).rejects.toThrow(/exit 1\): .*No username set in the environment/);
+    const slow: ExecFn = async () => ({ stdout: '', stderr: '', exitCode: null, timedOut: true });
+    await expect(listKeboolaProjects({ exec: slow })).rejects.toThrow(/did not finish within 45 s/);
+  });
+
+  it('tells an empty list apart from a failure', async () => {
+    await expect(listKeboolaProjects({ exec: execReturning('{"status":"ok","data":[]}') })).resolves.toEqual([]);
   });
 });
 
