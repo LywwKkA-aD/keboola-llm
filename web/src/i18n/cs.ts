@@ -332,6 +332,7 @@ export const cs: Record<StringKey, string> = {
   'setup.hideSteps': 'Skrýt kroky',
   'setup.fact.router': 'Modelů: {count} · {url}',
   'setup.fact.routerProvider': 'Modelů: {count} (poskytovatel {provider}) · {url}',
+  'setup.fact.kbagentConfig': 'kbagent v aplikaci čte nastavení takto: {source}. Porovnejte s řádkem Config source ve výstupu {doctor} v terminálu.',
   'setup.fact.routerRunning': 'Běží na adrese {url}',
   'setup.fact.unreachable': 'Žádná odpověď na adrese {url}',
   'setup.fact.unreachableError': 'Žádná odpověď na adrese {url}: {error}',

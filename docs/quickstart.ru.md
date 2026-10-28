@@ -226,6 +226,15 @@ continue); в Git: `git stash`, `git pull`, `git stash pop`.
   `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (администратор не нужен) и откройте PowerShell заново.
 - `npm install` падает на `better-sqlite3`: нужен доступ к GitHub (оттуда скачивается готовая сборка) и Node.js 24.
 - Порт 4800 занят: `$env:PORT=4801; npm start` и откройте http://127.0.0.1:4801.
+- **Приложение не видит проекты, а `kbagent project list` в терминале их показывает.** В карточке настройки, в шаге
+  «Проект Keboola подключён», будет строка, откуда kbagent в приложении читает настройки. Запустите в терминале
+  `kbagent doctor` и сравните её со строкой «Config source». Если пути разные (например, у вас настройки kbagent в
+  папке проекта `.kbagent`), укажите эту папку приложению и перезапустите его в новом окне PowerShell:
+
+  ```powershell
+  [Environment]::SetEnvironmentVariable('KBAGENT_CONFIG_DIR', 'C:\путь\к\папке\с\config.json', 'User')
+  ```
+
 - `kbagent` не находится после установки: откройте новое окно PowerShell (PATH меняется только для новых окон).
 - `kbagent` ставится с ошибкой `does not satisfy Python>=3.12`: uv не смог скачать Python; используйте способ B
   (готовая сборка без Python).

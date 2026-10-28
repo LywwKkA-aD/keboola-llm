@@ -132,6 +132,31 @@ describe('runSetupChecks', () => {
     });
   });
 
+  it('says which config kbagent in the app reads when it has no projects or cannot list them', async () => {
+    const source = 'Using global config at C:\\Users\\a\\AppData\\Local\\keboola-agent-cli\\keboola-agent-cli\\config.json';
+    const kbagentConfig = vi.fn(async () => source);
+    const none = await runSetupChecks(input({ keboolaProjects: async () => [], kbagentConfig }));
+    expect(step(none.steps, 'projects')).toMatchObject({
+      reason: 'projectsNone',
+      detail: `none registered (kbagent: ${source})`,
+      facts: { kind: 'none', config: source },
+    });
+    const failing = await runSetupChecks(
+      input({
+        keboolaProjects: async () => {
+          throw new Error('kbagent project list failed (exit 5): no config');
+        },
+        kbagentConfig,
+      }),
+    );
+    expect(step(failing.steps, 'projects')).toMatchObject({ facts: { kind: 'error', message: 'kbagent project list failed (exit 5): no config', config: source } });
+
+    // Not asked when the projects are there.
+    kbagentConfig.mockClear();
+    await runSetupChecks(input({ kbagentConfig }));
+    expect(kbagentConfig).not.toHaveBeenCalled();
+  });
+
   it('accepts kbagent default or only project when none is configured', async () => {
     const byDefault = await runSetupChecks(input({ keboolaProject: '' }));
     expect(step(byDefault.steps, 'project')).toMatchObject({ status: 'ok', detail: 'sandbox (kbagent default)', facts: { kind: 'project', alias: 'sandbox', source: 'default' } });

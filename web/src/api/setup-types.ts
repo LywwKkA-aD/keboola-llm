@@ -23,7 +23,8 @@ export type ChangePath = 'promote' | 'merge-request' | 'keboola-ui' | 'read-only
 
 /** What a step found, as data for the UI to word in the user's language. `none`: the reason says it all. */
 export type SetupFacts =
-  | { readonly kind: 'none' }
+  // config: where kbagent in the app reads its projects (only when it has none or fails to list them).
+  | { readonly kind: 'none'; readonly config?: string }
   | { readonly kind: 'router'; readonly url: string; readonly models?: number; readonly provider?: string }
   | { readonly kind: 'unreachable'; readonly url: string; readonly error?: string }
   | { readonly kind: 'http'; readonly url: string; readonly status: number }
@@ -32,7 +33,7 @@ export type SetupFacts =
   | { readonly kind: 'modelAnswered'; readonly model: string; readonly ms: number }
   | { readonly kind: 'modelFailed'; readonly model: string; readonly error: string }
   | { readonly kind: 'version'; readonly version: string }
-  | { readonly kind: 'error'; readonly message: string }
+  | { readonly kind: 'error'; readonly message: string; readonly config?: string }
   | { readonly kind: 'projects'; readonly aliases: readonly string[] }
   | { readonly kind: 'project'; readonly alias: string; readonly source: 'configured' | 'default' | 'only' }
   | { readonly kind: 'projectUnknown'; readonly alias: string }

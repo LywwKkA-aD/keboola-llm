@@ -46,6 +46,8 @@ export interface SetupServiceDeps {
   readonly keboolaProjects: () => Promise<readonly KeboolaProject[]>;
   /** The analyst's access in the chosen project; adds the access step to the checklist. */
   readonly keboolaAccess?: () => Promise<KeboolaAccess>;
+  /** Where kbagent reads its config, for the projects step when it finds none. */
+  readonly kbagentConfig?: () => Promise<string | undefined>;
   /** Start using new OmniRoute settings: rebuild the model factory and the team. */
   readonly apply: (omniroute: OmniRouteConfig) => void;
   readonly fetchImpl?: typeof fetch;
@@ -105,6 +107,7 @@ export function createSetupService(deps: SetupServiceDeps): SetupService {
         kbagentVersion: deps.kbagentVersion,
         keboolaProjects: deps.keboolaProjects,
         ...(deps.keboolaAccess ? { keboolaAccess: deps.keboolaAccess } : {}),
+        ...(deps.kbagentConfig ? { kbagentConfig: deps.kbagentConfig } : {}),
       });
       return { ...checks, omniroute: state(), effective: { model: config.model, keboolaProject } };
     },

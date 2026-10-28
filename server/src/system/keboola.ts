@@ -33,13 +33,28 @@ function failureOf(result: RunResult): string {
   return (last ?? result.hint ?? 'no output').slice(0, 300);
 }
 
+type Entry = Record<string, unknown>;
+const isEntry = (value: unknown): value is Entry => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * The project entries of `project list`: a list (current kbagent), or a list or alias map under `projects`, or an alias
+ * map (other versions); the alias comes from the key where the entry has none.
+ */
+function projectEntries(data: unknown): Entry[] | undefined {
+  const fromMap = (map: Entry) => Object.entries(map).flatMap(([alias, entry]) => (isEntry(entry) ? [{ alias, ...entry }] : []));
+  if (Array.isArray(data)) return data.filter(isEntry);
+  if (!isEntry(data)) return undefined;
+  if (Array.isArray(data.projects)) return data.projects.filter(isEntry);
+  if (isEntry(data.projects)) return fromMap(data.projects);
+  return fromMap(data);
+}
+
 /** Projects registered in kbagent, as aliases the user can pick. Tokens are never returned. */
 export async function listKeboolaProjects(options: Options = {}): Promise<KeboolaProject[]> {
   const result = await run(['--json', 'project', 'list'], options);
-  const data = (result.output as { data?: unknown } | undefined)?.data;
-  if (!result.ok || !Array.isArray(data)) throw new Error(`kbagent project list failed (exit ${String(result.exitCode)}): ${failureOf(result)}`);
-  return data
-    .filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
+  const entries = result.ok ? projectEntries((result.output as { data?: unknown } | undefined)?.data) : undefined;
+  if (!entries) throw new Error(`kbagent project list failed (exit ${String(result.exitCode)}): ${failureOf(result)}`);
+  return entries
     .map((entry) => ({
       alias: str(entry.alias),
       name: str(entry.project_name),
@@ -48,6 +63,17 @@ export async function listKeboolaProjects(options: Options = {}): Promise<Kebool
       isDefault: entry.is_default === true,
     }))
     .filter((project) => project.alias);
+}
+
+/**
+ * Where kbagent run by the app reads its projects: the "Config source" line of `kbagent doctor`, e.g. "Using global
+ * config at C:\\...\\config.json". Asked only when the app finds no projects, to compare with the analyst's terminal.
+ */
+export async function kbagentConfigSource(options: Options = {}): Promise<string | undefined> {
+  const result = await run(['--json', 'doctor'], options);
+  const checks = (result.output as { data?: { checks?: unknown } } | undefined)?.data?.checks;
+  const source = Array.isArray(checks) ? checks.filter(isEntry).find((check) => check.check === 'config_source') : undefined;
+  return str(source?.message) || undefined;
 }
 
 /** `kbagent --version`, e.g. "kbagent v0.100.2". */

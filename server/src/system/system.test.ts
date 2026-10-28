@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ExecFn } from '../tools/kbagent/index.ts';
-import { kbagentVersion, listKeboolaProjects } from './keboola.ts';
+import { kbagentConfigSource, kbagentVersion, listKeboolaProjects } from './keboola.ts';
 import { listModels, modelsOfProvider } from './models.ts';
 import { systemStatus } from './status.ts';
 
@@ -106,8 +106,24 @@ describe('listKeboolaProjects', () => {
     await expect(listKeboolaProjects({ exec: slow })).rejects.toThrow(/did not finish within 45 s/);
   });
 
+  it('reads the projects from other shapes kbagent versions answer with', async () => {
+    const entry = { project_name: 'Sandbox', project_id: 1, stack_url: 'https://c', is_default: true };
+    const expected = [{ alias: 'sandbox', name: 'Sandbox', id: 1, stackUrl: 'https://c', isDefault: true }];
+    for (const data of [{ projects: [{ alias: 'sandbox', ...entry }] }, { projects: { sandbox: entry } }, { sandbox: entry }]) {
+      expect(await listKeboolaProjects({ exec: execReturning(JSON.stringify({ status: 'ok', data })) })).toEqual(expected);
+    }
+  });
+
   it('tells an empty list apart from a failure', async () => {
     await expect(listKeboolaProjects({ exec: execReturning('{"status":"ok","data":[]}') })).resolves.toEqual([]);
+  });
+});
+
+describe('kbagentConfigSource', () => {
+  it('reads the config source line of kbagent doctor, even when doctor reports problems', async () => {
+    const doctor = { status: 'ok', data: { checks: [{ check: 'config_source', status: 'pass', message: 'Using global config at C:\\cfg\\config.json' }] } };
+    expect(await kbagentConfigSource({ exec: execReturning(JSON.stringify(doctor), 1) })).toBe('Using global config at C:\\cfg\\config.json');
+    expect(await kbagentConfigSource({ exec: execReturning('not json', 1) })).toBeUndefined();
   });
 });
 

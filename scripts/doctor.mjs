@@ -56,7 +56,7 @@ async function main() {
   const { loadSettings } = await import('../server/src/config/settings.ts');
   const { runSetupChecks, STEP_LABELS } = await import('../server/src/setup/checks.ts');
   const { probeOmniRoute, testModel } = await import('../server/src/setup/omniroute.ts');
-  const { kbagentVersion, listKeboolaProjects } = await import('../server/src/system/keboola.ts');
+  const { kbagentConfigSource, kbagentVersion, listKeboolaProjects } = await import('../server/src/system/keboola.ts');
 
   const env = readAppEnv(process.env, ROOT);
   // The app lets Settings override the model and project from .env; check what it would really use.
@@ -69,6 +69,7 @@ async function main() {
     testModel: () => testModel(omniroute),
     kbagentVersion: () => kbagentVersion(),
     keboolaProjects: () => listKeboolaProjects(),
+    kbagentConfig: () => kbagentConfigSource(),
   });
 
   steps.forEach((step) => {

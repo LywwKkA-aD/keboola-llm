@@ -28,8 +28,10 @@ export type SetupReason =
   | 'accessUnreadable';
 
 /** What a step found, as data. `none`: nothing to add to the reason (a key or a choice is missing). */
+// config on the projects step: where kbagent in the app reads its projects (doctor's "Config source"), shown when it
+// has none or fails, to compare with what the analyst's terminal reads.
 export type SetupFacts =
-  | { readonly kind: 'none' }
+  | { readonly kind: 'none'; readonly config?: string }
   // provider: the models counted are those of this provider (the default model's), not the whole catalog.
   | { readonly kind: 'router'; readonly url: string; readonly models?: number; readonly provider?: string }
   | { readonly kind: 'unreachable'; readonly url: string; readonly error?: string }
@@ -39,7 +41,7 @@ export type SetupFacts =
   | { readonly kind: 'modelAnswered'; readonly model: string; readonly ms: number }
   | { readonly kind: 'modelFailed'; readonly model: string; readonly error: string }
   | { readonly kind: 'version'; readonly version: string }
-  | { readonly kind: 'error'; readonly message: string }
+  | { readonly kind: 'error'; readonly message: string; readonly config?: string }
   | { readonly kind: 'projects'; readonly aliases: readonly string[] }
   | { readonly kind: 'project'; readonly alias: string; readonly source: 'configured' | 'default' | 'only' }
   | { readonly kind: 'projectUnknown'; readonly alias: string }
@@ -74,6 +76,8 @@ export interface SetupInput {
   readonly keboolaProjects: () => Promise<readonly KeboolaProject[]>;
   /** What the analyst may do in the project; without it the checklist has no access step (e.g. doctor). */
   readonly keboolaAccess?: () => Promise<KeboolaAccess>;
+  /** Where kbagent reads its config (asked only when it has no projects or cannot list them). */
+  readonly kbagentConfig?: () => Promise<string | undefined>;
 }
 
 export interface SetupChecks {
@@ -186,14 +190,25 @@ function projectStep(configured: string, projects: readonly KeboolaProject[]): S
     : fail('project', 'projectMissing', 'not chosen', NONE);
 }
 
-function keboolaSteps(version: PromiseSettledResult<string>, listed: PromiseSettledResult<readonly KeboolaProject[]>, configured: string): SetupStep[] {
+function keboolaSteps(
+  version: PromiseSettledResult<string>,
+  listed: PromiseSettledResult<readonly KeboolaProject[]>,
+  configured: string,
+  config: string | undefined,
+): SetupStep[] {
   if (version.status === 'rejected') {
     return [failed('kbagent', 'kbagentMissing', version.reason), blocked('projects', 'waiting for kbagent'), blocked('project', 'waiting for kbagent')];
   }
   const tool = ok('kbagent', version.value, { kind: 'version', version: version.value });
-  if (listed.status === 'rejected') return [tool, failed('projects', 'projectsFailed', listed.reason), blocked('project', 'waiting for a project')];
+  const where = config ? { config } : {};
+  if (listed.status === 'rejected') {
+    const error = message(listed.reason);
+    return [tool, fail('projects', 'projectsFailed', error, { kind: 'error', message: error, ...where }), blocked('project', 'waiting for a project')];
+  }
   const projects = listed.value;
-  if (projects.length === 0) return [tool, fail('projects', 'projectsNone', 'none registered', NONE), blocked('project', 'waiting for a project')];
+  if (projects.length === 0) {
+    return [tool, fail('projects', 'projectsNone', `none registered${config ? ` (kbagent: ${config})` : ''}`, { kind: 'none', ...where }), blocked('project', 'waiting for a project')];
+  }
   const aliases = projects.map((entry) => entry.alias);
   return [tool, ok('projects', `${projects.length} registered: ${aliases.join(', ')}`, { kind: 'projects', aliases }), projectStep(configured, projects)];
 }
@@ -208,7 +223,10 @@ export async function runSetupChecks(input: SetupInput): Promise<SetupChecks> {
   const [probe, version, listed] = await Promise.all([input.probeOmniRoute(), settle(input.kbagentVersion()), settle(input.keboolaProjects())]);
   const [router, key] = omniRouteSteps(input.omniroute, probe);
   const model = await modelStep(input, router.status === 'ok' && key.status === 'ok');
-  const keboola = keboolaSteps(version, listed, input.keboolaProject);
+  // When kbagent has no projects for the app, say where it looked: the analyst's terminal may read another config.
+  const missing = version.status === 'fulfilled' && (listed.status === 'rejected' || listed.value.length === 0);
+  const config = missing && input.kbagentConfig ? await input.kbagentConfig().catch(() => undefined) : undefined;
+  const keboola = keboolaSteps(version, listed, input.keboolaProject, config);
   const project = keboola.at(-1) as SetupStep;
   const access = input.keboolaAccess ? [await accessStep(project, input.keboolaAccess)] : [];
   const redact = (text: string) => redactSecret(text, input.omniroute.apiKey);

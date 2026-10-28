@@ -24,7 +24,7 @@ import { createRoutines } from './routines/service.ts';
 import { createNoteStore, MAX_MEMORY_BYTES } from './knowledge/store.ts';
 import { watchFolders } from './runtime/watch.ts';
 import { createSetupService } from './setup/service.ts';
-import { kbagentVersion, keboolaAccess, listKeboolaProjects } from './system/keboola.ts';
+import { kbagentConfigSource, kbagentVersion, keboolaAccess, listKeboolaProjects } from './system/keboola.ts';
 import { accessSummary, type KeboolaAccess, shortAccess } from './system/keboola-access.ts';
 import { listModels, modelsOfProvider } from './system/models.ts';
 import { onboardingStatus } from './system/onboarding.ts';
@@ -197,6 +197,7 @@ const server = await createServer({
     kbagentVersion: () => kbagentVersion(),
     keboolaProjects: () => listKeboolaProjects(),
     keboolaAccess: () => keboolaAccess(team.effective.keboolaProject || undefined),
+    kbagentConfig: () => kbagentConfigSource(),
     apply: (omniroute) => {
       // The key form in the setup wizard: new models for the next runs, no restart.
       app.setOmniRoute(omniroute);

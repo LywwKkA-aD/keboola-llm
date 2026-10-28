@@ -28,6 +28,17 @@ describe('factParts', () => {
     ['unknown project', { kind: 'projectUnknown', alias: 'gone' }, '`gone` не подключён в kbagent'],
     ['expired session', { kind: 'session', session: 'expired' }, 'Сессия kbagent: `expired`'],
     ['nothing to add', { kind: 'none' }, ''],
+    ['router of the connected provider', { kind: 'router', url: 'http://omni/v1', models: 72, provider: 'claude' }, 'Моделей: 72 (провайдер `claude`) · `http://omni/v1`'],
+    [
+      'no projects, with the config kbagent reads',
+      { kind: 'none', config: 'Using global config at C:\\cfg\\config.json' },
+      'kbagent в приложении читает настройки так: `Using global config at C:\\cfg\\config.json`. Сравните со строкой Config source в выводе `kbagent doctor` в терминале.',
+    ],
+    [
+      'listing failed, with the config kbagent reads',
+      { kind: 'error', message: 'kbagent project list failed (exit 5): no config', config: 'Using local config at D:\\work\\.kbagent' },
+      '`kbagent project list failed (exit 5): no config` · kbagent в приложении читает настройки так: `Using local config at D:\\work\\.kbagent`. Сравните со строкой Config source в выводе `kbagent doctor` в терминале.',
+    ],
   ])('%s', (_name, facts, expected) => {
     expect(plain(factParts(facts, ru))).toBe(expected);
   });

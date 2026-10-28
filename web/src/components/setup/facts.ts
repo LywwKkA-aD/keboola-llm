@@ -28,6 +28,10 @@ const PATHS: Readonly<Record<ChangePath, StringKey>> = {
 
 const PROJECT_SOURCES: Readonly<Record<'default' | 'only', StringKey>> = { default: 'setup.fact.projectDefault', only: 'setup.fact.projectOnly' };
 
+/** Where kbagent in the app reads its projects, to compare with the analyst's terminal. */
+const configParts = (config: string, t: Translate): FactPart[] =>
+  fill(t('setup.fact.kbagentConfig'), { source: code(config), doctor: code('kbagent doctor') });
+
 function accessParts(facts: Extract<SetupFacts, { kind: 'access' }>, t: Translate): FactPart[] {
   const groups: FactPart[][] = [
     ...(facts.role ? [[code(facts.role)]] : facts.token ? [[text(t('setup.fact.token'))]] : []),
@@ -42,7 +46,7 @@ function accessParts(facts: Extract<SetupFacts, { kind: 'access' }>, t: Translat
 export function factParts(facts: SetupFacts, t: Translate): FactPart[] {
   switch (facts.kind) {
     case 'none':
-      return [];
+      return facts.config ? configParts(facts.config, t) : [];
     case 'router':
       return facts.models === undefined
         ? fill(t('setup.fact.routerRunning'), { url: code(facts.url) })
@@ -66,7 +70,7 @@ export function factParts(facts: SetupFacts, t: Translate): FactPart[] {
     case 'version':
       return [code(facts.version)];
     case 'error':
-      return [code(facts.message)];
+      return facts.config ? [code(facts.message), text(' · '), ...configParts(facts.config, t)] : [code(facts.message)];
     case 'projects':
       return fill(t('setup.fact.projects'), { count: text(String(facts.aliases.length)), aliases: code(facts.aliases.join(', ')) });
     case 'project':

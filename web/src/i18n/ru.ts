@@ -332,6 +332,7 @@ export const ru: Record<StringKey, string> = {
   'setup.hideSteps': 'Свернуть шаги',
   'setup.fact.router': 'Моделей: {count} · {url}',
   'setup.fact.routerProvider': 'Моделей: {count} (провайдер {provider}) · {url}',
+  'setup.fact.kbagentConfig': 'kbagent в приложении читает настройки так: {source}. Сравните со строкой Config source в выводе {doctor} в терминале.',
   'setup.fact.routerRunning': 'Работает по адресу {url}',
   'setup.fact.unreachable': 'Нет ответа по адресу {url}',
   'setup.fact.unreachableError': 'Нет ответа по адресу {url}: {error}',

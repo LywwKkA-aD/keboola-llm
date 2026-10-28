@@ -330,6 +330,7 @@ export const en = {
   'setup.hideSteps': 'Hide the steps',
   'setup.fact.router': 'Models: {count} · {url}',
   'setup.fact.routerProvider': 'Models: {count} (provider {provider}) · {url}',
+  'setup.fact.kbagentConfig': 'kbagent in the app reads its config like this: {source}. Compare with the Config source line of {doctor} in your terminal.',
   'setup.fact.routerRunning': 'Running at {url}',
   'setup.fact.unreachable': 'No answer at {url}',
   'setup.fact.unreachableError': 'No answer at {url}: {error}',

@@ -4,20 +4,34 @@
  * per-agent credentials are passed explicitly through `extraEnv`.
  */
 
-/** OS and network variables kbagent (a Python app) needs to start and reach Keboola. */
+/**
+ * OS and network variables kbagent (a Python app) needs to start and reach Keboola, upper-cased: Windows variable
+ * names ignore case (Path, windir, SystemRoot), so they are matched that way. None of them holds a secret.
+ */
 const PASSTHROUGH: ReadonlySet<string> = new Set([
   'PATH',
-  'Path',
   'PATHEXT',
   'HOME',
   'USERPROFILE',
+  'USERNAME',
+  'USERDOMAIN',
+  'COMPUTERNAME',
   'HOMEDRIVE',
   'HOMEPATH',
   'APPDATA',
   'LOCALAPPDATA',
-  'SystemRoot',
+  'PROGRAMDATA',
+  'ALLUSERSPROFILE',
+  'PROGRAMFILES',
+  'PROGRAMFILES(X86)',
+  'COMMONPROGRAMFILES',
   'SYSTEMROOT',
-  'windir',
+  'SYSTEMDRIVE',
+  'WINDIR',
+  'COMSPEC',
+  'OS',
+  'PROCESSOR_ARCHITECTURE',
+  'NUMBER_OF_PROCESSORS',
   'TEMP',
   'TMP',
   'TMPDIR',
@@ -30,19 +44,19 @@ const PASSTHROUGH: ReadonlySet<string> = new Set([
   'HTTPS_PROXY',
   'HTTP_PROXY',
   'NO_PROXY',
-  'https_proxy',
-  'http_proxy',
-  'no_proxy',
   'SSL_CERT_FILE',
   'SSL_CERT_DIR',
   'REQUESTS_CA_BUNDLE',
 ]);
 
-/** kbagent variables that are credentials or that the app controls itself. */
+/**
+ * kbagent variables that are credentials or that the app controls itself. KBAGENT_CONFIG_DIR is not one of them: an
+ * analyst who keeps kbagent's config elsewhere sets it for her terminal, and the app must read the same projects (it
+ * only overrides it when it pins an agent's own config dir).
+ */
 const CONTROLLED_KBAGENT: ReadonlySet<string> = new Set([
   'KBAGENT_SERVE_TOKEN',
   'KBAGENT_SERVE_URL',
-  'KBAGENT_CONFIG_DIR',
   'KBAGENT_PROJECT',
   'KBAGENT_PROJECT_FROM_ENV',
   'KBAGENT_CONVERSATION_ID',
@@ -66,7 +80,7 @@ export interface ChildEnvOptions {
 }
 
 const keep = (name: string) =>
-  PASSTHROUGH.has(name) || (name.startsWith('KBAGENT_') && !CONTROLLED_KBAGENT.has(name));
+  PASSTHROUGH.has(name.toUpperCase()) || (name.startsWith('KBAGENT_') && !CONTROLLED_KBAGENT.has(name));
 
 export function buildChildEnv({ parentEnv, configDir, project, extraEnv = {} }: ChildEnvOptions): NodeJS.ProcessEnv {
   const inherited = Object.fromEntries(

@@ -217,15 +217,17 @@ describe('buildChildEnv', () => {
         APPDATA: 'C:\\Users\\a\\AppData\\Roaming',
         KBAGENT_DISABLE_TELEMETRY: '1',
         KBAGENT_SERVE_TOKEN: 'x',
-        KBAGENT_CONFIG_DIR: '/elsewhere',
+        KBAGENT_CONFIG_DIR: 'D:\\kbagent',
         KBC_MANAGE_API_TOKEN: 'x',
         AWS_SECRET_ACCESS_KEY: 'x',
       },
     });
+    // The user's own config dir comes along: kbagent in the app must see the projects her terminal sees.
     expect(env).toEqual({
       PATH: '/bin',
       APPDATA: 'C:\\Users\\a\\AppData\\Roaming',
       KBAGENT_DISABLE_TELEMETRY: '1',
+      KBAGENT_CONFIG_DIR: 'D:\\kbagent',
       KBAGENT_AUTO_UPDATE: 'false',
       NO_COLOR: '1',
       PYTHONIOENCODING: 'utf-8',
@@ -233,9 +235,17 @@ describe('buildChildEnv', () => {
     });
   });
 
-  it('pins the config dir and project, and merges explicit per-agent variables last', () => {
+  it('matches Windows system variables whatever their case', () => {
     const env = buildChildEnv({
-      parentEnv: { PATH: '/bin' },
+      parentEnv: { Path: 'C:\\bin', windir: 'C:\\Windows', SystemDrive: 'C:', USERNAME: 'analyst', Https_Proxy: 'http://proxy:8080', OPENAI_API_KEY: 'x' },
+    });
+    expect(env).toMatchObject({ Path: 'C:\\bin', windir: 'C:\\Windows', SystemDrive: 'C:', USERNAME: 'analyst', Https_Proxy: 'http://proxy:8080' });
+    expect(env).not.toHaveProperty('OPENAI_API_KEY');
+  });
+
+  it('pins the config dir and project over the user\'s, and merges explicit per-agent variables last', () => {
+    const env = buildChildEnv({
+      parentEnv: { PATH: '/bin', KBAGENT_CONFIG_DIR: '/users/own' },
       configDir: '/agents/sql/kbagent',
       project: 'sandbox',
       extraEnv: { KBAGENT_PROJECT_FROM_ENV: '1', KBC_TOKEN: 'per-agent', KBC_STORAGE_API_URL: 'https://connection.keboola.com' },
