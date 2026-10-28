@@ -14,8 +14,9 @@ test('a skill edited on disk gets a history and an older version can be restored
   await page.goto('/agents?tab=skills');
   mkdirSync(E2E_SKILL_DIR, { recursive: true });
   writeFileSync(E2E_SKILL_FILE, FIRST);
-  // The file watcher reloads the team and the page refetches it: no page reload.
-  await page.getByRole('button', { name: /^e2e-skill/ }).click();
+  // The file watcher reloads the team and the page refetches it: no page reload. Wait for the skill's row in the team
+  // (with its description): until the reload, an earlier spec's e2e-skill shows under removed definitions instead.
+  await page.getByRole('button', { name: /^e2e-skill Written by the end-to-end tests/ }).click();
   const drawer = page.getByRole('complementary', { name: 'e2e-skill' });
   const history = drawer.getByRole('region', { name: 'История' });
   await expect(history.getByRole('button').first()).toContainText('Создан');
