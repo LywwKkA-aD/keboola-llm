@@ -22,7 +22,7 @@ test('home shows the setup checklist in place of the survey offer while kbagent 
   await expect(steps.nth(0)).toContainText('Моделей:');
   const kbagent = steps.nth(3);
   await expect(kbagent).toContainText('Нужно сделать');
-  await expect(kbagent).toContainText(/winget install|install\.sh/);
+  await expect(kbagent).toContainText(/uv\/install\.ps1|install\.sh/);
   await expect(kbagent.getByRole('button', { name: 'Копировать' })).toBeVisible();
   await expect(steps.nth(4)).toContainText('Ждёт предыдущих шагов.');
   await expect(page.getByRole('region', { name: 'Инициализация проекта' })).toHaveCount(0);

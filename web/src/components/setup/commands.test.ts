@@ -26,11 +26,15 @@ describe('commandFor', () => {
     const script = 'curl -LsSf https://raw.githubusercontent.com/keboola/cli/main/install.sh | sh';
     expect(commandFor('kbagentMissing', 'mac')).toBe(script);
     expect(commandFor('kbagentMissing', 'linux')).toBe(script);
-    const windows = commandFor('kbagentMissing', 'windows') ?? '';
-    expect(windows.split('\n')).toHaveLength(4);
-    expect(windows).toContain('winget install --id astral-sh.uv -e');
-    expect(windows).toContain('Invoke-RestMethod');
-    expect(windows).toContain('uv tool update-shell');
+    // PowerShell, no admin rights: uv's own installer, then Keboola's block (version from PyPI, two fallbacks), all in
+    // one window: uv's folder joins this window's PATH before uv is used.
+    const windows = (commandFor('kbagentMissing', 'windows') ?? '').split('\n');
+    expect(windows[0]).toBe('powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"');
+    expect(windows[1]).toBe('$env:Path = "$env:USERPROFILE\\.local\\bin;$env:Path"');
+    expect(windows[2]).toContain('https://pypi.org/pypi/keboola-cli/json');
+    expect(windows.filter((line) => line.includes('uv tool install --force'))).toHaveLength(3);
+    expect(windows.at(-1)).toBe('uv tool update-shell');
+    expect(windows.join('\n')).not.toContain('winget');
   });
 
   it('has nothing to run where the UI offers a control instead', () => {

@@ -35,14 +35,21 @@ macOS / Linux:
 curl -LsSf https://raw.githubusercontent.com/keboola/cli/main/install.sh | sh
 ```
 
-Windows (PowerShell, no admin rights needed; reopen PowerShell after the first line):
+Windows (PowerShell, no admin rights needed; Keboola's own block from https://github.com/keboola/cli#install with
+uv's installer instead of winget, runs in one paste; the setup checklist offers the same block):
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-$ver = (Invoke-RestMethod "https://api.github.com/repos/keboola/cli/releases/latest").tag_name.TrimStart('v')
+$env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+$ver = (Invoke-RestMethod "https://pypi.org/pypi/keboola-cli/json").info.version
 uv tool install --force "keboola-cli[server] @ https://github.com/keboola/cli/releases/download/v$ver/keboola_cli-$ver-py3-none-any.whl"
+if ($LASTEXITCODE -ne 0 -and $ver) { uv tool install --force "keboola-cli[server]==$ver" }
+if ($LASTEXITCODE -ne 0) { uv tool install --force "keboola-cli[server]" }
 uv tool update-shell
 ```
+
+Without Python or uv: unpack `keboola-cli2_<version>_windows_amd64.zip` from https://github.com/keboola/cli/releases
+(a single `kbagent.exe`) into a folder on your PATH.
 
 Then sign in (opens the browser): `kbagent auth login --stack https://connection.<your-stack>.keboola.com --register-projects`
 

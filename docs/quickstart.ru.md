@@ -55,29 +55,74 @@ npm install -g omniroute
 
 Запускайте `omniroute` и не закрывайте его окно, пока работаете с приложением.
 
-## 3. kbagent (доступ к Keboola)
+## 3. Keboola CLI (kbagent)
 
-Сначала uv (ставится в `%USERPROFILE%\.local\bin`, без администратора):
+kbagent — официальная командная строка Keboola (https://github.com/keboola/cli). Агенты работают с Keboola только
+через неё; вход и токены хранит kbagent, приложение их не видит. Ставится без администратора, одним из двух способов.
+
+### Способ A: через uv (рекомендуется, kbagent сам обновляется)
+
+Вставьте блок целиком в одно окно PowerShell. Первая строка ставит uv в `%USERPROFILE%\.local\bin` (если uv уже
+есть, она его просто обновит), остальные — kbagent по официальной инструкции Keboola. Python отдельно ставить не нужно:
+uv скачает его сам.
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-Закройте и снова откройте PowerShell, затем поставьте kbagent:
-
-```powershell
-$ver = (Invoke-RestMethod "https://api.github.com/repos/keboola/cli/releases/latest").tag_name.TrimStart('v')
+$env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+$ver = (Invoke-RestMethod "https://pypi.org/pypi/keboola-cli/json").info.version
 uv tool install --force "keboola-cli[server] @ https://github.com/keboola/cli/releases/download/v$ver/keboola_cli-$ver-py3-none-any.whl"
+if ($LASTEXITCODE -ne 0 -and $ver) { uv tool install --force "keboola-cli[server]==$ver" }
+if ($LASTEXITCODE -ne 0) { uv tool install --force "keboola-cli[server]" }
 uv tool update-shell
 ```
 
-Снова перезапустите PowerShell и войдите в Keboola (откроется браузер; адрес стека как в адресной строке Keboola):
+В этом окне kbagent уже работает; новые окна PowerShell увидят его благодаря последней строке.
+
+### Способ B: готовая сборка без Python и uv
+
+1. На https://github.com/keboola/cli/releases откройте последний релиз и скачайте
+   `keboola-cli2_<версия>_windows_amd64.zip`.
+2. Распакуйте в `%LOCALAPPDATA%\Programs\kbagent` так, чтобы `kbagent.exe` лежал прямо в этой папке.
+3. Добавьте папку в свой PATH и откройте PowerShell заново:
+
+   ```powershell
+   $kb = "$env:LOCALAPPDATA\Programs\kbagent"
+   [Environment]::SetEnvironmentVariable('Path', "$kb;" + [Environment]::GetEnvironmentVariable('Path', 'User'), 'User')
+   ```
+
+Эта сборка сама не обновляется: для новой версии скачайте новый архив и замените папку.
+
+### Проверка и вход
+
+```powershell
+kbagent --version
+```
+
+Войдите в Keboola. Адрес стека — начало адреса, который вы видите в Keboola в браузере, например
+`https://connection.eu-central-1.keboola.com` или `https://connection.north-europe.azure.keboola.com`:
 
 ```powershell
 kbagent auth login --stack https://connection.<ваш-стек>.keboola.com --register-projects
 ```
 
-Токен Keboola хранит kbagent; приложение его не видит.
+Откроется браузер: войдите и подтвердите доступ. Затем проверьте:
+
+```powershell
+kbagent auth status      # вход выполнен
+kbagent project list     # ваши проекты и их короткие имена (alias): одно из них вы выберете в шаге 5
+kbagent doctor           # общая проверка
+```
+
+**Если вход через браузер недоступен** (или компания выдаёт токены Storage API), подключите проект токеном. Токен
+вводится скрыто, в истории команд он не останется:
+
+```powershell
+kbagent project add --project <короткое-имя> --url https://connection.<ваш-стек>.keboola.com --token-stdin
+```
+
+**Обновление:** при способе A kbagent обновляется сам при запуске; при способе B — новым архивом. Приложение знает
+команды той версии kbagent, с которой его проверяли; незнакомые команды новой версии оно просто не даёт агентам
+выполнять, так что обновлять kbagent безопасно.
 
 ## 4. Приложение
 
@@ -176,4 +221,7 @@ continue); в Git: `git stash`, `git pull`, `git stash pop`.
   `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (администратор не нужен) и откройте PowerShell заново.
 - `npm install` падает на `better-sqlite3`: нужен доступ к GitHub (оттуда скачивается готовая сборка) и Node.js 24.
 - Порт 4800 занят: `$env:PORT=4801; npm start` и откройте http://127.0.0.1:4801.
+- `kbagent` не находится после установки: откройте новое окно PowerShell (PATH меняется только для новых окон).
+- `kbagent` ставится с ошибкой `does not satisfy Python>=3.12`: uv не смог скачать Python; используйте способ B
+  (готовая сборка без Python).
 - Модель не отвечает: проверьте, что окно `omniroute` открыто и провайдер подключён в его панели.

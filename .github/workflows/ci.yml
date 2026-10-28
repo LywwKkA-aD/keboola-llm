@@ -34,6 +34,26 @@ jobs:
       # The app as a new user starts it: built UI, no .env, empty data folder.
       - run: npm run check:first-start
 
+  kbagent-install:
+    # The analyst's quick start installs kbagent with a PowerShell block; run exactly that block, as she would paste it,
+    # in Windows PowerShell 5.1. (The runner is an admin; the block itself needs no admin rights.)
+    name: kbagent install (quick start, Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Take the install block from docs/quickstart.ru.md
+        shell: pwsh
+        run: |
+          $doc = Get-Content docs/quickstart.ru.md -Raw -Encoding utf8
+          $match = [regex]::Match($doc, '(?s)```powershell\r?\n((?:(?!```).)*astral\.sh/uv/install\.ps1(?:(?!```).)*)```')
+          if (-not $match.Success) { throw 'no kbagent install block in the quick start' }
+          $script = $match.Groups[1].Value + "`nkbagent --version`nexit `$LASTEXITCODE`n"
+          Set-Content -Path "$env:RUNNER_TEMP\install-kbagent.ps1" -Value $script -Encoding ascii
+          Get-Content "$env:RUNNER_TEMP\install-kbagent.ps1"
+      - name: Run it in Windows PowerShell 5.1
+        shell: cmd
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File "%RUNNER_TEMP%\install-kbagent.ps1"
+
   e2e:
     name: E2E (stub LLM)
     runs-on: ubuntu-latest

@@ -20,10 +20,15 @@ export function detectOs(nav: NavigatorLike = navigator): Os {
 
 const KBAGENT_INSTALL: Readonly<Record<'unix' | 'windows', string>> = {
   unix: 'curl -LsSf https://raw.githubusercontent.com/keboola/cli/main/install.sh | sh',
+  // Keboola's PowerShell block (github.com/keboola/cli#install) with uv's own installer instead of winget, so no admin
+  // rights are needed; uv's folder joins this window's PATH so the whole block runs in one paste.
   windows: [
-    'winget install --id astral-sh.uv -e',
-    `$ver = (Invoke-RestMethod "https://api.github.com/repos/keboola/cli/releases/latest").tag_name.TrimStart('v')`,
+    'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
+    '$env:Path = "$env:USERPROFILE\\.local\\bin;$env:Path"',
+    '$ver = (Invoke-RestMethod "https://pypi.org/pypi/keboola-cli/json").info.version',
     'uv tool install --force "keboola-cli[server] @ https://github.com/keboola/cli/releases/download/v$ver/keboola_cli-$ver-py3-none-any.whl"',
+    'if ($LASTEXITCODE -ne 0 -and $ver) { uv tool install --force "keboola-cli[server]==$ver" }',
+    'if ($LASTEXITCODE -ne 0) { uv tool install --force "keboola-cli[server]" }',
     'uv tool update-shell',
   ].join('\n'),
 };

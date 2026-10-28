@@ -136,7 +136,7 @@ describe('setup checklist', () => {
     expect(within(stepItem(section, '3. Model answers')).getByText('Waits for the steps above.')).toBeInTheDocument();
 
     const kbagent = stepItem(section, '4. kbagent is installed');
-    expect(within(kbagent).getByText(/winget install --id astral-sh.uv -e/)).toBeInTheDocument();
+    expect(within(kbagent).getByText(/astral.sh\/uv\/install.ps1/)).toBeInTheDocument();
     await user.click(within(kbagent).getByRole('button', { name: 'Copy' }));
     expect(await navigator.clipboard.readText()).toContain('uv tool update-shell');
     expect(within(kbagent).getByRole('button', { name: 'Copied' })).toBeInTheDocument();
