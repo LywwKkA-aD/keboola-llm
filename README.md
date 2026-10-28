@@ -35,10 +35,10 @@ macOS / Linux:
 curl -LsSf https://raw.githubusercontent.com/keboola/cli/main/install.sh | sh
 ```
 
-Windows (PowerShell):
+Windows (PowerShell, no admin rights needed; reopen PowerShell after the first line):
 
 ```powershell
-winget install --id astral-sh.uv -e
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 $ver = (Invoke-RestMethod "https://api.github.com/repos/keboola/cli/releases/latest").tag_name.TrimStart('v')
 uv tool install --force "keboola-cli[server] @ https://github.com/keboola/cli/releases/download/v$ver/keboola_cli-$ver-py3-none-any.whl"
 uv tool update-shell

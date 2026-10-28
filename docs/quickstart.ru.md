@@ -5,47 +5,73 @@ Agent Studio — локальное приложение: команда ИИ-а
 изменения на dev-ветке) и собирает ответ. Всё работает на вашем компьютере; в интернет уходят только запросы к модели
 через OmniRoute и вызовы Keboola через kbagent.
 
-Установка занимает 20-30 минут один раз. Команды ниже выполняются в PowerShell.
+**Права администратора не нужны:** всё ставится в профиль пользователя. Установка занимает 20-30 минут один раз.
+Команды ниже выполняются в PowerShell.
 
-## 1. Node.js и Git
+## 1. Node.js
+
+Проверьте, что Node.js уже есть и подходящей версии:
 
 ```powershell
-winget install OpenJS.NodeJS.LTS
-winget install Git.Git
+node -v
 ```
 
-Закройте и снова откройте PowerShell, затем проверьте: `node -v` (нужна версия 24 или 26) и `git --version`.
+Нужна версия 24 (подойдут и 22.22+ или 26, но проверена 24). Если Node.js нет или версия старше, поставьте его без
+администратора из архива:
+
+1. На https://nodejs.org/en/download выберите Windows, версию 24 (LTS) и «Standalone Binary (.zip)».
+2. Распакуйте архив так, чтобы `node.exe` лежал прямо в папке `%LOCALAPPDATA%\Programs\node`.
+3. Добавьте Node.js и папку глобальных npm-пакетов в свой PATH:
+
+   ```powershell
+   $node = "$env:LOCALAPPDATA\Programs\node"
+   $path = [Environment]::GetEnvironmentVariable('Path', 'User')
+   [Environment]::SetEnvironmentVariable('Path', "$node;$env:APPDATA\npm;$path", 'User')
+   ```
+
+4. Закройте и снова откройте PowerShell и проверьте `node -v`.
 
 ## 2. OmniRoute (доступ к моделям)
+
+Если OmniRoute ещё не стоит:
 
 ```powershell
 npm install -g omniroute
 ```
 
-Чтобы OmniRoute был доступен только с этого компьютера и только по ключу, создайте файл
-`%USERPROFILE%\.omniroute\.env` с двумя строками:
+Если уже стоит и работает, проверьте три вещи:
 
-```
-OMNIROUTE_SERVER_HOST=127.0.0.1
-REQUIRE_API_KEY=true
-```
+1. Файл `%USERPROFILE%\.omniroute\.env` содержит эти две строки, иначе к OmniRoute можно подключиться из локальной
+   сети и тратить ваши запросы:
 
-Запустите `omniroute` и не закрывайте это окно. В панели OmniRoute (откроется в браузере, обычно
-http://127.0.0.1:20128):
+   ```
+   OMNIROUTE_SERVER_HOST=127.0.0.1
+   REQUIRE_API_KEY=true
+   ```
 
-1. Подключите провайдера, через которого вы работаете с моделью (например, Sol).
-2. В разделе Endpoints создайте API-ключ. Он понадобится в шаге 5.
+2. В панели OmniRoute (обычно http://127.0.0.1:20128) подключён провайдер, через которого вы работаете с моделью
+   (например, Sol).
+3. В разделе Endpoints создан API-ключ. Он понадобится в шаге 5.
+
+Запускайте `omniroute` и не закрывайте его окно, пока работаете с приложением.
 
 ## 3. kbagent (доступ к Keboola)
 
+Сначала uv (ставится в `%USERPROFILE%\.local\bin`, без администратора):
+
 ```powershell
-winget install --id astral-sh.uv -e
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Закройте и снова откройте PowerShell, затем поставьте kbagent:
+
+```powershell
 $ver = (Invoke-RestMethod "https://api.github.com/repos/keboola/cli/releases/latest").tag_name.TrimStart('v')
 uv tool install --force "keboola-cli[server] @ https://github.com/keboola/cli/releases/download/v$ver/keboola_cli-$ver-py3-none-any.whl"
 uv tool update-shell
 ```
 
-Перезапустите PowerShell и войдите в Keboola (откроется браузер; адрес стека как в адресной строке Keboola):
+Снова перезапустите PowerShell и войдите в Keboola (откроется браузер; адрес стека как в адресной строке Keboola):
 
 ```powershell
 kbagent auth login --stack https://connection.<ваш-стек>.keboola.com --register-projects
@@ -55,13 +81,26 @@ kbagent auth login --stack https://connection.<ваш-стек>.keboola.com --re
 
 ## 4. Приложение
 
-Нужен доступ к репозиторию на GitHub (приглашение придёт на почту). При первом `git clone` откроется окно входа в
-GitHub.
+Нужен доступ к репозиторию на GitHub (приглашение придёт на почту). Скачайте его одним из способов.
+
+**GitHub Desktop (проще всего, обновления одной кнопкой).** Скачайте с https://desktop.github.com и установите: он
+ставится без администратора, Git уже внутри. Войдите в свой аккаунт GitHub, затем File → Clone repository →
+`LywwKkA-aD/keboola-llm` → Clone. По умолчанию папка будет `Документы\GitHub\keboola-llm`.
+
+**Git**, если он уже есть:
 
 ```powershell
 cd $HOME
 git clone https://github.com/LywwKkA-aD/keboola-llm.git
-cd keboola-llm
+```
+
+**Без Git:** на странице репозитория Code → Download ZIP, распакуйте в удобную папку. Обновляться так неудобнее
+(см. «Обновление»).
+
+Затем в PowerShell перейдите в папку приложения и запустите его:
+
+```powershell
+cd "$HOME\Documents\GitHub\keboola-llm"   # или папка, куда вы его скачали
 npm install
 npm start
 ```
@@ -102,9 +141,9 @@ npm start
 
 ## Где хранятся данные
 
-Всё, что знает команда, лежит в папке `data` внутри `keboola-llm` и **никогда не попадает в git**: чаты, база знаний,
-общая память и профиль проекта, история версий агентов, расход, настройки. Ключ OmniRoute — в файле `.env` там же,
-тоже не в git.
+Всё, что знает команда, лежит в папке `data` внутри папки приложения и **никогда не попадает в git**: чаты, база
+знаний, общая память и профиль проекта, история версий агентов, расход, настройки. Ключ OmniRoute — в файле `.env`
+там же, тоже не в git.
 
 Данные компании уходят только в выбранную модель через OmniRoute. Не выбирайте бесплатные модели без ключа (они
 видны по «Показать все модели OmniRoute» в настройках): туда данные компании отправлять нельзя.
@@ -113,19 +152,28 @@ npm start
 
 ## Обновление
 
+Остановите приложение (Ctrl+C), затем:
+
+- **GitHub Desktop:** Fetch origin → Pull origin.
+- **Git:** `git pull` в папке приложения.
+- **ZIP:** скачайте новый архив, распакуйте в новую папку и перенесите в неё папку `data` и файл `.env` из старой.
+
+После этого в папке приложения:
+
 ```powershell
-cd $HOME\keboola-llm
-git pull
 npm install
 npm start
 ```
 
 Агентов, навыки и рутины, которые создаёт или меняет agent-builder, приложение сохраняет в папках `agents`, `skills`
-и `routines`. Если `git pull` пишет, что мешают локальные изменения, сохраните их и верните после обновления:
-`git stash`, `git pull`, `git stash pop`.
+и `routines`. Если при обновлении мешают локальные изменения, GitHub Desktop предложит их отложить (Stash changes and
+continue); в Git: `git stash`, `git pull`, `git stash pop`.
 
 ## Если что-то не так
 
 - `npm run doctor` — те же проверки, что в карточке настройки, в терминале.
+- PowerShell пишет «running scripts is disabled on this system»: выполните
+  `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (администратор не нужен) и откройте PowerShell заново.
+- `npm install` падает на `better-sqlite3`: нужен доступ к GitHub (оттуда скачивается готовая сборка) и Node.js 24.
 - Порт 4800 занят: `$env:PORT=4801; npm start` и откройте http://127.0.0.1:4801.
 - Модель не отвечает: проверьте, что окно `omniroute` открыто и провайдер подключён в его панели.
