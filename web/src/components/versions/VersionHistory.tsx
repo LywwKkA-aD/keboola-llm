@@ -16,6 +16,9 @@ const CHIP: Record<ChangeType, string> = {
   restored: 'chip chip--amber',
 };
 
+/** How often an open history is fetched again. */
+export const HISTORY_REFRESH_MS = 5000;
+
 /** History of an agent's AGENT.md or a custom skill's SKILL.md: every recorded version, newest first. */
 export function VersionHistory({ kind, name }: { kind: DefinitionKind; name: string }) {
   const { t, settings } = useSettings();
@@ -36,6 +39,11 @@ export function VersionHistory({ kind, name }: { kind: DefinitionKind; name: str
     );
   }, [kind, name, t]);
   useEffect(load, [load, team]);
+  // And now and then while open: an edit outside the app may come with no event (the server catches up on reading).
+  useEffect(() => {
+    const timer = setInterval(load, HISTORY_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [load]);
 
   const onRestored = (changed: boolean) => {
     setSelected(undefined);

@@ -5,6 +5,7 @@ import { App } from '../../App.tsx';
 import type { TeamInfo, VersionSummary } from '../../api/types.ts';
 import { FakeEventSource, errorResponse, stubApi, stubEventSource } from '../../test-utils/fake-api.ts';
 import { baseRoutes, TEAM } from '../../test-utils/fixtures.ts';
+import { HISTORY_REFRESH_MS } from '../versions/VersionHistory.tsx';
 
 const team: TeamInfo = {
   ...TEAM,
@@ -169,6 +170,24 @@ describe('agent history', () => {
     act(() => FakeEventSource.global().emit({ type: 'team.updated' }, '_system'));
     expect(await within(section).findAllByRole('button', { expanded: false })).toHaveLength(3);
     expect(api.callsTo('GET', expertVersions).length).toBeGreaterThan(1);
+  });
+
+  it('reloads an open history every few seconds, so an edit no event announced still shows', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let versions: VersionSummary[] = [VERSIONS[2] as VersionSummary];
+      const { drawer } = await openAgent('keboola-expert', { [`GET ${expertVersions}`]: () => versions });
+      const section = history(drawer);
+      expect(await within(section).findAllByRole('button', { expanded: false })).toHaveLength(1);
+
+      versions = VERSIONS;
+      await act(async () => {
+        vi.advanceTimersByTime(HISTORY_REFRESH_MS);
+      });
+      expect(await within(section).findAllByRole('button', { expanded: false })).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reports a failed restore in place', async () => {
