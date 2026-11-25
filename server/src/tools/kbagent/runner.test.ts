@@ -37,13 +37,16 @@ describe('runKbagent', () => {
     expect(result.output).toBe('Usage: kbagent config list');
   });
 
-  it('truncates long output and says how to narrow it', async () => {
-    const big = JSON.stringify({ status: 'ok', data: 'x'.repeat(5000) });
-    const result = await run({ stdout: big }, { maxOutputChars: 1000 });
-    expect(result.truncated).toBe(true);
-    expect(typeof result.output).toBe('string');
-    expect((result.output as string).length).toBeLessThan(1300);
-    expect(result.output).toMatch(/truncated/);
+  it('parses long JSON whole (the app reads big configurations), and cuts only long plain text', async () => {
+    // kbagent prints indented JSON: a medium transformation is well over the budget as text.
+    const config = { status: 'ok', data: { configuration: { queries: Array.from({ length: 400 }, (_, i) => `SELECT ${i} FROM t`) } } };
+    const parsed = await run({ stdout: JSON.stringify(config, null, 2) }, { maxOutputChars: 1000 });
+    expect(parsed).toMatchObject({ truncated: false, output: config });
+
+    const text = await run({ stdout: 'x'.repeat(5000) }, { maxOutputChars: 1000 });
+    expect(text.truncated).toBe(true);
+    expect((text.output as string).length).toBeLessThan(1300);
+    expect(text.output).toMatch(/truncated/);
   });
 
   it('returns non-zero exits with the error envelope and a hint instead of throwing', async () => {

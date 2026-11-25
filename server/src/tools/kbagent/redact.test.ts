@@ -30,4 +30,11 @@ describe('redactSecrets', () => {
   it('redacts inside text that is not valid JSON (e.g. truncated output)', () => {
     expect(redactSecrets('{"rows": [1,2], "password": "x", "user": "u", ...')).toBe('{"rows": [1,2], "password": "[redacted]", "user": "u", ...');
   });
+
+  it('blanks tokens inside values too: a URL query parameter and the Storage token shape', () => {
+    const output = JSON.stringify({ data: { url: 'https://external.keboola.com/oauth/index.html?token=1234-56789-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd&id=x' } });
+    expect(redactSecrets(output)).not.toContain('AbCdEfGhIj');
+    expect(redactSecrets(output)).toContain('id=x');
+    expect(redactSecrets('use 6487-1234567-aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789ABCD now')).toBe('use [redacted] now');
+  });
 });

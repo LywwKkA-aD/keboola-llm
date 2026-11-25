@@ -88,16 +88,25 @@ export const defaultExec: ExecFn = (file, args, options) =>
     child.stdin?.end();
   });
 
+/** Cut a text for the model at maxChars, saying how to get less. */
+export function cutForModel(text: string, maxChars: number): { text: string; truncated: boolean } {
+  if (text.length <= maxChars) return { text, truncated: false };
+  const note = `\n... [truncated ${text.length - maxChars} more characters: narrow the query with filters or --limit]`;
+  return { text: text.slice(0, maxChars) + note, truncated: true };
+}
+
+/**
+ * JSON is parsed whole whatever its size: the app reads big configurations (promotion) and kbagent indents its
+ * output, so a budget on the text would turn a medium transformation into an unreadable string. Only plain text is cut
+ * here; what the model sees is cut after compact serialization (tools.ts).
+ */
 function shapeOutput(text: string, maxChars: number): { output: unknown; truncated: boolean } {
   const trimmed = text.trim();
-  if (trimmed.length > maxChars) {
-    const note = `\n... [truncated ${trimmed.length - maxChars} more characters: narrow the query with filters or --limit]`;
-    return { output: trimmed.slice(0, maxChars) + note, truncated: true };
-  }
   try {
     return { output: JSON.parse(trimmed), truncated: false };
   } catch {
-    return { output: trimmed, truncated: false };
+    const cut = cutForModel(trimmed, maxChars);
+    return { output: cut.text, truncated: cut.truncated };
   }
 }
 

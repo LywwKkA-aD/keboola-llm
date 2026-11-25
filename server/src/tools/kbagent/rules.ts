@@ -31,6 +31,7 @@ export const DENIED_OPERATIONS: ReadonlyMap<string, string> = new Map([
   ['project.use', 'changes the default project for every agent'],
   ['project.member-list', 'exposes personal data of project members'],
   ['project.invitation-list', 'exposes personal data of invited people'],
+  ['config.oauth-url', 'mints a Storage token and puts it in the link'],
   ['data-app.password', 'reveals a credential'],
   ['data-app.secrets-get', 'reveals a credential'],
   ['data-app.secrets-set', 'writes credentials'],

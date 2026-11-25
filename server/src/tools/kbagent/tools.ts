@@ -4,7 +4,7 @@ import type { RunnableConfig } from '@langchain/core/runnables';
 import { z } from 'zod';
 import { buildChildEnv } from './env.ts';
 import { buildInvocation } from './policy.ts';
-import { runKbagent } from './runner.ts';
+import { cutForModel, runKbagent } from './runner.ts';
 import type { ExecFn, RunResult } from './runner.ts';
 import { SQL_OPERATIONS } from './sql.ts';
 import type { Access, Category, InvocationResult } from './types.ts';
@@ -83,8 +83,11 @@ const SQL_DESCRIPTION = `Query Keboola data with SQL through a workspace (kbagen
 - ["workspace", "from-transformation", "--component-id", "keboola.snowflake-transformation", "--config-id", "456"] to debug a transformation with its inputs loaded
 Results are capped by --limit (default 500 rows): check statements[].truncated and total_rows, use COUNT(*) for counts. Only read data: never INSERT, UPDATE, DELETE or DROP. Write SQL in the project's backend dialect (see ["project", "info"] via kbagent_read: Snowflake or BigQuery).`;
 
-function formatResult(result: RunResult): string {
-  if (result.ok) return typeof result.output === 'string' ? result.output : JSON.stringify(result.output);
+/** Budget of one result for the model, as compact JSON. */
+const MODEL_OUTPUT_CHARS = 30_000;
+
+function formatResult(result: RunResult, maxChars = MODEL_OUTPUT_CHARS): string {
+  if (result.ok) return cutForModel(typeof result.output === 'string' ? result.output : JSON.stringify(result.output), maxChars).text;
   return JSON.stringify({
     ok: false,
     exitCode: result.exitCode,
@@ -168,7 +171,7 @@ function createTool(name: string, description: string, options: KbagentToolsOpti
       const result = await run(invocation.argv);
       const warning = after ? await after(run, options, invocation.operation, result.ok) : '';
       return [
-        formatResult(result) + warning,
+        formatResult(result, options.maxOutputChars) + warning,
         {
           operation: invocation.operation,
           category: invocation.category,

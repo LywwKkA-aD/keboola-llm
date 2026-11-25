@@ -147,6 +147,7 @@ describe('buildInvocation: denied groups and operations', () => {
 
   it.each([
     [['data-app', 'password', '--app-id', '1']],
+    [['config', 'oauth-url', '--component-id', 'keboola.ex-google-drive', '--config-id', '1']],
     [['data-app', 'secrets-get', '--app-id', '1', '--key', 'k']],
     [['storage', 'download-table', '--table-id', 'in.c-a.b']],
     [['lineage', 'server']],
