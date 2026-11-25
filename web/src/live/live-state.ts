@@ -159,3 +159,12 @@ export function seedFeed(state: LiveState, envelopes: readonly Envelope[]): Live
   const known = new Set(state.feed.map((item) => item.id));
   return { ...state, feed: [...state.feed, ...replayed.feed.filter((item) => !known.has(item.id))].slice(0, FEED_LIMIT) };
 }
+
+const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((entry) => b.includes(entry));
+
+/** Take the server's running and waiting chats over the ones the events left behind. Pure. */
+export function reconcileLive(state: LiveState, running: readonly string[], waiting: readonly string[]): LiveState {
+  if (sameList(state.running, running) && sameList(state.waiting, waiting)) return state;
+  // A change in the waiting chats may have changed the approvals too.
+  return { ...state, running: [...running], waiting: [...waiting], approvalsVersion: state.approvalsVersion + (sameList(state.waiting, waiting) ? 0 : 1) };
+}

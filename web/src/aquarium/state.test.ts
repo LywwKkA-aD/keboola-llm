@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Envelope } from '../api/types.ts';
-import { activityForTool, initialAquarium, moodOf, reduceAquarium } from './state.ts';
+import { activityForTool, initialAquarium, moodOf, reduceAquarium, settleInactive } from './state.ts';
 
 let seq = 0;
 const env = (event: Envelope['event'], threadId = 't1'): Envelope => ({ seq: ++seq, threadId, event });
@@ -148,5 +148,25 @@ describe('moodOf', () => {
     expect(moodOf(agent, 1000)).toBe('error');
     expect(moodOf(agent, 10_000)).toBe('idle');
     expect(moodOf(undefined, 0)).toBe('idle');
+  });
+});
+
+describe('approvals and the server\'s word', () => {
+  it('puts the agent the server names at the bell, not the last caller of the same tool', () => {
+    const state = play([
+      env({ type: 'tool.start', agent: 'alpha', callId: 'a', tool: 'write_file', args: {} }),
+      env({ type: 'tool.start', agent: 'beta', callId: 'b', tool: 'write_file', args: {} }),
+      env({ type: 'approval.required', interruptId: 'i', requests: [{ tool: 'write_file', agent: 'alpha', args: {}, decisions: [] }] }),
+    ]);
+    expect(state.agents.alpha?.activity).toBe('waiting');
+    expect(state.agents.beta?.activity).not.toBe('waiting');
+  });
+
+  it('rests agents of chats the server says neither run nor wait', () => {
+    const state = play([env({ type: 'token', agent: 'helper', text: 'x' }, 't1'), env({ type: 'token', agent: 'other', text: 'y' }, 't2')]);
+    const settled = settleInactive(state, new Set(['t2']), at);
+    expect(settled.agents.helper?.activity).toBe('idle');
+    expect(settled.agents.other?.activity).toBe('thinking');
+    expect(settleInactive(settled, new Set(['t2']), at)).toBe(settled);
   });
 });

@@ -10,6 +10,8 @@ import { initialLive } from './live-state.ts';
 export interface LiveValue extends AquariumEvents {
   readonly approvals: readonly PendingApprovalEntry[];
   readonly refreshApprovals: () => void;
+  /** Ask the server which chats run and wait now, and reconcile the live view (e.g. after a chat was deleted). */
+  readonly refreshStatus: () => void;
   readonly status?: AppStatus;
 }
 
@@ -22,6 +24,10 @@ const LiveContext = createContext<LiveValue>({
   live: initialLive(),
   approvals: [],
   refreshApprovals: () => {},
+  refreshStatus: () => {},
+  reconnects: 0,
+  mark: () => 0,
+  reconcile: () => {},
 });
 
 /** One event stream for the whole app, plus the pending approvals and the status line it implies. */
@@ -43,17 +49,30 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     if (teamVersion > 0) refreshTeam();
   }, [refreshTeam, teamVersion]);
 
+  const { mark, reconcile, reconnects } = events;
+  const refreshStatus = useCallback(() => {
+    const since = mark();
+    api
+      .status()
+      .then((next) => {
+        setStatus(next);
+        if (next.running && next.waiting) reconcile(next.running, next.waiting, since);
+      })
+      .catch(() => {});
+  }, [mark, reconcile]);
+
+  // Polled, and asked again whenever the runs change or the stream comes back after a drop (a server restart may
+  // have ended runs this page never heard end).
   const runsKey = `${running.join(',')}|${waiting.join(',')}|${settings.model}|${settings.keboolaProject}`;
   useEffect(() => {
-    const load = () => api.status().then(setStatus).catch(() => {});
-    load();
-    const timer = setInterval(load, STATUS_POLL_MS);
+    refreshStatus();
+    const timer = setInterval(refreshStatus, STATUS_POLL_MS);
     return () => clearInterval(timer);
-  }, [runsKey]);
+  }, [refreshStatus, runsKey, reconnects]);
 
   const value = useMemo<LiveValue>(
-    () => ({ ...events, approvals, refreshApprovals, ...(status ? { status } : {}) }),
-    [events, approvals, refreshApprovals, status],
+    () => ({ ...events, approvals, refreshApprovals, refreshStatus, ...(status ? { status } : {}) }),
+    [events, approvals, refreshApprovals, refreshStatus, status],
   );
   return <LiveContext.Provider value={value}>{children}</LiveContext.Provider>;
 }

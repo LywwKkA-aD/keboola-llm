@@ -122,3 +122,31 @@ describe('a chat in step with the server', () => {
     expect(screen.getByRole('textbox')).toHaveValue('important follow-up');
   });
 });
+
+describe('the live view in step with the server', () => {
+  it('stops showing a chat as running once the server says it is not (after a restart)', async () => {
+    let status = { ...(baseRoutes['GET /api/status'] as object), running: ['t2'], waiting: [] };
+    await openChat({ 'GET /api/status': () => status });
+    act(() => FakeEventSource.global().emit({ type: 'run.started', runId: 'r1' }, 't2'));
+    const item = () => screen.getByRole('link', { name: 'Почему упал джоб?' }).closest('li') as HTMLElement;
+    await waitFor(() => expect(item().textContent).toMatch(/работает/i));
+
+    status = { ...status, running: [] };
+    act(() => {
+      FakeEventSource.global().fail();
+      FakeEventSource.global().open();
+    });
+    await waitFor(() => expect(item().textContent).not.toMatch(/работает/i));
+  });
+
+  it("drops a deleted chat's approval from the top bar badge", async () => {
+    let approvals: unknown[] = [{ threadId: 't2', threadTitle: 'Почему упал джоб?', interruptId: 'i1', requests: [{ tool: 'kbagent_sql', args: {}, decisions: ['approve'] }] }];
+    const { callsTo } = await openChat({ 'GET /api/approvals': () => approvals, 'DELETE /api/threads/t2': undefined });
+    await waitFor(() => expect(document.querySelector('.topbar__badge')?.textContent).toBe('1'));
+    approvals = [];
+    const item = screen.getByRole('link', { name: 'Почему упал джоб?' }).closest('li') as HTMLElement;
+    await userEvent.click(item.querySelector('button') as HTMLElement);
+    await waitFor(() => expect(callsTo('DELETE', '/api/threads/t2')).toHaveLength(1));
+    await waitFor(() => expect(document.querySelector('.topbar__badge')).toBeNull());
+  });
+});
