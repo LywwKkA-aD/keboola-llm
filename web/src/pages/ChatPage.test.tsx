@@ -172,7 +172,9 @@ describe('Chat page', () => {
     await openChat({ 'POST /api/threads/t1/messages': () => errorResponse(409, 'Thread is busy with another run') });
     await userEvent.type(screen.getByRole('textbox'), 'never sent{Enter}');
     await screen.findByText(/Команда ещё работает над прошлым сообщением/);
-    expect(screen.queryByText('never sent')).toBeNull();
+    expect(screen.queryByText('never sent', { selector: '.message__plain' })).toBeNull();
+    // The text stays in the field, to send once the team is free.
+    expect(screen.getByRole('textbox')).toHaveValue('never sent');
   });
 
   it('streams the reply of a lead agent that is not called "lead"', async () => {

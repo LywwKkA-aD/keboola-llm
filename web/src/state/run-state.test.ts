@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BusEvent } from '../api/types.ts';
-import { initialRunState, reduceRun } from './run-state.ts';
+import { initialRunState, reduceRun, syncRun } from './run-state.ts';
 
 const lead = 'lead';
 const apply = (events: BusEvent[], state = initialRunState(lead)) => events.reduce(reduceRun, state);
@@ -164,5 +164,39 @@ describe('reduceRun', () => {
     const state = apply([{ type: 'tool.start', agent: 'helper', callId: 'a', tool: 'ls', args: {} }]);
     expect(state.turns).toBe(1);
     expect(state.activities[0]?.turn).toBe(0);
+  });
+});
+
+describe('syncRun', () => {
+  const running = apply([
+    { type: 'run.started', runId: 'r' },
+    { type: 'tool.start', agent: 'helper', callId: 'c', tool: 'kbagent_read', args: {} },
+    { type: 'token', agent: 'lead', text: 'Считаю' },
+  ]);
+
+  it('ends a run the server no longer has: cut off and continuable, its open steps failed', () => {
+    const synced = syncRun(running, { status: 'idle', resumable: true });
+    expect(synced).toMatchObject({ status: 'idle', resumable: true, streamingText: '' });
+    expect(synced.activities[0]).toMatchObject({ status: 'failed' });
+    expect(synced.busyAgents).toEqual([]);
+  });
+
+  it('closes the steps as done when the server finished the run', () => {
+    expect(syncRun(running, { status: 'idle', resumable: false }).activities[0]).toMatchObject({ status: 'done' });
+  });
+
+  it('shows a run the page never heard start, and a wait the page missed', () => {
+    expect(syncRun(initialRunState(lead), { status: 'running', resumable: false }).status).toBe('running');
+    expect(syncRun(running, { status: 'waiting', resumable: false }).status).toBe('waiting');
+  });
+
+  it('keeps a failure the events reported and notes whether it can be continued', () => {
+    const failed = reduceRun(running, { type: 'run.failed', runId: 'r', error: 'boom', reason: 'error' });
+    expect(syncRun(failed, { status: 'idle', resumable: true })).toMatchObject({ status: 'failed', error: 'boom', resumable: true });
+  });
+
+  it('changes nothing when it agrees', () => {
+    const idle = { ...initialRunState(lead), resumable: false };
+    expect(syncRun(idle, { status: 'idle', resumable: false })).toBe(idle);
   });
 });

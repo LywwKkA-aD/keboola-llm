@@ -15,7 +15,7 @@ import type {
   UsageReport,
 } from './types.ts';
 import type { DefinitionKind, TrackedDefinition, VersionDetail, VersionSummary } from './types.ts';
-import type { PendingApproval } from '../state/run-state.ts';
+import type { PendingApproval, ServerRun } from '../state/run-state.ts';
 import type { ModelTest, OmniRouteInput, OmniRouteState, SetupReport } from './setup-types.ts';
 
 export class ApiError extends Error {
@@ -50,6 +50,8 @@ export const api = {
   send: (id: string, text: string, command?: ChatCommand) => request<{ runId: string }>(`${thread(id)}/messages`, 'POST', { text, command }),
   history: (id: string) => request<ChatEntry[]>(`${thread(id)}/messages`),
   approvals: (id: string) => request<PendingApproval[]>(`${thread(id)}/approvals`),
+  /** What the chat's run is doing on the server now. */
+  threadRun: (id: string) => request<ServerRun>(`${thread(id)}/run`),
   /** Answer some of a chat's approvals; runId comes once none is left. */
   answer: (id: string, answers: readonly InterruptAnswer[]) =>
     request<{ runId?: string; remaining: number }>(`${thread(id)}/approvals`, 'POST', { answers }),
