@@ -3,9 +3,8 @@
  * every other line, comment and the line endings stay as they were, a missing key goes at the end.
  * The values written here are secrets (the OmniRoute key), so they never appear in an error message.
  */
-import { randomUUID } from 'node:crypto';
-import { chmodSync, existsSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { defaultIo, writeFileAtomic } from '../storage/json-file.ts';
 
 const BOM = '﻿';
 const ASSIGNMENT = /^(\s*(?:export\s+)?)([\w.-]+)(\s*=\s*)(.*)$/;
@@ -86,7 +85,8 @@ export function setEnvValues(text: string, values: Readonly<Record<string, strin
   const missing = [...formatted].filter(([key]) => !seen.has(key)).map(([key, value]) => `${key}=${value}${eol}`);
   const body = out.join('');
   const glue = missing.length > 0 && body !== '' && !body.endsWith('\n') ? eol : '';
-  return bom + body + glue + missing.join('');
+  // Without the byte order mark: Node's .env reader would take it for part of the first key.
+  return body + glue + missing.join('');
 }
 
 /**
@@ -101,14 +101,5 @@ export function writeEnvValues(file: string, values: Readonly<Record<string, str
   const current = source === undefined ? '' : readFileSync(source, 'utf8');
   const next = setEnvValues(current, values);
   const mode = exists ? statSync(target).mode & 0o777 : 0o600;
-  const temp = join(dirname(target), `.${basename(target)}.${process.pid}.${randomUUID().slice(0, 8)}.tmp`);
-  try {
-    writeFileSync(temp, next, { mode, flag: 'wx' });
-    // The umask may have narrowed the mode; the new file gets exactly the old one.
-    chmodSync(temp, mode);
-    renameSync(temp, target);
-  } catch (error) {
-    rmSync(temp, { force: true });
-    throw error;
-  }
+  writeFileAtomic(target, next, defaultIo, mode);
 }

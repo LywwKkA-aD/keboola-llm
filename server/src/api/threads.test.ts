@@ -1,5 +1,7 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { flakyRename } from '../test-utils/flaky-io.ts';
 import { makeTree } from '../test-utils/tree.ts';
 import { createThreadStore, titleFrom } from './threads.ts';
 
@@ -31,11 +33,25 @@ describe('createThreadStore', () => {
     expect(createThreadStore(file).list()).toHaveLength(2);
   });
 
-  it('ignores touching an unknown thread and survives a corrupt file', () => {
-    const root = makeTree({ 'threads.json': '{broken' });
+  it('ignores touching an unknown thread and keeps a corrupt file aside instead of overwriting it', () => {
+    const root = makeTree({ 'threads.json': '[{"id":"old","title":"Old ch' });
     const store = createThreadStore(join(root, 'threads.json'));
     store.touch('missing');
     expect(store.list()).toEqual([]);
+    store.create('New');
+    const aside = readdirSync(root).find((name) => name.startsWith('threads.json.corrupt-'));
+    expect(readFileSync(join(root, aside as string), 'utf8')).toBe('[{"id":"old","title":"Old ch');
+  });
+
+  it('keeps its list as it was when a write fails (the chat is not half created)', () => {
+    const file = join(makeTree({}), 'threads.json');
+    const store = createThreadStore(file, clock('2026-01-01T10:00:00Z'));
+    const kept = store.create('Kept');
+    const failing = createThreadStore(file, clock('2026-01-01T11:00:00Z'), flakyRename(99));
+    expect(() => failing.create('Lost')).toThrow(/EPERM/);
+    expect(failing.list().map((thread) => thread.id)).toEqual([kept.id]);
+    // A moment of antivirus is fine.
+    expect(createThreadStore(file, clock(), flakyRename(2)).create('After a retry').title).toBe('After a retry');
   });
 
   it('stores the per-chat SQL permission without reordering threads', () => {

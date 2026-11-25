@@ -16,6 +16,18 @@ const RESERVED = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
 
 const invalid = (reason: string) => noteError('NOTE_INVALID', `Invalid path: ${reason}`);
 
+/**
+ * Why a file or folder name would misbehave on Windows, or undefined when it is fine: an alternate data stream
+ * ("a.md:notes" hides the content), a device name ("nul.md", "CON" lose the data) or a trailing dot or space (dropped,
+ * so "a.md." silently becomes "a.md").
+ */
+export function windowsNameProblem(segment: string): string | undefined {
+  if (segment.includes(':')) return `"${segment}" contains ":"`;
+  if (RESERVED.test(segment)) return `"${segment}" is a reserved name on Windows`;
+  if (segment !== segment.trimEnd() || segment.endsWith('.')) return `"${segment}" ends with a dot or a space`;
+  return undefined;
+}
+
 function checkSegment(segment: string): void {
   if (segment === '..') throw invalid('".." is not allowed');
   if (segment.startsWith('.')) throw invalid('hidden files and folders are not allowed');

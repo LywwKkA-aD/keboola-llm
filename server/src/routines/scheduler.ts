@@ -60,6 +60,8 @@ export function createScheduler({ routines, store, clock, isRunning, launch, log
 }): Scheduler {
   let started = false;
   let lastCheck: number | undefined;
+  // Times whose run could not start: owed until a launch succeeds (within the catch-up window).
+  const owed = new Map<string, number>();
   let cancelTimer: (() => void) | undefined;
 
   const settle = (routine: ScheduledRoutine, now: number) => {
@@ -74,19 +76,26 @@ export function createScheduler({ routines, store, clock, isRunning, launch, log
       store.update(name, (state) => ({ ...state, settledUntil: new Date(now).toISOString() }));
       return;
     }
-    const after = Math.max(Date.parse(settledUntil), lastCheck ?? Number.NEGATIVE_INFINITY, now - CATCH_UP_MS);
+    // lastCheck keeps a time that already ran from running again when its settled time could not be saved.
+    const checked = owed.has(name) ? (owed.get(name) as number) - 1 : (lastCheck ?? Number.NEGATIVE_INFINITY);
+    const after = Math.max(Date.parse(settledUntil), checked, now - CATCH_UP_MS);
     const slot = latestRun(routine.cron, routine.timeZone, { after, until: now });
     if (slot === undefined) return;
-    store.update(name, (state) => ({ ...state, settledUntil: new Date(slot).toISOString() }));
+    const due = new Date(slot).toISOString();
     if (isRunning(name)) {
-      log(`[routines] ${name}: skipped the run due at ${new Date(slot).toISOString()}, the previous one is still going`);
-      return;
+      log(`[routines] ${name}: skipped the run due at ${due}, the previous one is still going`);
+    } else {
+      // Settled only once the run started: a time whose run could not start stays owed and is tried again.
+      try {
+        launch(name, slot);
+      } catch (error) {
+        owed.set(name, slot);
+        log(`[routines] ${name}: could not start the run due at ${due}, will try again: ${message(error)}`);
+        return;
+      }
     }
-    try {
-      launch(name, slot);
-    } catch (error) {
-      log(`[routines] ${name}: could not start the run due at ${new Date(slot).toISOString()}: ${message(error)}`);
-    }
+    owed.delete(name);
+    store.update(name, (state) => ({ ...state, settledUntil: due }));
   };
 
   const arm = (now: number) => {

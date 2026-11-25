@@ -1,5 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { type FileIo, defaultIo, readJsonFile, writeJsonAtomic } from '../storage/json-file.ts';
 import { z } from 'zod';
 import type { EventBus } from '../api/bus.ts';
 import { addUsage, type Ledger, pruneLedger, reportOf, type UsageReport, type UsageSample } from './ledger.ts';
@@ -21,25 +20,25 @@ const pad = (value: number) => String(value).padStart(2, '0');
 /** YYYY-MM-DD of the machine's own calendar, where the analyst's working day is. */
 export const localDate = (at = new Date()) => `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
 
-function read(file: string): Ledger {
-  try {
-    const parsed = ledgerSchema.safeParse(JSON.parse(readFileSync(file, 'utf8')));
-    return parsed.success ? parsed.data : {};
-  } catch {
-    return {};
-  }
-}
+const read = (file: string, io: FileIo): Ledger =>
+  readJsonFile<Ledger>(file, { fallback: {}, io, parse: (raw) => {
+    const parsed = ledgerSchema.safeParse(raw);
+    return parsed.success ? parsed.data : undefined;
+  } });
 
 /** Token usage by day and agent in one JSON file (DATA_DIR/usage.json), rewritten atomically on every model call. */
-export function createUsageStore({ file, today = () => localDate(), keepDays = KEEP_DAYS }: { file: string; today?: () => string; keepDays?: number }): UsageStore {
-  let ledger = read(file);
+export function createUsageStore({ file, today = () => localDate(), keepDays = KEEP_DAYS, io = defaultIo }: {
+  file: string;
+  today?: () => string;
+  keepDays?: number;
+  io?: FileIo;
+}): UsageStore {
+  let ledger = read(file, io);
 
+  // Memory follows the file: a failed write (logged by the caller) loses nothing already saved.
   const save = (next: Ledger) => {
+    writeJsonAtomic(file, next, { compact: true, io });
     ledger = next;
-    mkdirSync(dirname(file), { recursive: true });
-    const temp = `${file}.${process.pid}.tmp`;
-    writeFileSync(temp, `${JSON.stringify(ledger)}\n`);
-    renameSync(temp, file);
   };
 
   return {
@@ -56,6 +55,10 @@ export function trackUsage(bus: EventBus, store: UsageStore): () => void {
   return bus.subscribe(({ event }) => {
     if (event.type !== 'usage') return;
     const { agent, input, cached, cacheWrite, output } = event;
-    store.record({ agent, input, cached, cacheWrite, output });
+    try {
+      store.record({ agent, input, cached, cacheWrite, output });
+    } catch (error) {
+      console.warn(`[usage] could not save the token usage: ${(error as Error).message}`);
+    }
   });
 }

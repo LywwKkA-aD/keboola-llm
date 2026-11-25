@@ -1,5 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { type FileIo, defaultIo, readJsonFile, writeJsonAtomic } from '../storage/json-file.ts';
 import { z } from 'zod';
 
 const fields = {
@@ -34,22 +33,24 @@ export type Settings = z.infer<typeof settingsSchema>;
 
 export const DEFAULT_SETTINGS: Settings = settingsSchema.parse({});
 
-/** Load user settings; a missing, corrupt or invalid file yields the defaults. Missing fields get defaults. */
-export function loadSettings(file: string): Settings {
-  try {
-    const parsed = settingsSchema.safeParse(JSON.parse(readFileSync(file, 'utf8')));
-    return parsed.success ? parsed.data : DEFAULT_SETTINGS;
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
+/**
+ * Load user settings; a missing file yields the defaults (missing fields too). A corrupt or invalid one is kept aside
+ * (settings.json.corrupt-<time>) before the defaults are used, so a save cannot silently overwrite it.
+ */
+export function loadSettings(file: string, io: FileIo = defaultIo): Settings {
+  return readJsonFile<Settings>(file, {
+    fallback: DEFAULT_SETTINGS,
+    io,
+    parse: (raw) => {
+      const parsed = settingsSchema.safeParse(raw);
+      return parsed.success ? parsed.data : undefined;
+    },
+  });
 }
 
 /** Validate current + patch, write it atomically and return the new settings. */
-export function saveSettings(file: string, current: Settings, patch: Partial<Settings>): Settings {
+export function saveSettings(file: string, current: Settings, patch: Partial<Settings>, io: FileIo = defaultIo): Settings {
   const next = settingsSchema.parse({ ...current, ...patch });
-  mkdirSync(dirname(file), { recursive: true });
-  const temp = `${file}.${process.pid}.tmp`;
-  writeFileSync(temp, `${JSON.stringify(next, null, 2)}\n`);
-  renameSync(temp, file);
+  writeJsonAtomic(file, next, { io });
   return next;
 }

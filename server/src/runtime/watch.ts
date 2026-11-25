@@ -1,9 +1,10 @@
 import { existsSync, readdirSync, statSync, watch as fsWatch } from 'node:fs';
 import { join } from 'node:path';
 
-export type WatchFn = (path: string, listener: () => void) => { close(): void };
+export type WatchFn = (path: string, listener: () => void, onError: (error: Error) => void) => { close(): void };
 
-const defaultWatch: WatchFn = (path, listener) => fsWatch(path, { recursive: true }, listener);
+// Without an error listener a watcher's error (on Windows: EPERM when the watched folder is deleted) crashes the app.
+export const defaultWatch: WatchFn = (path, listener, onError) => fsWatch(path, { recursive: true }, listener).on('error', onError);
 
 /** Every file under the folders with its size and modification time: equal strings mean nothing changed. */
 export function folderSignature(paths: readonly string[]): string {
@@ -35,7 +36,12 @@ export function folderSignature(paths: readonly string[]): string {
 export function watchFolders(
   paths: readonly string[],
   onChange: () => void,
-  { debounceMs, watch = defaultWatch, pollMs }: { debounceMs: number; watch?: WatchFn; pollMs?: number },
+  { debounceMs, watch = defaultWatch, pollMs, log = (message) => console.warn(message) }: {
+    debounceMs: number;
+    watch?: WatchFn;
+    pollMs?: number;
+    log?: (message: string) => void;
+  },
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let seen = pollMs ? folderSignature(paths) : '';
@@ -47,12 +53,27 @@ export function watchFolders(
       onChange();
     }, debounceMs);
   };
-  const watchers = paths.filter((path) => existsSync(path)).map((path) => watch(path, schedule));
+  const watchers = paths
+    .filter((path) => existsSync(path))
+    .map((path) => {
+      const watcher = watch(path, schedule, (error) => {
+        // The folder went away or cannot be watched any more: stop this watcher; polling (when on) carries on.
+        log(`[watch] stopped watching ${path}: ${error.message}`);
+        watcher.close();
+        schedule();
+      });
+      return watcher;
+    });
   const poll = pollMs
     ? setInterval(() => {
         if (timer) return;
-        const now = folderSignature(paths);
-        if (now !== seen) schedule();
+        try {
+          const now = folderSignature(paths);
+          if (now !== seen) schedule();
+        } catch (error) {
+          // A folder removed between listing and reading it: compare again next time.
+          log(`[watch] ${(error as Error).message}`);
+        }
       }, pollMs)
     : undefined;
   return () => {

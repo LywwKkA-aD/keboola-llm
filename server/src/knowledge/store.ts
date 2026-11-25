@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Dirent, Stats } from 'node:fs';
 import { lstat, mkdir, open, readdir, readFile, rename, rmdir, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative } from 'node:path';
+import { retryTransient } from '../storage/json-file.ts';
 import { noteError } from './errors.ts';
 import { titleOf } from './markdown.ts';
 import { MAX_DEPTH, parseNotePath } from './note-path.ts';
@@ -191,7 +192,8 @@ export function createNoteStore(rootDir: string, { maxBytes = MAX_NOTE_BYTES }: 
         const temp = join(dirname(file), `.${basename(file)}.${randomUUID()}.tmp`);
         try {
           await writeFile(temp, content, { flag: 'wx' });
-          await rename(temp, file);
+          // An antivirus or OneDrive may hold the note for a moment on Windows.
+          await retryTransient(() => rename(temp, file));
         } catch (error) {
           await unlink(temp).catch(() => {});
           throw error;

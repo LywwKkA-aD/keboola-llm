@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { makeTree } from '../test-utils/tree.ts';
-import { createBackend } from './backend.ts';
+import { createBackend, unsafeWritePath } from './backend.ts';
 
 function setup() {
   const root = makeTree({
@@ -51,6 +51,22 @@ describe('createBackend', () => {
 
     const escaped = await backend.read('/knowledge/../agents/lead/AGENT.md');
     expect(escaped.content).toBeUndefined();
+  });
+
+  it('refuses names Windows would mangle: streams, device names, trailing dots and spaces', async () => {
+    const { root, dataDir, skillSources } = setup();
+    const backend = createBackend({ rootDir: root, dataDir, skillSources });
+    for (const path of ['/knowledge/a.md:notes', '/knowledge/nul.md', '/knowledge/CON', '/knowledge/a.md.', '/knowledge/dir /a.md']) {
+      const result = await backend.write(path, 'x');
+      expect(result.error, path).toMatch(/cannot write/);
+    }
+    expect((await backend.edit('/knowledge/aux.md', 'a', 'b')).error).toMatch(/reserved name/);
+    expect(await backend.uploadFiles([['/knowledge/com1.md', new Uint8Array([1])]])).toEqual([{ path: '/knowledge/com1.md', error: 'invalid_path' }]);
+
+    // Ordinary names, Cyrillic included, still work.
+    expect((await backend.write('/knowledge/how-to/загрузка заказов.md', '# Ok')).error).toBeUndefined();
+    expect(existsSync(join(dataDir, 'knowledge', 'how-to', 'загрузка заказов.md'))).toBe(true);
+    expect(unsafeWritePath('/knowledge/v1.2/notes.md')).toBeUndefined();
   });
 
   it('creates the shared memory file once and never overwrites it', () => {

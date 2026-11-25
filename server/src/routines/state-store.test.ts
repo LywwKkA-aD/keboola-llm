@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { flakyRename } from '../test-utils/flaky-io.ts';
 import { makeTree } from '../test-utils/tree.ts';
 import { createRoutineStateStore } from './state-store.ts';
 
@@ -48,5 +49,12 @@ describe('createRoutineStateStore', () => {
     writeFileSync(file, '{}');
     store.update('x', () => ({ enabled: true }));
     expect(readFileSync(file, 'utf8')).toBe('{}');
+  });
+
+  it('takes a change only once it is on disk', () => {
+    const file = join(makeTree({}), 'routines.json');
+    const store = createRoutineStateStore(file, flakyRename(99));
+    expect(() => store.update('morning-check', () => ({ settledUntil: RUN.at }))).toThrow(/EPERM/);
+    expect(store.get('morning-check')).toEqual({});
   });
 });

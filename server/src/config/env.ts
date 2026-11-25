@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { resolve } from 'node:path';
 
 export interface OmniRouteConfig {
   readonly baseUrl: string;
@@ -31,7 +31,8 @@ export function readAppEnv(env: Env, rootDir: string): AppEnv {
   const value = (name: string) => (env[name] ?? '').trim();
   return {
     rootDir,
-    dataDir: value('DATA_DIR') || join(rootDir, 'data'),
+    // A relative DATA_DIR means the same folder for the server (run from server/) and the scripts (run from the root).
+    dataDir: resolve(rootDir, value('DATA_DIR') || 'data'),
     host: value('HOST') || '127.0.0.1',
     port: readPort(value('PORT') || '4800'),
     webDevPort: readPort(value('WEB_DEV_PORT') || '5173'),

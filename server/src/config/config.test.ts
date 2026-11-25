@@ -22,6 +22,10 @@ describe('readAppEnv', () => {
     expect(readAppEnv({ KEBOOLA_PROJECT: ' sandbox ' }, '/app').keboolaProject).toBe('sandbox');
   });
 
+  it('resolves a relative DATA_DIR against the app folder, wherever it is started from', () => {
+    expect(readAppEnv({ DATA_DIR: 'my-data' }, '/app').dataDir).toBe(join('/app', 'my-data'));
+  });
+
   it('reads overrides and trims values', () => {
     const env = readAppEnv(
       { PORT: '5000', HOST: ' 0.0.0.0 ', DATA_DIR: '/tmp/d', OMNIROUTE_BASE_URL: 'http://x/v1/', OMNIROUTE_API_KEY: ' k ', OMNIROUTE_MODEL: 'm' },

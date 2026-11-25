@@ -72,8 +72,8 @@ describe('setEnvValues', () => {
     expect(parseEnv(next)).toEqual({ A: 'abc#def', B: 'has space', C: "it's$x" });
   });
 
-  it('keeps a byte order mark at the start of the file', () => {
-    expect(setEnvValues('﻿K=old\n', { K: 'new' })).toBe('﻿K=new\n');
+  it('drops a byte order mark: Node would read it as part of the first key', () => {
+    expect(setEnvValues('\uFEFFK=old\n', { K: 'new' })).toBe('K=new\n');
   });
 });
 

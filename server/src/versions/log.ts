@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { readJsonFile, writeJsonAtomic } from '../storage/json-file.ts';
 import { NAME_RE } from '../registry/types.ts';
 import { assertName } from './files.ts';
 import type { ChangeType, DefinitionKind, Version } from './types.ts';
@@ -31,14 +32,15 @@ const isVersion = (value: unknown): value is Version => {
   );
 };
 
-function readFile(file: string): readonly Version[] {
-  try {
-    const parsed = JSON.parse(readFileSync(file, 'utf8')) as { versions?: unknown };
-    return Array.isArray(parsed.versions) ? parsed.versions.filter(isVersion) : [];
-  } catch {
-    return [];
-  }
-}
+// A damaged history file is kept aside (<name>.json.corrupt-<time>), not overwritten by the next version.
+const readFile = (file: string): readonly Version[] =>
+  readJsonFile<readonly Version[]>(file, {
+    fallback: [],
+    parse: (parsed) => {
+      const versions = (parsed as { versions?: unknown } | null)?.versions;
+      return Array.isArray(versions) ? versions.filter(isVersion) : undefined;
+    },
+  });
 
 /** One JSON file per definition under dir/<kind>/<name>.json, rewritten atomically on every change. */
 export function createVersionLog({ dir, limit = DEFAULT_LIMIT }: { dir: string; limit?: number }): VersionLog {
@@ -53,10 +55,7 @@ export function createVersionLog({ dir, limit = DEFAULT_LIMIT }: { dir: string; 
       const file = fileOf(kind, name);
       const versions = readFile(file);
       const version: Version = { id: (versions.at(-1)?.id ?? 0) + 1, ...entry };
-      mkdirSync(dirname(file), { recursive: true });
-      const temp = `${file}.${process.pid}.tmp`;
-      writeFileSync(temp, `${JSON.stringify({ versions: [...versions, version].slice(-limit) }, null, 2)}\n`);
-      renameSync(temp, file);
+      writeJsonAtomic(file, { versions: [...versions, version].slice(-limit) });
       return version;
     },
     names(kind) {

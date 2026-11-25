@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { type FileIo, defaultIo, readJsonFile, writeJsonAtomic } from '../storage/json-file.ts';
 
 /** Standing permissions the user grants per chat. */
 export interface ThreadPolicy {
@@ -34,25 +33,17 @@ export function titleFrom(text: string): string {
   return firstLine.slice(0, TITLE_CHARS).trim() || 'New chat';
 }
 
-function read(file: string): readonly Thread[] {
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
-    return Array.isArray(parsed) ? (parsed as Thread[]) : [];
-  } catch {
-    return [];
-  }
-}
+const read = (file: string, io: FileIo): readonly Thread[] =>
+  readJsonFile<readonly Thread[]>(file, { fallback: [], io, parse: (parsed) => (Array.isArray(parsed) ? (parsed as Thread[]) : undefined) });
 
 /** Chat thread index (titles, timestamps). Message history itself lives in the LangGraph checkpointer. */
-export function createThreadStore(file: string, now: () => Date = () => new Date()): ThreadStore {
-  let threads = read(file);
+export function createThreadStore(file: string, now: () => Date = () => new Date(), io: FileIo = defaultIo): ThreadStore {
+  let threads = read(file, io);
 
+  // Memory follows the file: when the write fails the change throws and is not taken.
   const save = (next: readonly Thread[]) => {
+    writeJsonAtomic(file, next, { io });
     threads = next;
-    mkdirSync(dirname(file), { recursive: true });
-    const temp = `${file}.${process.pid}.tmp`;
-    writeFileSync(temp, `${JSON.stringify(threads, null, 2)}\n`);
-    renameSync(temp, file);
   };
   const update = (id: string, patch: Partial<Thread>) =>
     save(threads.map((thread) => (thread.id === id ? { ...thread, ...patch, updatedAt: now().toISOString() } : thread)));
