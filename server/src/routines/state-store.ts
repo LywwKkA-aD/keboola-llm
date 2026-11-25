@@ -1,5 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { type FileIo, defaultIo, readJsonFile, writeJsonAtomic } from '../storage/json-file.ts';
 import { z } from 'zod';
 
 const stateSchema = z.object({
@@ -19,30 +18,28 @@ export interface RoutineStateStore {
   update(name: string, change: (state: RoutineState) => RoutineState): RoutineState;
 }
 
-function read(file: string): ReadonlyMap<string, RoutineState> {
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return new Map();
-    return new Map(
-      Object.entries(parsed).flatMap(([name, value]) => {
-        const state = stateSchema.safeParse(value);
-        return state.success ? [[name, state.data] as const] : [];
-      }),
-    );
-  } catch {
-    return new Map();
-  }
-}
+const read = (file: string, io: FileIo): ReadonlyMap<string, RoutineState> =>
+  readJsonFile<ReadonlyMap<string, RoutineState>>(file, {
+    fallback: new Map(),
+    io,
+    parse: (parsed) =>
+      typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+        ? new Map(
+            Object.entries(parsed).flatMap(([name, value]) => {
+              const state = stateSchema.safeParse(value);
+              return state.success ? [[name, state.data] as const] : [];
+            }),
+          )
+        : undefined,
+  });
 
-export function createRoutineStateStore(file: string): RoutineStateStore {
-  let states = read(file);
+export function createRoutineStateStore(file: string, io: FileIo = defaultIo): RoutineStateStore {
+  let states = read(file, io);
 
+  // Memory follows the file: when the write fails, the change throws and is not taken.
   const save = (next: ReadonlyMap<string, RoutineState>) => {
+    writeJsonAtomic(file, Object.fromEntries(next), { io });
     states = next;
-    mkdirSync(dirname(file), { recursive: true });
-    const temp = `${file}.${process.pid}.tmp`;
-    writeFileSync(temp, `${JSON.stringify(Object.fromEntries(states), null, 2)}\n`);
-    renameSync(temp, file);
   };
 
   return {

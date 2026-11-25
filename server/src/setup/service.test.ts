@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseEnv } from 'node:util';
 import { describe, expect, it, vi } from 'vitest';
@@ -101,8 +101,10 @@ describe('createSetupService', () => {
 
   it('keeps the running config when .env cannot be written', () => {
     const { root, service, apply } = setup();
+    writeFileSync(join(root, 'not-a-folder'), '');
     const blocked = createSetupService({
-      envFile: join(root, 'missing-dir', '.env'),
+      // A file where its folder should be: nothing can be written there.
+      envFile: join(root, 'not-a-folder', '.env'),
       current: () => ({ omniroute: { baseUrl: 'http://omni/v1', apiKey: '', model: '' }, model: '', keboolaProject: '' }),
       kbagentVersion: async () => '',
       keboolaProjects: async () => [],

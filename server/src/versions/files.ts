@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { writeFileAtomic } from '../storage/json-file.ts';
 import { NAME_RE } from '../registry/types.ts';
 import type { DefinitionKind } from './types.ts';
 
@@ -38,9 +39,5 @@ export function readDefinition(rootDir: string, kind: DefinitionKind, name: stri
 
 /** Replace the file in one step (temp file + rename), creating its folder if it was deleted. */
 export function writeDefinition(rootDir: string, kind: DefinitionKind, name: string, content: string): void {
-  const file = definitionFile(rootDir, kind, name);
-  mkdirSync(dirname(file), { recursive: true });
-  const temp = `${file}.${process.pid}.tmp`;
-  writeFileSync(temp, content);
-  renameSync(temp, file);
+  writeFileAtomic(definitionFile(rootDir, kind, name), content);
 }
