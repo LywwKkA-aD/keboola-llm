@@ -5,7 +5,7 @@
  * user's language. Neither ever carries the OmniRoute key.
  */
 import type { OmniRouteConfig } from '../config/env.ts';
-import { type ChangePath, type KeboolaAccess, shortAccess } from '../system/keboola-access.ts';
+import { type ChangePath, isTokenAuth, type KeboolaAccess, shortAccess } from '../system/keboola-access.ts';
 import type { KeboolaProject } from '../system/keboola.ts';
 import { modelsOfProvider } from '../system/models.ts';
 import { type ModelTestResult, type OmniRouteProbe, redactSecret } from './omniroute.ts';
@@ -125,7 +125,7 @@ async function accessStep(project: SetupStep, read: () => Promise<KeboolaAccess>
   if (session && EXPIRED_SESSIONS.has(session)) return fail('access', 'sessionExpired', `kbagent session ${session}`, { kind: 'session', session });
   return ok('access', shortAccess(access.value), {
     kind: 'access',
-    ...(role ? { role } : authMode === 'token' ? { token: true as const } : {}),
+    ...(role ? { role } : isTokenAuth(authMode) ? { token: true as const } : {}),
     ...(backend ? { backend } : {}),
     changePath,
     protectedProduction,

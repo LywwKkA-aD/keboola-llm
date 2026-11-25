@@ -65,6 +65,12 @@ describe(PROMOTE_TOOL, () => {
     expect(calls.some((call) => call.includes(' update '))).toBe(false);
   });
 
+  it('compares the rows by their content, not by the version and dates a branch copy always has its own', async () => {
+    const row = (version: number, created: string) => ({ id: 'r1', name: 'Orders', configuration: { query: 'SELECT 1' }, isDisabled: false, version, created, changeDescription: 'x' });
+    const { exec } = kbagent({ prod: config(4, 'SELECT 1', [row(3, '2026-01-01')]), dev: config(2, 'SELECT 2', [row(1, '2026-11-25')]) });
+    expect(String(await promote(exec).invoke(input()))).toMatch(/Promoted to production/);
+  });
+
   it('refuses a "branch" that is production, and says when there is nothing to promote', async () => {
     const prodAsBranch = kbagent();
     expect(String(await promote(prodAsBranch.exec).invoke(input({ branch_id: PROD })))).toMatch(/development branch/i);

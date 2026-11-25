@@ -13,10 +13,13 @@ seeing production next to the branch. The tools enforce this; the steps below ma
 
 - Read the project profile (`/memories/projects/<file>.md`) and the notes of the affected transformation under
   `/knowledge/data-model/<project-file>/` if they exist.
-- Fetch the current production code: `kbagent_read ["transformation", "show", "--config-id", K]` (ids renumber after
-  edits; show again before every edit), or `["config", "detail", "--component-id", C, "--config-id", K]` for other
-  components. Note the production `version` of every configuration you will change (from `config detail`): the
-  promotion in step 7 needs it and refuses if production moved on in the meantime.
+- Find the production branch id once: `kbagent_read ["branch", "list"]`, the branch with `isDefault: true`. Without
+  `--branch` kbagent reads its active branch, which may be a development one, so pass `"--branch", <production id>`
+  on every production read below.
+- Fetch the current production code: `kbagent_read ["transformation", "show", "--config-id", K, "--branch", P]` (ids
+  renumber after edits; show again before every edit), or `["config", "detail", "--component-id", C, "--config-id",
+  K, "--branch", P]` for other components. Note the production `version` of every configuration you will change
+  (from `config detail`): the promotion in step 7 needs it and refuses if production moved on in the meantime.
 - Restate the change in one paragraph: what, where (config ids, block/code ids), why, expected effect on the data.
   If the brief does not match what you see, stop and report instead of guessing.
 

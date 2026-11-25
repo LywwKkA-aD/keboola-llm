@@ -2,7 +2,7 @@ import { ToolMessage } from '@langchain/core/messages';
 import { describe, expect, it } from 'vitest';
 import { buildChildEnv } from './env.ts';
 import type { ExecFn, ExecOptions } from './runner.ts';
-import { createKbagentSqlTool, createKbagentTools } from './tools.ts';
+import { createKbagentSqlTool, createKbagentTools, waitTimeoutMs } from './tools.ts';
 
 interface Call {
   readonly file: string;
@@ -272,4 +272,14 @@ describe.skipIf(process.env.KBAGENT_IT !== '1')('kbagent integration', () => {
     const result = await createKbagentTools({ access: 'read' })[0]?.invoke({ args: ['project', 'list'], purpose: 'it' });
     expect(JSON.parse(String(result))).toMatchObject({ status: 'ok' });
   }, 60_000);
+});
+
+describe('waitTimeoutMs', () => {
+  it('gives commands that wait for Keboola kbagent\'s own wait plus a minute', () => {
+    expect(waitTimeoutMs(['--json', 'job', 'run', '--component-id', 'c', '--config-id', '1', '--wait'])).toBe(360_000);
+    expect(waitTimeoutMs(['--json', 'job', 'run', '--wait', '--timeout', '900'])).toBe(960_000);
+    expect(waitTimeoutMs(['--json', 'workspace', 'load', '--workspace-id', '1'])).toBe(360_000);
+    expect(waitTimeoutMs(['--json', 'config', 'list'])).toBe(180_000);
+    expect(waitTimeoutMs(['--json', 'config', 'list'], 60_000)).toBe(60_000);
+  });
 });

@@ -99,7 +99,7 @@ function formatResult(result: RunResult, maxChars = MODEL_OUTPUT_CHARS): string 
 }
 
 type Invoke = (args: readonly string[], conversationId: string | undefined) => InvocationResult | Promise<InvocationResult>;
-export type Run = (argv: readonly string[]) => Promise<RunResult>;
+export type Run = (argv: readonly string[], timeoutMs?: number) => Promise<RunResult>;
 
 /** Policy for one tool: which access level, and optionally which operations only. */
 const invokeWith =
@@ -124,14 +124,32 @@ export function runnerFor(options: KbagentToolsOptions): Run {
     ...(options.project === undefined ? {} : { project: options.project }),
     ...(options.extraEnv === undefined ? {} : { extraEnv: options.extraEnv }),
   });
-  return (argv) =>
+  return (argv, timeoutMs = options.timeoutMs) =>
     runKbagent({
       argv,
       env,
-      ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
       ...(options.maxOutputChars === undefined ? {} : { maxOutputChars: options.maxOutputChars }),
       ...(options.exec === undefined ? {} : { exec: options.exec }),
     });
+}
+
+/** Commands that wait for Keboola by themselves (kbagent waits 300 s unless told otherwise with --timeout). */
+const WAITING_COMMANDS = [['workspace', 'load'], ['storage', 'create-table'], ['workspace', 'from-transformation']];
+const KBAGENT_WAIT_S = 300;
+const DEFAULT_RUN_TIMEOUT_MS = 180_000;
+
+/**
+ * Time a call may take: a command that waits (--wait, or one that always waits) gets kbagent's own wait plus a
+ * minute, so the app does not kill kbagent while the job it waits for goes on.
+ */
+export function waitTimeoutMs(argv: readonly string[], base = DEFAULT_RUN_TIMEOUT_MS): number {
+  const runs = ([group, command]: readonly string[]) => argv.some((token, index) => token === group && argv[index + 1] === command);
+  const waits = argv.includes('--wait') || WAITING_COMMANDS.some(runs);
+  if (!waits) return base;
+  const at = argv.indexOf('--timeout');
+  const seconds = at >= 0 ? Number(argv[at + 1]) : KBAGENT_WAIT_S;
+  return Math.max(base, ((Number.isFinite(seconds) && seconds > 0 ? seconds : KBAGENT_WAIT_S) + 60) * 1000);
 }
 
 export const projectArgs = (options: KbagentToolsOptions) => (options.project === undefined ? [] : ['--project', options.project]);
@@ -168,7 +186,7 @@ function createTool(name: string, description: string, options: KbagentToolsOpti
       if (!invocation.ok) {
         return [`Rejected: ${invocation.reason}`, { ok: false, purpose: input.purpose, rejected: invocation.reason }];
       }
-      const result = await run(invocation.argv);
+      const result = await run(invocation.argv, waitTimeoutMs(invocation.argv, options.timeoutMs));
       const warning = after ? await after(run, options, invocation.operation, result.ok) : '';
       return [
         formatResult(result, options.maxOutputChars) + warning,

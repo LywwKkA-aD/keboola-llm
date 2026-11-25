@@ -27,7 +27,7 @@ const schema = z.object({
 
 type Input = z.infer<typeof schema>;
 
-const DESCRIPTION = `Carry a configuration you changed and verified on a development branch over to production. The user approves it in the app after seeing production next to the branch; only then this runs. The app copies the branch's configuration itself (you never send configuration content) and refuses when production changed since you read it: pass the "version" from your first production read (["config", "detail", ...] without --branch). One call per changed configuration. Configuration rows are not promoted here: if they changed, ask the user to merge in Keboola.`;
+const DESCRIPTION = `Carry a configuration you changed and verified on a development branch over to production. The user approves it in the app after seeing production next to the branch; only then this runs. The app copies the branch's configuration itself (you never send configuration content) and refuses when production changed since you read it: pass the "version" from your first production read: ["config", "detail", ..., "--branch", <production branch id>] (the isDefault branch of ["branch", "list"]; without --branch kbagent reads the active branch, which may be a development one). One call per changed configuration. Configuration rows are not promoted here: if they changed, ask the user to merge in Keboola.`;
 
 interface ConfigDetail {
   readonly version?: unknown;
@@ -44,6 +44,14 @@ function sortKeys(value: unknown): unknown {
   }
   return value;
 }
+
+/** What a row holds; its version, dates and change description differ on any branch copy and are left out. */
+const rowContent = (rows: unknown) =>
+  (Array.isArray(rows) ? rows : []).map((row: { id?: unknown; configuration?: unknown; isDisabled?: unknown }) => ({
+    id: row?.id,
+    configuration: row?.configuration,
+    isDisabled: row?.isDisabled === true,
+  }));
 
 /** JSON that ignores key order, to compare two configurations. */
 const canonical = (value: unknown) => JSON.stringify(sortKeys(value ?? null));
@@ -97,7 +105,7 @@ export function createKbagentPromoteTool(options: Omit<KbagentToolsOptions, 'acc
       }
       const branch = dataOf(await detail(input, input.branch_id));
       if (!branch) return 'Not promoted: the configuration on the development branch could not be read.';
-      if (canonical(current.rows ?? []) !== canonical(branch.rows ?? [])) {
+      if (canonical(rowContent(current.rows)) !== canonical(rowContent(branch.rows))) {
         return 'Not promoted: the configuration rows differ between production and the branch; ask the user to merge this one in Keboola.';
       }
       if (canonical(current.configuration) === canonical(branch.configuration)) return 'Nothing to promote: production already has this configuration.';

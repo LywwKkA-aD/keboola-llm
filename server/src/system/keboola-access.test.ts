@@ -79,6 +79,18 @@ describe('readKeboolaAccess', () => {
     expect(calls).toEqual(['--json --deny-writes project info --project shop', '--json --deny-writes auth status']);
   });
 
+  it('reads an expired session from auth status, which then exits 3', async () => {
+    const run = async (argv: readonly string[]): Promise<RunResult> =>
+      argv.includes('auth')
+        ? { ok: false, exitCode: 3, output: { status: 'ok', data: { status: 'expired', accessible_projects: [] } }, truncated: false }
+        : { ok: true, exitCode: 0, output: { status: 'ok', data: info() }, truncated: false };
+    expect((await readKeboolaAccess({ run, project: 'shop' })).session).toBe('expired');
+  });
+
+  it('labels a Storage token sign-in, which kbagent calls static', () => {
+    expect(shortAccess(deriveAccess({ info: { ...info(), auth_mode: 'static' } }))).toMatch(/^token · /);
+  });
+
   it('fails with the command and what kbagent answered, so the setup step shows why', async () => {
     const json = async (): Promise<RunResult> => ({
       ok: false,

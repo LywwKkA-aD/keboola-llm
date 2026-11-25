@@ -110,12 +110,16 @@ const SHORT_PATHS: Readonly<Record<ChangePath, string>> = {
 
 /** One line for the setup checklist. */
 export function shortAccess(access: KeboolaAccess): string {
-  return [access.role ?? (access.authMode === 'token' ? 'token' : undefined), access.backend, `changes: ${SHORT_PATHS[access.changePath]}`]
+  return [access.role ?? (isTokenAuth(access.authMode) ? 'token' : undefined), access.backend, `changes: ${SHORT_PATHS[access.changePath]}`]
     .filter(Boolean)
     .join(' · ');
 }
 
 const dataOf = <T>(result: RunResult): T | undefined => (result.ok ? (result.output as { data?: T } | undefined)?.data : undefined);
+const anyDataOf = <T>(result: RunResult): T | undefined => (result.output as { data?: T } | undefined)?.data;
+
+/** kbagent calls a sign-in with a Storage token "static" (older versions "token"). */
+export const isTokenAuth = (authMode: string | undefined) => authMode === 'static' || authMode === 'token';
 
 /** Read the access with kbagent (read-only calls only). */
 export async function readKeboolaAccess({ run, project }: { run: (argv: readonly string[]) => Promise<RunResult>; project?: string }): Promise<KeboolaAccess> {
@@ -123,6 +127,7 @@ export async function readKeboolaAccess({ run, project }: { run: (argv: readonly
   const result = await run(argv);
   const info = dataOf<ProjectInfo>(result);
   if (!info) throw new Error(`kbagent could not read the project (kbagent ${argv.slice(2).join(' ')}, exit ${String(result.exitCode)}): ${describeFailure(result)}`);
-  const auth = info.auth_mode === 'session' ? dataOf<AuthStatus>(await run(['--json', '--deny-writes', 'auth', 'status'])) : undefined;
+  // An expired or missing session exits 3 but still answers with its status: read it either way.
+  const auth = info.auth_mode === 'session' ? anyDataOf<AuthStatus>(await run(['--json', '--deny-writes', 'auth', 'status'])) : undefined;
   return deriveAccess({ info, ...(auth ? { auth } : {}) });
 }
