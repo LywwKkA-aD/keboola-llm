@@ -24,7 +24,7 @@ import { createRoutines } from './routines/service.ts';
 import { createNoteStore, MAX_MEMORY_BYTES } from './knowledge/store.ts';
 import { watchFolders } from './runtime/watch.ts';
 import { createSetupService } from './setup/service.ts';
-import { kbagentConfigSource, kbagentVersion, keboolaAccess, listKeboolaProjects } from './system/keboola.ts';
+import { kbagentConfigSource, kbagentVersion, keboolaAccess, listKeboolaProjects, pickProject } from './system/keboola.ts';
 import { accessSummary, type KeboolaAccess, shortAccess } from './system/keboola-access.ts';
 import { listModels, modelsOfProvider } from './system/models.ts';
 import { onboardingStatus } from './system/onboarding.ts';
@@ -45,6 +45,13 @@ const models = () => listModels(app.env.omniroute);
 app.loadErrors.forEach((error) => console.warn(`[load] ${error.file}: ${error.message}`));
 
 let settings = app.loadSettings();
+// Without a project chosen in Settings or .env, the team works with kbagent's default (or only) project: most kbagent
+// commands require --project, and the production guard must know whose production it guards. Asked again on every
+// access refresh, so a `kbagent project use` in the terminal or a cleared choice in Settings is picked up.
+const configuredProject = () => settings.keboolaProject || app.env.keboolaProject;
+const kbagentDefaultProject = () => (configuredProject() ? Promise.resolve(undefined) : listKeboolaProjects().then(pickProject));
+let defaultProject = await kbagentDefaultProject().catch(() => undefined);
+app.setDefaultProject(defaultProject);
 let team = app.buildTeam(settings);
 team.spec.warnings.forEach((warning) => console.warn(`[team] ${warning}`));
 
@@ -122,19 +129,24 @@ const routines = createRoutines({ rootDir: app.env.rootDir, dataDir: app.env.dat
 const ACCESS_REFRESH_MS = 15 * 60_000;
 let accessKey = '';
 async function refreshAccess(): Promise<void> {
-  let next: KeboolaAccess;
+  const resolved = await kbagentDefaultProject().catch(() => defaultProject);
+  let rebuild = resolved !== defaultProject;
+  defaultProject = resolved;
+  app.setDefaultProject(resolved);
   try {
-    next = await keboolaAccess(team.effective.keboolaProject || undefined);
+    const next: KeboolaAccess = await keboolaAccess(configuredProject() || resolved);
+    const key = `${next.changePath}\n${accessSummary(next)}`;
+    if (key !== accessKey) {
+      accessKey = key;
+      app.setKeboolaAccess(next);
+      rebuild = true;
+      console.log(`Keboola access: ${shortAccess(next)}`);
+    }
   } catch (error) {
     console.warn(`[access] could not read the Keboola access: ${(error as Error).message}`);
-    return;
   }
-  const key = `${next.changePath}\n${accessSummary(next)}`;
-  if (key === accessKey) return;
-  accessKey = key;
-  app.setKeboolaAccess(next);
+  if (!rebuild) return;
   team = app.buildTeam(settings);
-  console.log(`Keboola access: ${shortAccess(next)}`);
   bus.publish(SYSTEM_THREAD, { type: 'team.updated' });
 }
 

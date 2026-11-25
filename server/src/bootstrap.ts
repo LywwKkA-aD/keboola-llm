@@ -33,6 +33,8 @@ export interface App {
   readonly setOmniRoute: (omniroute: OmniRouteConfig) => void;
   /** What the analyst may do in Keboola, read from kbagent; the next buildTeam tells the agents and picks tools. */
   readonly setKeboolaAccess: (access: KeboolaAccess | undefined) => void;
+  /** The project the team works with when none is chosen in Settings or .env: kbagent's default (or only) one. */
+  readonly setDefaultProject: (alias: string | undefined) => void;
 }
 
 /** Model and Keboola project actually in use: settings override .env, empty means .env. */
@@ -66,6 +68,7 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
   const readDefinitions = () => ({ agents: loadAgents(rootDir), skills: loadSkills(skillSources) });
   let definitions = readDefinitions();
   let access: KeboolaAccess | undefined;
+  let defaultProject: string | undefined;
   const settingsFile = join(env.dataDir, 'settings.json');
 
   const checkpointer = SqliteSaver.fromConnString(join(env.dataDir, 'checkpoints.sqlite'));
@@ -99,10 +102,14 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
     setKeboolaAccess: (next) => {
       access = next;
     },
+    setDefaultProject: (alias) => {
+      defaultProject = alias;
+    },
     buildTeam: (settings) => {
       const { agents, skills } = definitions;
-      // Without a chosen project, the one the access was read for (kbagent's default): agents and the top bar name it.
-      const effective = { model: settings.model || env.omniroute.model, keboolaProject: settings.keboolaProject || env.keboolaProject || access?.project || '' };
+      // Without a chosen project, kbagent's default (or only) one: the tools always name a project (most kbagent
+      // commands require --project) and the production guard knows whose production it guards.
+      const effective = { model: settings.model || env.omniroute.model, keboolaProject: settings.keboolaProject || env.keboolaProject || defaultProject || '' };
       const resolveTools = createToolResolver(
         createToolFactories({ defaultProject: effective.keboolaProject, ...(access ? { changePath: access.changePath } : {}) }),
       );

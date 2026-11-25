@@ -133,10 +133,15 @@ export function runnerFor(options: KbagentToolsOptions): Run {
 
 export const projectArgs = (options: KbagentToolsOptions) => (options.project === undefined ? [] : ['--project', options.project]);
 
-/** Id of the default (production) branch from `branch list`, asked once; failures are retried on the next call. */
+/**
+ * Id of the default (production) branch from `branch list`, asked once; failures are retried on the next call.
+ * Unknown without a project: kbagent then lists every project's branches and the first default one may be another
+ * project's production, which would let a write through to this one's.
+ */
 export function productionBranchOf(run: Run, options: KbagentToolsOptions): () => Promise<string | undefined> {
   let known: string | undefined;
   return async () => {
+    if (options.project === undefined) return undefined;
     if (known !== undefined) return known;
     const result = await run(['--json', '--deny-writes', 'branch', 'list', ...projectArgs(options)]);
     const data = (result.output as { data?: { branches?: { id?: unknown; isDefault?: unknown }[] } } | undefined)?.data;

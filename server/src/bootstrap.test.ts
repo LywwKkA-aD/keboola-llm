@@ -119,10 +119,10 @@ describe('bootstrap', () => {
     expect(app.buildTeam(DEFAULT_SETTINGS).effective.model).toBe('cc/test');
   });
 
-  it('works with the project the access was read for when none is chosen (kbagent\'s default)', () => {
+  it('works with kbagent\'s default project when none is chosen', () => {
     const app = bootstrap(repo(''));
     expect(app.buildTeam(DEFAULT_SETTINGS).effective.keboolaProject).toBe('');
-    app.setKeboolaAccess({ project: 'main', backend: 'snowflake', role: 'admin', mergeRequests: false, protectedProduction: false, changePath: 'promote', sql: true });
+    app.setDefaultProject('main');
     expect(app.buildTeam(DEFAULT_SETTINGS).effective.keboolaProject).toBe('main');
     expect(app.buildTeam({ ...DEFAULT_SETTINGS, keboolaProject: 'chosen' }).effective.keboolaProject).toBe('chosen');
   });

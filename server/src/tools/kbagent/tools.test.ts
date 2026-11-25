@@ -155,6 +155,14 @@ describe('kbagent_write without a pinned branch', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('blocks writes when the team has no project: a branch listing then spans every project', async () => {
+    const { calls, exec } = scriptedExec();
+    const tool = byName(createKbagentTools({ access: 'write', exec }), 'kbagent_write');
+    const result = await tool.invoke({ ...update('57656'), args: [...update('57656').args, '--project', 'l0-staging'] });
+    expect(String(result)).toMatch(/production branch of this project is not known/i);
+    expect(calls).toHaveLength(0);
+  });
+
   it('puts kbagent back on production after creating a branch, so other agents keep reading production', async () => {
     const { calls, exec } = scriptedExec();
     await writeTool(exec).invoke({ args: ['branch', 'create', '--name', 'agent/fix'], purpose: 'dev branch' });
