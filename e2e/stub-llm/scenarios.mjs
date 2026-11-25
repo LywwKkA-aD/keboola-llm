@@ -12,6 +12,10 @@ export const DELEGATE_REPLY = 'Хранитель знаний проверил 
 export const APPROVED_REPLY = 'Скилл e2e-skill создан.';
 export const REJECTED_REPLY = 'Пользователь отклонил запись скилла, файл не создан.';
 export const RESUMED_REPLY = 'Команда продолжила с того же места и закончила ответ.';
+export const PARALLEL_REPLY = 'Оба агента закончили: решения по обоим подтверждениям учтены.';
+/** The two skills the parallel scenario's agents write at the same time, each waiting for its own approval. */
+export const PARALLEL_SKILLS = ['e2e-par-a', 'e2e-par-b'];
+const parallelSkill = (name) => `---\nname: ${name}\ndescription: Written by the parallel approvals E2E; safe to delete.\n---\n\n# ${name}\n`;
 
 export const SKILL_PATH = '/skills/custom/e2e-skill/SKILL.md';
 export const SKILL_CONTENT = `---
@@ -70,6 +74,24 @@ const SCENARIOS = [
     },
   },
   {
+    // Two agents at once, each stopping at its own approval: the user answers them one at a time.
+    keyword: 'e2e-parallel',
+    lead: (results) =>
+      results.length === 0
+        ? {
+            toolCalls: PARALLEL_SKILLS.map((name) => ({
+              name: 'task',
+              args: { subagent_type: 'agent-builder', description: `e2e-parallel: create the custom skill ${name}.` },
+            })),
+          }
+        : say(PARALLEL_REPLY),
+    subagent: (results, ask) => {
+      const name = PARALLEL_SKILLS.find((skill) => ask.includes(skill)) ?? PARALLEL_SKILLS[0];
+      if (results.length === 0) return call('write_file', { file_path: `/skills/custom/${name}/SKILL.md`, content: parallelSkill(name) });
+      return say(REJECTED.test(results.at(-1) ?? '') ? `The user rejected ${name}.` : `Created ${name}.`);
+    },
+  },
+  {
     // The answer breaks off the first time (not retried: the stream had started); Continue completes it.
     keyword: 'e2e-fail-once',
     lead: () => ({ ...say(RESUMED_REPLY), failOnce: true }),
@@ -83,5 +105,5 @@ const PLAIN = { lead: () => say(PLAIN_REPLY), subagent: () => say('Done.') };
 export function planReply(body) {
   const { isLead, ask, results } = readTurn(body?.messages);
   const scenario = SCENARIOS.find(({ keyword }) => ask.includes(keyword)) ?? PLAIN;
-  return isLead ? scenario.lead(results) : scenario.subagent(results);
+  return isLead ? scenario.lead(results) : scenario.subagent(results, ask);
 }

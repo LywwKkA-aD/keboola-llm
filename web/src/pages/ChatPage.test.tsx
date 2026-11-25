@@ -83,21 +83,29 @@ describe('Chat page', () => {
   });
 
   it('asks for approval and sends the decision', async () => {
-    const { source, callsTo } = await openChat({ 'POST /api/threads/t1/approvals': { runId: 'r2' } });
+    const approval = {
+      interruptId: 'i1',
+      requests: [{ tool: 'write_file', args: { file_path: '/agents/x/AGENT.md', content: 'name: x' }, decisions: ['approve', 'reject'] }],
+    };
+    let pending = [approval];
+    const { source, callsTo } = await openChat({
+      'GET /api/threads/t1/approvals': () => pending,
+      'POST /api/threads/t1/approvals': () => {
+        pending = [];
+        return { runId: 'r2', remaining: 0 };
+      },
+    });
 
     act(() => {
       source.emit({ type: 'run.started', runId: 'r1' });
-      source.emit({
-        type: 'approval.required',
-        interruptId: 'i1',
-        requests: [{ tool: 'write_file', args: { file_path: '/agents/x/AGENT.md', content: 'name: x' }, decisions: ['approve', 'reject'] }],
-      });
+      source.emit({ type: 'approval.required', ...approval });
       source.emit({ type: 'run.waiting', runId: 'r1' });
     });
 
     expect(screen.getByText('Ждём вашего подтверждения')).toBeInTheDocument();
-    expect(screen.getByText('/agents/x/AGENT.md')).toBeInTheDocument();
+    expect(await screen.findByText('/agents/x/AGENT.md')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Отправить' })).toBeDisabled();
+    expect(screen.getByText(/Ответьте на подтверждения выше/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Разрешить' }));
     expect(callsTo('POST', '/api/threads/t1/approvals')[0]?.body).toEqual({
@@ -105,7 +113,44 @@ describe('Chat page', () => {
     });
 
     act(() => source.emit({ type: 'run.started', runId: 'r2' }));
-    expect(screen.queryByText('/agents/x/AGENT.md')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('/agents/x/AGENT.md')).toBeNull());
+  });
+
+  it('takes the approvals of parallel agents one at a time, and drops one answered elsewhere', async () => {
+    const request = (purpose: string) => ({ tool: 'kbagent_sql', args: { purpose, args: ['workspace', 'query'] }, decisions: ['approve', 'reject'] });
+    let pending = [
+      { interruptId: 'a', requests: [request('Telemetry coverage')] },
+      { interruptId: 'b', requests: [request('Current database')] },
+    ];
+    const { source, callsTo } = await openChat({
+      'GET /api/threads/t1/approvals': () => pending,
+      'POST /api/threads/t1/approvals': (body: unknown) => {
+        const id = (body as { answers: { interruptId: string }[] }).answers[0]?.interruptId;
+        if (!pending.some((approval) => approval.interruptId === id)) return errorResponse(409, `Approval ${id} is not waiting for an answer`);
+        pending = pending.filter((approval) => approval.interruptId !== id);
+        return { remaining: pending.length };
+      },
+    });
+    act(() => {
+      source.emit({ type: 'run.started', runId: 'r1' });
+      pending.forEach((approval) => source.emit({ type: 'approval.required', ...approval }));
+      source.emit({ type: 'run.waiting', runId: 'r1' });
+    });
+    expect(await screen.findAllByRole('button', { name: 'Разрешить' })).toHaveLength(2);
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Разрешить' })[0] as HTMLElement);
+    expect(callsTo('POST', '/api/threads/t1/approvals')[0]?.body).toEqual({ answers: [{ interruptId: 'a', decisions: [{ type: 'approve' }] }] });
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Разрешить' })).toHaveLength(1));
+    expect(screen.queryByText('Telemetry coverage')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Отправить' })).toBeDisabled();
+
+    // Answered on the Approvals page meanwhile: this page's card is out of date.
+    const stale = pending;
+    pending = [];
+    await userEvent.click(screen.getByRole('button', { name: 'Разрешить' }));
+    expect(stale).toHaveLength(1);
+    expect(await screen.findByText(/уже решено или больше не ждёт ответа/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Разрешить' })).toBeNull());
   });
 
   it('sends a message and shows it right away', async () => {
@@ -120,13 +165,13 @@ describe('Chat page', () => {
   it('shows API errors, e.g. a busy chat', async () => {
     await openChat({ 'POST /api/threads/t1/messages': () => errorResponse(409, 'Thread is busy with another run') });
     await userEvent.type(screen.getByRole('textbox'), 'x{Enter}');
-    expect(await screen.findByText('Thread is busy with another run')).toBeInTheDocument();
+    expect(await screen.findByText(/Команда ещё работает над прошлым сообщением/)).toBeInTheDocument();
   });
 
   it('takes back a message the server did not accept', async () => {
     await openChat({ 'POST /api/threads/t1/messages': () => errorResponse(409, 'Thread is busy with another run') });
     await userEvent.type(screen.getByRole('textbox'), 'never sent{Enter}');
-    await screen.findByText('Thread is busy with another run');
+    await screen.findByText(/Команда ещё работает над прошлым сообщением/);
     expect(screen.queryByText('never sent')).toBeNull();
   });
 

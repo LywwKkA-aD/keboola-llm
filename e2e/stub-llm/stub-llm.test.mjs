@@ -5,6 +5,7 @@ import {
   DELEGATE_REPLY,
   MODEL_ID,
   PLAIN_REPLY,
+  PARALLEL_REPLY,
   planReply,
   readTurn,
   REJECTED_REPLY,
@@ -28,6 +29,17 @@ describe('readTurn', () => {
 });
 
 describe('planReply', () => {
+  it('sends two agents at once in the parallel scenario, each writing its own skill', () => {
+    const first = planReply({ messages: [lead, user('e2e-parallel: два агента')] });
+    expect(first.toolCalls?.map((entry) => entry.args.description)).toEqual([
+      'e2e-parallel: create the custom skill e2e-par-a.',
+      'e2e-parallel: create the custom skill e2e-par-b.',
+    ]);
+    const b = planReply({ messages: [specialist, user('e2e-parallel: create the custom skill e2e-par-b.')] });
+    expect(b.toolCalls?.[0]).toMatchObject({ name: 'write_file', args: { file_path: '/skills/custom/e2e-par-b/SKILL.md' } });
+    expect(planReply({ messages: [lead, user('e2e-parallel: два агента'), tool('Created e2e-par-a.'), tool('The user rejected e2e-par-b.')] })).toEqual({ text: PARALLEL_REPLY });
+  });
+
   it('answers a plain question with text', () => {
     expect(planReply({ messages: [lead, user('Привет')] })).toEqual({ text: PLAIN_REPLY });
   });

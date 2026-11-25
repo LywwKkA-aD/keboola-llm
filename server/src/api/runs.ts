@@ -18,6 +18,15 @@ export interface Waiting {
   readonly human: readonly PendingApproval[];
   // Auto-approved interrupts from the same pause; they are resumed together with the human answers.
   readonly auto: readonly InterruptAnswer[];
+  // Human answers given so far, when several agents wait at once: the run resumes once every interrupt is answered.
+  readonly answered?: readonly InterruptAnswer[];
+}
+
+/** An answer to some of a thread's approvals: a run when it was the last one missing, else how many are left. */
+export interface AnswerResult {
+  readonly runId?: string;
+  readonly remaining: number;
+  readonly done: Promise<void>;
 }
 
 /** Keeps paused runs across server restarts; the graph state itself is in the checkpointer. */
@@ -43,9 +52,11 @@ export interface RunHandle {
 
 export interface RunManager {
   start(threadId: string, input: unknown): RunHandle;
-  answer(threadId: string, answers: readonly InterruptAnswer[]): RunHandle;
+  /** Answer some or all pending approvals; the run resumes once none is left. */
+  answer(threadId: string, answers: readonly InterruptAnswer[]): AnswerResult;
   /** Continue a run that stopped before it finished, from the last checkpoint, as the same turn. */
   resume(threadId: string): RunHandle;
+  /** Approvals still waiting for an answer. */
   pending(threadId: string): readonly PendingApproval[];
   isBusy(threadId: string): boolean;
   cancel(threadId: string): boolean;
@@ -175,19 +186,31 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
     answer(threadId, answers) {
       const paused = waiting.get(threadId);
       if (!paused) throw runError('RUN_CONFLICT', 'No pending approvals for this thread');
-      const pending = paused.human;
-      const ids = new Set(pending.map((approval) => approval.interruptId));
-      if (answers.length !== ids.size || answers.some((answer) => !ids.has(answer.interruptId))) {
-        throw runError('RUN_INVALID', 'Answers must cover exactly the pending interrupt ids');
-      }
-      pending.forEach((approval) => {
-        const answer = answers.find((entry) => entry.interruptId === approval.interruptId);
-        if (answer?.decisions.length !== approval.requests.length) {
+      const given = paused.answered ?? [];
+      const open = paused.human.filter((approval) => !given.some((answer) => answer.interruptId === approval.interruptId));
+      answers.forEach((answer) => {
+        const approval = open.find((entry) => entry.interruptId === answer.interruptId);
+        // Answered elsewhere already (another page, another tab) or never asked: the caller's view is out of date.
+        if (!approval) throw runError('RUN_CONFLICT', `Approval ${answer.interruptId} is not waiting for an answer`);
+        if (answer.decisions.length !== approval.requests.length) {
           throw runError('RUN_INVALID', `Interrupt ${approval.interruptId} needs ${approval.requests.length} decision(s)`);
         }
       });
+      if (answers.length === 0 || new Set(answers.map((answer) => answer.interruptId)).size !== answers.length) {
+        throw runError('RUN_INVALID', 'Give one answer per approval');
+      }
+      const answered = [...given, ...answers];
+      const remaining = open.length - answers.length;
+      bus.publish(threadId, { type: 'approval.answered', interruptIds: answers.map((answer) => answer.interruptId), remaining });
+      if (remaining > 0) {
+        pause(threadId, { ...paused, answered });
+        return { remaining, done: Promise.resolve() };
+      }
       unpause(threadId);
-      return launch(threadId, new Command({ resume: toResumeValue([...paused.auto, ...answers]) }), true);
+      // In the order the interrupts were asked, after the auto-approved ones.
+      const ordered = paused.human.flatMap((approval) => answered.filter((answer) => answer.interruptId === approval.interruptId));
+      const { runId, done } = launch(threadId, new Command({ resume: toResumeValue([...paused.auto, ...ordered]) }), true);
+      return { runId, remaining: 0, done };
     },
     resume(threadId) {
       if (running.has(threadId)) throw runError('RUN_CONFLICT', 'Thread is busy with another run');
@@ -195,7 +218,11 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
       if (!unfinished.has(threadId)) throw runError('RUN_CONFLICT', 'Nothing to continue in this chat');
       return launch(threadId, null, true);
     },
-    pending: (threadId) => waiting.get(threadId)?.human ?? [],
+    pending(threadId) {
+      const paused = waiting.get(threadId);
+      const given = paused?.answered ?? [];
+      return (paused?.human ?? []).filter((approval) => !given.some((answer) => answer.interruptId === approval.interruptId));
+    },
     isBusy: (threadId) => running.has(threadId) || waiting.has(threadId),
     active: () => [...running.keys()],
     waitingThreads: () => [...waiting.keys()],

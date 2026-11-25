@@ -468,3 +468,12 @@
 .plan-list__item--in_progress .plan-list__status {
   color: var(--color-primary);
 }
+
+/* Over the composer while approvals wait: why it does not take a message. */
+.conversation__hint {
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+  margin: 0 auto var(--space-2);
+  max-width: 880px;
+  width: 100%;
+}

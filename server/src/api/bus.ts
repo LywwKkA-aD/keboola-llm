@@ -10,7 +10,9 @@ export type RunEvent =
   | { readonly type: 'run.finished'; readonly runId: string }
   | { readonly type: 'run.failed'; readonly runId: string; readonly reason: FailureReason; readonly error: string }
   // An approval the app granted on the user's standing permission (e.g. SQL allowed for the chat).
-  | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] };
+  | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] }
+  // The user answered some approvals; remaining are still waiting (the run resumes at 0).
+  | { readonly type: 'approval.answered'; readonly interruptIds: readonly string[]; readonly remaining: number };
 /** App-wide news, published on SYSTEM_THREAD. */
 export type SystemEvent = { readonly type: 'team.updated' };
 

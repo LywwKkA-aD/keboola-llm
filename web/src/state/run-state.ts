@@ -130,6 +130,8 @@ export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
       };
     case 'approval.required':
       return { ...state, approvals: [...state.approvals, { interruptId: event.interruptId, requests: event.requests }] };
+    case 'approval.answered':
+      return { ...state, approvals: state.approvals.filter((approval) => !event.interruptIds.includes(approval.interruptId)) };
     case 'approval.auto':
       return withActivities(state, [
         ...state.activities,

@@ -27,7 +27,7 @@ function fakeRuns(): RunManager & { started: Array<[string, unknown]>; discarded
     answer(threadId, answers) {
       if (answers.length === 0) throw runError('RUN_CONFLICT', 'No pending approvals for this thread');
       started.push([threadId, answers]);
-      return { runId: 'run-answer', done: Promise.resolve() };
+      return { runId: 'run-answer', remaining: 0, done: Promise.resolve() };
     },
     resume: () => ({ runId: 'run-resume', done: Promise.resolve() }),
     pending: () => [],

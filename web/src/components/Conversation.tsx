@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.ts';
 import type { ChatEntry, Decision } from '../api/types.ts';
+import { friendlyError, isConflict } from '../lib/errors.ts';
+import type { PendingApproval } from '../state/run-state.ts';
 import type { CommandActions, Outgoing } from '../hooks/useCommandField.ts';
 import { useThreadEvents } from '../hooks/useThreadEvents.ts';
 import { useSettings } from '../state/settings-context.tsx';
@@ -50,6 +52,15 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
   }, [threadId, onActivity]);
 
   const run = useThreadEvents(threadId, team.lead, reload);
+
+  // What waits for an answer comes from the server, not from the events this page happened to see: an approval
+  // answered elsewhere, or one restored after a restart, must not linger or be missing. The events say when to ask.
+  const [pending, setPending] = useState<readonly PendingApproval[]>([]);
+  const loadPending = useCallback(() => {
+    api.approvals(threadId).then(setPending, () => {});
+  }, [threadId]);
+  useEffect(() => setPending([]), [threadId]);
+  useEffect(loadPending, [loadPending, run.approvals, run.status]);
   const [allowSql, setAllowSql] = useState(false);
 
   useEffect(() => {
@@ -65,7 +76,7 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
-  }, [history, run.streamingText, run.approvals.length]);
+  }, [history, run.streamingText, pending.length]);
 
   /** Run an API call with the busy flag and error banner; resolves to whether it succeeded. */
   const guard = async (action: () => Promise<unknown>): Promise<boolean> => {
@@ -75,7 +86,9 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
       await action();
       return true;
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t('error.generic'));
+      setError(friendlyError(reason, t));
+      // The server says this page is out of date (answered elsewhere, run already going): show what is true now.
+      if (isConflict(reason)) loadPending();
       return false;
     } finally {
       setBusy(false);
@@ -92,7 +105,7 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
   };
 
   const answer = (interruptId: string, decisions: Decision[]) =>
-    void guard(() => api.answer(threadId, [{ interruptId, decisions }]));
+    void guard(() => api.answer(threadId, [{ interruptId, decisions }])).then(loadPending);
 
   // The chat list learns the run is no longer unfinished.
   const resume = () =>
@@ -134,8 +147,8 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
           )}
           {showStream && <MessageBubble role="assistant" text={run.streamingText} pending />}
           {running && <div className="conversation__status conversation__status--working">{t('chat.working')}</div>}
-          {run.status === 'waiting' && <div className="conversation__status">{t('chat.waiting')}</div>}
-          {run.approvals.map((approval) => (
+          {(run.status === 'waiting' || pending.length > 0) && <div className="conversation__status">{t('chat.waiting')}</div>}
+          {pending.map((approval) => (
             <ApprovalCard key={approval.interruptId} approval={approval} busy={busy} onAnswer={(decisions) => answer(approval.interruptId, decisions)} />
           ))}
           {run.status === 'failed' && <RunNotice failure={run.failure ?? 'error'} detail={run.error} busy={busy} onContinue={resume} />}
@@ -143,11 +156,12 @@ export function Conversation({ threadId, title, updatedAt, resumable = false, on
           {error && <div className="conversation__status conversation__status--error">{error}</div>}
           <div ref={endRef} />
         </div>
+        {pending.length > 0 && <p className="conversation__hint">{t('chat.answerFirst')}</p>}
         <Composer
           onSend={send}
           onStop={() => void guard(() => api.cancel(threadId))}
           running={running}
-          disabled={busy || run.status === 'waiting'}
+          disabled={busy || run.status === 'waiting' || pending.length > 0}
           actions={{ ...actions, sql: saveSql }}
         />
       </div>

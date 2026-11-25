@@ -13,7 +13,7 @@ export const TEST_HOST = { host: '127.0.0.1:4800' };
 
 const idleRuns: RunManager = {
   start: () => ({ runId: 'run', done: Promise.resolve() }),
-  answer: () => ({ runId: 'run', done: Promise.resolve() }),
+  answer: () => ({ runId: 'run', remaining: 0, done: Promise.resolve() }),
   resume: () => ({ runId: 'run', done: Promise.resolve() }),
   pending: () => [],
   isBusy: () => false,

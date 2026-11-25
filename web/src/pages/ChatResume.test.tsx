@@ -79,6 +79,6 @@ describe('continuing a chat', () => {
     act(() => source.emit({ type: 'run.failed', runId: 'r1', reason: 'error', error: 'kbagent exited with code 2' }));
     expect(screen.getByRole('alert')).toHaveTextContent('kbagent exited with code 2');
     await userEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
-    expect(await screen.findByText('Nothing to continue in this chat')).toBeInTheDocument();
+    expect(await screen.findByText('В этом чате нечего продолжать.')).toBeInTheDocument();
   });
 });

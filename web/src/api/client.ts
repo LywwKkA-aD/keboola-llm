@@ -50,7 +50,9 @@ export const api = {
   send: (id: string, text: string, command?: ChatCommand) => request<{ runId: string }>(`${thread(id)}/messages`, 'POST', { text, command }),
   history: (id: string) => request<ChatEntry[]>(`${thread(id)}/messages`),
   approvals: (id: string) => request<PendingApproval[]>(`${thread(id)}/approvals`),
-  answer: (id: string, answers: readonly InterruptAnswer[]) => request<{ runId: string }>(`${thread(id)}/approvals`, 'POST', { answers }),
+  /** Answer some of a chat's approvals; runId comes once none is left. */
+  answer: (id: string, answers: readonly InterruptAnswer[]) =>
+    request<{ runId?: string; remaining: number }>(`${thread(id)}/approvals`, 'POST', { answers }),
   cancel: (id: string) => request<{ cancelled: boolean }>(`${thread(id)}/cancel`, 'POST'),
   resume: (id: string) => request<{ runId: string }>(`${thread(id)}/resume`, 'POST'),
   policy: (id: string) => request<ThreadPolicy>(`${thread(id)}/policy`),

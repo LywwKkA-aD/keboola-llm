@@ -59,8 +59,9 @@ export function registerThreadRoutes(app: FastifyInstance, { runs, threads, hist
   app.post<{ Params: { id: string } }>('/api/threads/:id/approvals', async (request, reply) => {
     if (!findThread(request.params.id, reply)) return reply;
     const { answers } = approvalsBody.parse(request.body);
-    const { runId } = runs.answer(request.params.id, answers);
-    return reply.code(202).send({ runId });
+    // runId only once the last pending approval is answered; until then remaining says how many are left.
+    const { runId, remaining } = runs.answer(request.params.id, answers);
+    return reply.code(202).send({ ...(runId ? { runId } : {}), remaining });
   });
 
   // Continue a run that stopped before it finished, from its last step (409 while busy, waiting or done).

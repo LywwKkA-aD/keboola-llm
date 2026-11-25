@@ -139,6 +139,8 @@ function reduceEvent(state: LiveState, { seq, threadId, event }: Envelope, at: n
       };
     case 'approval.auto':
       return pushFeed(state, requestItems('auto', event.requests, base, seq));
+    case 'approval.answered':
+      return { ...state, approvalsVersion: state.approvalsVersion + 1 };
     case 'usage':
       return { ...state, usageVersion: state.usageVersion + 1 };
     case 'team.updated':

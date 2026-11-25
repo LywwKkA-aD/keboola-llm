@@ -72,6 +72,6 @@ describe('Approvals page', () => {
   it('shows why an answer failed', async () => {
     await openApprovals({ 'GET /api/approvals': [BRANCH], 'POST /api/threads/t1/approvals': () => errorResponse(409, 'No pending approvals for this thread') });
     await userEvent.click(await screen.findByRole('button', { name: 'Разрешить' }));
-    expect(await screen.findByText('No pending approvals for this thread')).toBeInTheDocument();
+    expect(await screen.findByText('Это подтверждение уже решено или больше не ждёт ответа. Список обновлён.')).toBeInTheDocument();
   });
 });

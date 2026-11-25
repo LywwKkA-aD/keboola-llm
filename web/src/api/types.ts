@@ -83,7 +83,9 @@ export type RunEvent =
   | { readonly type: 'run.waiting'; readonly runId: string }
   | { readonly type: 'run.finished'; readonly runId: string }
   | { readonly type: 'run.failed'; readonly runId: string; readonly error: string; readonly reason?: FailureReason }
-  | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] };
+  | { readonly type: 'approval.auto'; readonly interruptId: string; readonly requests: readonly ApprovalRequest[] }
+  // The user answered some approvals; remaining are still waiting (the run resumes at 0).
+  | { readonly type: 'approval.answered'; readonly interruptIds: readonly string[]; readonly remaining: number };
 /** App-wide news, published on SYSTEM_THREAD. */
 export type SystemEvent = { readonly type: 'team.updated' };
 

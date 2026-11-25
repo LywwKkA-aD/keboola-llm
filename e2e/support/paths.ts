@@ -14,3 +14,7 @@ export const E2E_SKILL_DIR = join(ROOT, 'skills', 'e2e-skill');
 export const E2E_SKILL_FILE = join(E2E_SKILL_DIR, 'SKILL.md');
 
 export const removeE2eSkill = (): void => rmSync(E2E_SKILL_DIR, { recursive: true, force: true });
+
+/** The skills the parallel approvals scenario writes. */
+export const PARALLEL_SKILL_DIRS = ['e2e-par-a', 'e2e-par-b'].map((name) => join(ROOT, 'skills', name));
+export const removeParallelSkills = (): void => PARALLEL_SKILL_DIRS.forEach((dir) => rmSync(dir, { recursive: true, force: true }));

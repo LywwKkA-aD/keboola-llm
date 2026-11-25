@@ -89,7 +89,10 @@ describe('Home popups', () => {
       'GET /api/threads': [NEW_THREAD, ...THREADS],
       'GET /api/threads/t9/messages': [{ id: 'u', role: 'user', text: 'Сколько таблиц?' }],
       'GET /api/threads/t9/policy': { allowSql: false },
-      'POST /api/threads/t9/approvals': { runId: 'r2' },
+      'GET /api/threads/t9/approvals': [
+        { interruptId: 'i9', requests: [{ tool: 'write_file', args: { file_path: '/agents/x/AGENT.md', content: 'name: x' }, decisions: ['approve', 'reject'] }] },
+      ],
+      'POST /api/threads/t9/approvals': { runId: 'r2', remaining: 0 },
     });
     const input = screen.getByRole('textbox', { name: 'Спросить команду' });
     await userEvent.type(input, 'Сколько таблиц?{Enter}');
@@ -116,7 +119,7 @@ describe('Home popups', () => {
       });
       stream.emit({ type: 'run.waiting', runId: 'r' });
     });
-    await userEvent.click(within(popup).getByRole('button', { name: 'Разрешить' }));
+    await userEvent.click(await within(popup).findByRole('button', { name: 'Разрешить' }));
     expect(callsTo('POST', '/api/threads/t9/approvals')[0]?.body).toEqual({
       answers: [{ interruptId: 'i9', decisions: [{ type: 'approve' }] }],
     });

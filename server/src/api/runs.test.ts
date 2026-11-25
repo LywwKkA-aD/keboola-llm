@@ -114,7 +114,7 @@ describe('createRunManager', () => {
     const { runs } = setup(() => [interrupt]);
     await runs.start('t1', {}).done;
 
-    expect(() => runs.answer('t1', [{ interruptId: 'other', decisions: [{ type: 'approve' }] }])).toThrow(/interrupt/);
+    expect(() => runs.answer('t1', [{ interruptId: 'other', decisions: [{ type: 'approve' }] }])).toThrow(/not waiting/);
     expect(() => runs.answer('t1', [{ interruptId: 'int-1', decisions: [] }])).toThrow(/decision/);
     expect(() => runs.answer('t2', [])).toThrow(/No pending/);
   });
@@ -176,7 +176,7 @@ describe('createRunManager with a pending store', () => {
 
     await runs.answer('t1', [{ interruptId: 'w1', decisions: [{ type: 'approve' }] }]).done;
     expect((inputs[0] as Command).resume).toEqual({ s1: { decisions: [{ type: 'approve' }] }, w1: { decisions: [{ type: 'approve' }] } });
-    expect(types()).toEqual(['run.started', 'message', 'run.finished']);
+    expect(types()).toEqual(['approval.answered', 'run.started', 'message', 'run.finished']);
     expect(last().size).toBe(0);
   });
 
@@ -253,6 +253,58 @@ describe('createRunManager with auto-approval', () => {
     expect(calls).toBe(MAX_AUTO_RESUMES + 1);
     expect(events.at(-1)?.event).toMatchObject({ type: 'run.failed', error: expect.stringMatching(/automatic approvals/) });
     expect(runs.isBusy('t1')).toBe(false);
+  });
+});
+
+describe('createRunManager with several interrupts pending (parallel agents)', () => {
+  const sql = { name: 'kbagent_sql', args: { purpose: 'q' } };
+  const configs = [{ actionName: 'kbagent_sql', allowedDecisions: ['approve', 'reject'] }];
+  const two = [[], 'updates', { __interrupt__: [{ id: 'a', value: { actionRequests: [sql], reviewConfigs: configs } }, { id: 'b', value: { actionRequests: [sql], reviewConfigs: configs } }] }];
+  const approve = { type: 'approve' } as const;
+
+  it('takes the answers one at a time and resumes once every interrupt is answered', async () => {
+    const { store, last } = memoryStore();
+    const { runs, inputs, events } = setup((input) => (input instanceof Command ? [finalMessage] : [two]), undefined, store);
+    await runs.start('t1', {}).done;
+    expect(runs.pending('t1').map((approval) => approval.interruptId)).toEqual(['a', 'b']);
+
+    const first = runs.answer('t1', [{ interruptId: 'b', decisions: [approve] }]);
+    await first.done;
+    expect(first).toMatchObject({ remaining: 1 });
+    expect(first.runId).toBeUndefined();
+    expect(inputs).toHaveLength(1);
+    expect(runs.pending('t1').map((approval) => approval.interruptId)).toEqual(['a']);
+    expect(runs.isBusy('t1')).toBe(true);
+    expect(events.at(-1)?.event).toEqual({ type: 'approval.answered', interruptIds: ['b'], remaining: 1 });
+    // A restart in between keeps the answer that was given.
+    expect(last().get('t1')?.answered).toEqual([{ interruptId: 'b', decisions: [approve] }]);
+
+    const second = runs.answer('t1', [{ interruptId: 'a', decisions: [{ type: 'reject', message: 'no' }] }]);
+    await second.done;
+    expect(second).toMatchObject({ runId: expect.any(String), remaining: 0 });
+    expect((inputs[1] as Command).resume).toEqual({ a: { decisions: [{ type: 'reject', message: 'no' }] }, b: { decisions: [approve] } });
+    expect(runs.pending('t1')).toEqual([]);
+    expect(last().size).toBe(0);
+  });
+
+  it('refuses an answer to an interrupt that is already answered or not pending, as a conflict', async () => {
+    const { runs } = setup(() => [two]);
+    await runs.start('t1', {}).done;
+    await runs.answer('t1', [{ interruptId: 'a', decisions: [approve] }]).done;
+    expect(() => runs.answer('t1', [{ interruptId: 'a', decisions: [approve] }])).toThrow(expect.objectContaining({ code: 'RUN_CONFLICT' }));
+    expect(() => runs.answer('t1', [{ interruptId: 'zzz', decisions: [approve] }])).toThrow(expect.objectContaining({ code: 'RUN_CONFLICT' }));
+  });
+
+  it('still takes all answers at once', async () => {
+    const { runs, inputs } = setup((input) => (input instanceof Command ? [finalMessage] : [two]));
+    await runs.start('t1', {}).done;
+    const all = runs.answer('t1', [
+      { interruptId: 'a', decisions: [approve] },
+      { interruptId: 'b', decisions: [approve] },
+    ]);
+    await all.done;
+    expect(all.remaining).toBe(0);
+    expect((inputs[1] as Command).resume).toEqual({ a: { decisions: [approve] }, b: { decisions: [approve] } });
   });
 });
 
