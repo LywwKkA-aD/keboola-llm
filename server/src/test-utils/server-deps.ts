@@ -22,6 +22,7 @@ const idleRuns: RunManager = {
   waitingThreads: () => [],
   resumable: () => [],
   discard: () => {},
+  forgetApprovals: () => {},
 };
 
 /** Idle runs with some methods replaced, for route tests. */

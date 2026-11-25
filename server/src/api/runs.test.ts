@@ -380,6 +380,34 @@ describe('createRunManager resume', () => {
     expect(runs.resumable()).toEqual([]);
   });
 
+  it('keeps a chat waiting for approvals out of the resumable ones, and resumable once its approvals are forgotten', () => {
+    const paused: Waiting = { human: [{ type: 'approval.required', interruptId: 'w1', requests: [] }], auto: [] };
+    const { store } = memoryStore(new Map([['t1', paused]]));
+    const { runs } = setup(() => [finalMessage], undefined, store, ['t1', 't2']);
+    expect(runs.resumable()).toEqual(['t2']);
+    expect(() => runs.resume('t1')).toThrow(/waiting/);
+    runs.forgetApprovals('t1');
+    expect(runs.resumable().toSorted()).toEqual(['t1', 't2']);
+  });
+
+  it('does not bring back a chat deleted while its run was going', async () => {
+    let release: () => void = () => {};
+    const { runs } = setup(() => {
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return (async function* () {
+        await gate;
+        throw new Error('aborted');
+      })() as unknown as unknown[];
+    });
+    const { done } = runs.start('t1', {});
+    runs.discard('t1');
+    release();
+    await done;
+    expect(runs.resumable()).toEqual([]);
+  });
+
   it('forgets an unfinished run when the chat is discarded', () => {
     const { runs } = setup(() => [finalMessage], undefined, undefined, ['t1']);
     runs.discard('t1');

@@ -34,6 +34,7 @@ function fakeRuns(): RunManager & { started: Array<[string, unknown]>; discarded
     active: () => [],
     waitingThreads: () => [],
     resumable: () => [],
+    forgetApprovals: () => {},
     discard: (threadId) => {
       discarded.push(threadId);
     },

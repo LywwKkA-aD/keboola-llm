@@ -21,7 +21,7 @@ export async function pendingInterruptIds(graph: InterruptReader, threadId: stri
  * checkpointer does not hold their interrupts any more (or cannot be read). Returns the dropped threads.
  */
 export async function dropStaleApprovals({ runs, exists, interruptIds }: {
-  runs: Pick<RunManager, 'waitingThreads' | 'pending' | 'discard'>;
+  runs: Pick<RunManager, 'waitingThreads' | 'pending' | 'discard' | 'forgetApprovals'>;
   exists: (threadId: string) => boolean;
   interruptIds: (threadId: string) => Promise<ReadonlySet<string>>;
 }): Promise<readonly string[]> {
@@ -37,17 +37,20 @@ export async function dropStaleApprovals({ runs, exists, interruptIds }: {
   const threads = runs.waitingThreads();
   const stale = await Promise.all(threads.map(isStale));
   const dropped = threads.filter((_, index) => stale[index]);
-  dropped.forEach((threadId) => runs.discard(threadId));
+  // A deleted chat goes entirely; an existing one only loses the approvals, its run may still be continued.
+  dropped.forEach((threadId) => (exists(threadId) ? runs.forgetApprovals(threadId) : runs.discard(threadId)));
   return dropped;
 }
 
 /**
- * Whether a thread's run stopped midway: the checkpoint still has nodes to run and none of them waits for
- * an approval. A failed or stopped run looks the same, and so does one a server restart cut off.
+ * Whether a thread's run stopped midway: the checkpoint still has nodes to run. A failed or stopped run looks the
+ * same, and so does one a server restart cut off. Interrupts in the checkpoint do not tell a waiting run apart: an
+ * answered one stays there until the subagent's whole step ends. The run manager keeps waiting threads (restored
+ * approvals) out of the resumable ones, and continuing re-raises an interrupt that is really still open.
  */
 export async function hasUnfinishedRun(graph: ProgressReader, threadId: string): Promise<boolean> {
   const state = await graph.getState({ configurable: { thread_id: threadId } });
-  return state.next.length > 0 && state.tasks.every((task) => task.interrupts.length === 0);
+  return state.next.length > 0;
 }
 
 /** On start: the chats whose run a restart (or an earlier failure) left unfinished; unreadable ones are skipped. */

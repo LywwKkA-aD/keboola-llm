@@ -66,8 +66,10 @@ export interface RunManager {
   waitingThreads(): readonly string[];
   /** Threads whose last run stopped before it finished (failed, stopped by the user, cut off by a restart). */
   resumable(): readonly string[];
-  /** Forget a paused or unfinished run without resuming it (its chat was deleted or its interrupts are gone). */
+  /** Forget a paused or unfinished run without resuming it (its chat was deleted). */
   discard(threadId: string): void;
+  /** Forget a chat's pending approvals the checkpoint no longer holds; its run stays resumable when unfinished. */
+  forgetApprovals(threadId: string): void;
 }
 
 const RECURSION_LIMIT = 200;
@@ -96,6 +98,8 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
   const running = new Map<string, AbortController>();
   const waiting = new Map<string, Waiting>(store?.load());
   const unfinished = new Set(resumable);
+  // Chats deleted while their run went on: its end must not bring them back as resumable.
+  const discarded = new Set<string>();
   const pause = (threadId: string, paused: Waiting) => {
     waiting.set(threadId, paused);
     store?.save(waiting);
@@ -161,8 +165,8 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
         input = new Command({ resume: toResumeValue(paused.auto) });
       }
     } catch (error) {
-      // Resumable before anyone hears of the failure: the UI refetches the chats on run.failed.
-      unfinished.add(threadId);
+      // Resumable before anyone hears of the failure: the UI refetches the chats on run.failed. Not a deleted chat.
+      if (!discarded.has(threadId)) unfinished.add(threadId);
       bus.publish(threadId, { type: 'run.failed', runId, ...describeFailure(error, { stopped: controller.signal.aborted }) });
     } finally {
       running.delete(threadId);
@@ -172,6 +176,7 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
   function launch(threadId: string, input: unknown, resume = false): RunHandle {
     const runId = randomUUID();
     const controller = new AbortController();
+    discarded.delete(threadId);
     running.set(threadId, controller);
     unfinished.delete(threadId);
     return { runId, done: execute(threadId, runId, input, controller, resume) };
@@ -226,9 +231,14 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
     isBusy: (threadId) => running.has(threadId) || waiting.has(threadId),
     active: () => [...running.keys()],
     waitingThreads: () => [...waiting.keys()],
-    resumable: () => [...unfinished],
+    // A chat waiting for approvals is answered, not continued.
+    resumable: () => [...unfinished].filter((threadId) => !waiting.has(threadId)),
     discard(threadId) {
       unfinished.delete(threadId);
+      unpause(threadId);
+      discarded.add(threadId);
+    },
+    forgetApprovals(threadId) {
       unpause(threadId);
     },
     cancel(threadId) {

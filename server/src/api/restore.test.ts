@@ -5,12 +5,17 @@ const approval = (interruptId: string) => ({ type: 'approval.required' as const,
 
 function fakeRuns(pending: Record<string, string[]>) {
   const discarded: string[] = [];
+  const forgotten: string[] = [];
   return {
     discarded,
+    forgotten,
     waitingThreads: () => Object.keys(pending),
     pending: (threadId: string) => (pending[threadId] ?? []).map(approval),
     discard: (threadId: string) => {
       discarded.push(threadId);
+    },
+    forgetApprovals: (threadId: string) => {
+      forgotten.push(threadId);
     },
   };
 }
@@ -37,7 +42,9 @@ describe('dropStaleApprovals', () => {
       },
     });
 
-    expect(runs.discarded).toEqual(['answered', 'deleted', 'broken']);
+    // A deleted chat is forgotten whole; an existing one keeps its run, which may still be continued.
+    expect(runs.discarded).toEqual(['deleted']);
+    expect(runs.forgotten).toEqual(['answered', 'broken']);
     expect(dropped).toEqual(['answered', 'deleted', 'broken']);
   });
 });
@@ -47,13 +54,16 @@ describe('hasUnfinishedRun', () => {
     getState: async () => ({ next, tasks: next.map(() => ({ interrupts })) }),
   });
 
-  it('is true when the checkpoint still has work and no approval waits', async () => {
+  it('is true when the checkpoint still has work, even with an interrupt left in it', async () => {
     expect(await hasUnfinishedRun(graphWith(['model_request']), 't1')).toBe(true);
+    // An approval answered before the restart stays in the checkpoint until the subagent's step ends: the run is
+    // unfinished (continuing it re-raises an interrupt that is really still open); waiting ones are told apart by
+    // the run manager's restored approvals.
+    expect(await hasUnfinishedRun(graphWith(['tools'], [{ id: 'i1' }]), 't1')).toBe(true);
   });
 
-  it('is false for a finished run, a new chat and a run waiting for approval', async () => {
+  it('is false for a finished run and a new chat', async () => {
     expect(await hasUnfinishedRun(graphWith([]), 't1')).toBe(false);
-    expect(await hasUnfinishedRun(graphWith(['tools'], [{ id: 'i1' }]), 't1')).toBe(false);
   });
 });
 
