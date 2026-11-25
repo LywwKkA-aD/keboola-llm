@@ -1,10 +1,11 @@
+import { memo } from 'react';
 import type { ChatCommand } from '../api/types.ts';
 import { commandLabel } from '../lib/commands.ts';
 import { useSettings } from '../state/settings-context.tsx';
 import { Markdown } from './Markdown.tsx';
 
 /** User text is shown as typed, with the command it was sent with; agent replies are Markdown (never raw HTML). */
-export function MessageBubble({ role, text, command, pending = false }: { role: 'user' | 'assistant'; text: string; command?: ChatCommand; pending?: boolean }) {
+export const MessageBubble = memo(function MessageBubble({ role, text, command, pending = false }: { role: 'user' | 'assistant'; text: string; command?: ChatCommand; pending?: boolean }) {
   const { t } = useSettings();
   return (
     <div className={`message message--${role}${pending ? ' message--pending' : ''}`}>
@@ -13,4 +14,4 @@ export function MessageBubble({ role, text, command, pending = false }: { role: 
       {role === 'user' ? text && <p className="message__plain">{text}</p> : <Markdown className="message__markdown" text={text} />}
     </div>
   );
-}
+});

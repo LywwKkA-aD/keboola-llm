@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BusEvent, Envelope } from '../api/types.ts';
-import { initialLive, reduceLive, seedFeed } from './live-state.ts';
+import { initialLive, reconcileLive, reduceLive, seedFeed } from './live-state.ts';
 
 let seq = 0;
 const env = (event: BusEvent, threadId = 't1'): Envelope => ({ seq: ++seq, threadId, event });
@@ -123,5 +123,15 @@ describe('seedFeed', () => {
     const seeded = seedFeed(initialLive(), [approval, env({ type: 'run.started', runId: 'r' })]);
     expect(seeded.feed).toHaveLength(1);
     expect(seeded).toMatchObject({ running: [], approvalsVersion: 0, signals: [] });
+  });
+});
+
+describe('reconcileLive', () => {
+  it('takes the server\'s running and waiting chats, and asks for the approvals again when the waiting changed', () => {
+    const stale = play([env({ type: 'run.started', runId: 'r' }), env({ type: 'run.waiting', runId: 'r2' }, 't2')]);
+    const next = reconcileLive(stale, [], []);
+    expect(next).toMatchObject({ running: [], waiting: [] });
+    expect(next.approvalsVersion).toBe(stale.approvalsVersion + 1);
+    expect(reconcileLive(next, [], [])).toBe(next);
   });
 });

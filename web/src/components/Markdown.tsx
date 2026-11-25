@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router';
 import remarkGfm from 'remark-gfm';
@@ -14,7 +14,7 @@ const newTabLink = (href: string | undefined, children: ReactNode) => (
  * internalLink maps links that stay in the app (one note to another) to an app path; they open in place,
  * or in a new tab with newTab.
  */
-export function Markdown({ text, className, internalLink, newTab = false }: {
+export const Markdown = memo(function Markdown({ text, className, internalLink, newTab = false }: {
   text: string;
   className?: string;
   internalLink?: (href: string) => string | undefined;
@@ -34,4 +34,4 @@ export function Markdown({ text, className, internalLink, newTab = false }: {
       </ReactMarkdown>
     </div>
   );
-}
+});

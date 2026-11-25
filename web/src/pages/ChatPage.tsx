@@ -7,10 +7,12 @@ import { Conversation } from '../components/Conversation.tsx';
 import { ThreadList } from '../components/ThreadList.tsx';
 import type { Outgoing } from '../hooks/useCommandField.ts';
 import { useInitWorkspace } from '../hooks/useInitWorkspace.ts';
+import { useLiveActions } from '../live/live-context.tsx';
 import { useSettings } from '../state/settings-context.tsx';
 import { useTeam } from '../state/team-context.tsx';
 
 export function ChatPage() {
+  const { refreshApprovals, refreshStatus } = useLiveActions();
   const { t } = useSettings();
   const { threadId } = useParams();
   const navigate = useNavigate();
@@ -49,6 +51,9 @@ export function ChatPage() {
   const remove = async (id: string) => {
     await api.remove(id).catch(() => {});
     refresh();
+    // Its approvals and run go with it: the top bar, the HUD and the Approvals page must not keep them.
+    refreshApprovals();
+    refreshStatus();
     if (id === threadId) navigate('/chat');
   };
 

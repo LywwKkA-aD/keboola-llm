@@ -19,7 +19,7 @@ function CheckStatus({ threadId }: { threadId: string }) {
   const { t } = useSettings();
   const team = useTeam();
   const [ended, setEnded] = useState(false);
-  const run = useThreadEvents(threadId, team.lead, () => setEnded(true));
+  const { run } = useThreadEvents(threadId, team.lead, { onRunEnd: () => setEnded(true) });
   // Until the run's first event arrives the new chat counts as running.
   const state: CheckState = run.status === 'failed' || run.status === 'waiting' ? run.status : ended && run.status === 'idle' ? 'done' : 'running';
 

@@ -3,14 +3,12 @@ import { Link } from 'react-router';
 import { RequestDetails, requestLabel } from '../components/approvals/RequestDetails.tsx';
 import { useAnswer } from '../components/approvals/useAnswer.ts';
 import { shortName } from '../components/home/mood.ts';
-import { useLive } from '../live/live-context.tsx';
 import { useSettings } from '../state/settings-context.tsx';
 
 /** Every agent action waiting for the user, across all chats: pick one on the left, decide on the right. */
 export function ApprovalsPage() {
   const { t } = useSettings();
-  const { approvals } = useLive();
-  const { answer, busy, error } = useAnswer();
+  const { answer, pending: approvals, isBusy, error } = useAnswer();
   const [selectedId, setSelectedId] = useState<string>();
   const [comment, setComment] = useState('');
   const selected = approvals.find((entry) => entry.interruptId === selectedId) ?? approvals[0];
@@ -84,10 +82,10 @@ export function ApprovalsPage() {
                 <textarea className="textarea" rows={3} placeholder={t('approvals.commentPlaceholder')} value={comment} onChange={(event) => setComment(event.target.value)} />
               </label>
               <div className="approval-detail__actions">
-                <button type="button" className="btn btn--primary" disabled={busy === selected.interruptId} onClick={() => void decide(true)}>
+                <button type="button" className="btn btn--primary" disabled={isBusy(selected.interruptId)} onClick={() => void decide(true)}>
                   {t('approval.approve')}
                 </button>
-                <button type="button" className="btn btn--danger" disabled={busy === selected.interruptId} onClick={() => void decide(false)}>
+                <button type="button" className="btn btn--danger" disabled={isBusy(selected.interruptId)} onClick={() => void decide(false)}>
                   {t('approval.reject')}
                 </button>
               </div>

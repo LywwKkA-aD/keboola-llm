@@ -156,6 +156,9 @@ export interface AppStatus {
   readonly version: string;
   readonly activeRuns: number;
   readonly pendingApprovals: number;
+  /** The chats running and waiting for approval now (newer servers): the live view reconciles with them. */
+  readonly running?: readonly string[];
+  readonly waiting?: readonly string[];
 }
 
 export interface KeboolaProject {

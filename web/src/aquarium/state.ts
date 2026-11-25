@@ -126,7 +126,8 @@ export function reduceAquarium(state: AquariumState, { threadId, event }: Envelo
     }
     case 'approval.required':
       return event.requests.reduce((current, request) => {
-        const agent = current.lastToolUser[request.tool] ?? current.lead;
+        // The server names the agent of each request; the last caller of the tool is only a guess (parallel agents).
+        const agent = request.agent || current.lastToolUser[request.tool] || current.lead;
         return set(current, agent, { activity: 'waiting', label: request.tool, threadId, ...workOf(current.agents[agent]) }, now);
       }, state);
     default:
@@ -139,4 +140,14 @@ export function moodOf(agent: AgentState | undefined, now: number): AgentActivit
   if (!agent) return 'idle';
   if (agent.activity === 'error' && now - agent.since > ERROR_VISIBLE_MS) return 'idle';
   return agent.activity;
+}
+
+/**
+ * Rest every agent working in a chat the server says neither runs nor waits (it ended unheard, e.g. a restart cut it
+ * off). Pure; the same state when nothing changes.
+ */
+export function settleInactive(state: AquariumState, active: ReadonlySet<string>, now: number): AquariumState {
+  const stale = Object.entries(state.agents).filter(([, agent]) => agent.activity !== 'idle' && agent.activity !== 'error' && !active.has(agent.threadId));
+  if (stale.length === 0) return state;
+  return { ...state, agents: { ...state.agents, ...Object.fromEntries(stale.map(([name, agent]) => [name, { activity: 'idle' as const, label: '', since: now, threadId: agent.threadId }])) } };
 }

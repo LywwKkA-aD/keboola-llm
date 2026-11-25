@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { StringKey } from '../i18n/strings.ts';
 import { formatDuration } from '../lib/format.ts';
 import { stepView } from '../lib/actions.ts';
@@ -48,7 +48,7 @@ function StepRow({ step, open, onToggle }: { step: Activity; open: boolean; onTo
 }
 
 /** What the team did in this chat: delegations, tool calls and auto-approvals as compact rows that open what each did. */
-export function StepRows({ steps }: { steps: readonly Activity[] }) {
+export const StepRows = memo(function StepRows({ steps }: { steps: readonly Activity[] }) {
   const { t } = useSettings();
   const [open, setOpen] = useState<string>();
   if (steps.length === 0) return null;
@@ -65,4 +65,4 @@ export function StepRows({ steps }: { steps: readonly Activity[] }) {
       </ol>
     </section>
   );
-}
+});

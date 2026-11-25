@@ -30,6 +30,17 @@ beforeEach(() => {
 });
 
 describe('Approvals page', () => {
+  it('never offers an approval it answered again, even before the refreshed list drops it', async () => {
+    // The server's list lags behind: it still has both after the first answer.
+    const { callsTo } = await openApprovals({ 'GET /api/approvals': [BRANCH, FILE], 'POST /api/threads/t1/approvals': { remaining: 0 } });
+    await userEvent.click(await screen.findByRole('button', { name: 'Разрешить' }));
+    expect(callsTo('POST', '/api/threads/t1/approvals')).toHaveLength(1);
+    const list = await screen.findByRole('list');
+    expect(within(list).queryByText('Fix the orders join')).toBeNull();
+    expect(within(list).getByText('New SQL style skill')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Нужно подтверждение' })).toHaveTextContent('agent-builder');
+  });
+
   it('says when nothing waits', async () => {
     await openApprovals({});
     expect(await screen.findByText('Подтверждать нечего.')).toBeInTheDocument();

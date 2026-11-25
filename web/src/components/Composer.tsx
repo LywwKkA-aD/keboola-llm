@@ -5,7 +5,8 @@ import { CommandMenu, CommandNoteLine } from './CommandMenu.tsx';
 
 /** The chat composer; "/" at the start opens the command menu (see lib/commands.ts). */
 export function Composer({ onSend, onStop, running, disabled, actions = {} }: {
-  onSend: (message: Outgoing) => void;
+  /** Resolves to false when the message was not taken: the text stays in the field. */
+  onSend: (message: Outgoing) => void | Promise<boolean>;
   onStop: () => void;
   running: boolean;
   disabled: boolean;
@@ -15,7 +16,8 @@ export function Composer({ onSend, onStop, running, disabled, actions = {} }: {
   const field = useCommandField({ actions, onSend });
 
   const submit = () => {
-    if (!field.value.trim() || disabled) return;
+    // While the team works the button is Stop: Enter must not send (and lose) the text the user is preparing.
+    if (!field.value.trim() || disabled || running) return;
     void field.submit();
   };
 

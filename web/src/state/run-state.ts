@@ -40,6 +40,17 @@ export interface RunState {
   readonly error?: string;
   /** Why the last run failed; with it the chat offers to continue. */
   readonly failure?: FailureReason;
+  /**
+   * What the server last said about continuing: true when its run stopped before it finished (e.g. a restart cut it
+   * off) and can be continued. Undefined until the page asked.
+   */
+  readonly resumable?: boolean;
+}
+
+/** What the server says the chat's run is doing (GET /api/threads/:id/run). */
+export interface ServerRun {
+  readonly status: 'running' | 'waiting' | 'idle';
+  readonly resumable: boolean;
 }
 
 const MAX_ACTIVITIES = 300;
@@ -103,7 +114,7 @@ export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
       const { error: _previousError, failure: _previousFailure, ...rest } = state;
       // An answered approval or Continue after a failure continues the turn; anything else answers a new message.
       const turns = event.resume && state.turns > 0 ? state.turns : state.turns + 1;
-      return { ...rest, status: 'running', streamingText: '', approvals: [], turns };
+      return { ...rest, status: 'running', streamingText: '', approvals: [], turns, resumable: false };
     }
     case 'run.waiting':
       return { ...state, status: 'waiting' };
@@ -186,5 +197,27 @@ export function reduceRun(state: RunState, event: BusEvent, at = 0): RunState {
       );
     default:
       return state;
+  }
+}
+
+/**
+ * Reconcile the chat with what the server says its run is doing, for what the events did not tell this page: a run
+ * that started before the replay window, or one a server restart ended without a word. Pure.
+ */
+export function syncRun(state: RunState, server: ServerRun): RunState {
+  const { error: _error, failure: _failure, ...clean } = state;
+  switch (server.status) {
+    case 'running':
+      return { ...(state.status === 'failed' ? clean : state), status: 'running', resumable: false };
+    case 'waiting':
+      return { ...(state.status === 'failed' ? clean : state), status: 'waiting', resumable: false };
+    case 'idle': {
+      if (state.status === 'failed' || state.status === 'idle') return state.resumable === server.resumable ? state : { ...state, resumable: server.resumable };
+      // Running or waiting here, over on the server: its steps end as the run did, cut off when it can be continued.
+      const ended = state.activities.some((activity) => activity.status === 'running')
+        ? withActivities(state, state.activities.map((activity) => (activity.status === 'running' ? finish(!server.resumable, 0)(activity) : activity)))
+        : state;
+      return { ...ended, status: 'idle', streamingText: '', approvals: [], resumable: server.resumable };
+    }
   }
 }
