@@ -5,7 +5,8 @@ import { createEventBus, type Envelope, type EventBus } from '../bus.ts';
 import type { ServerDeps } from '../types.ts';
 import { registerEventRoutes } from './events.ts';
 
-const token = (text: string) => ({ type: 'token', agent: 'lead', text }) as const;
+// A message, not a token: token chunks are not kept for replay.
+const token = (text: string) => ({ type: 'message', agent: 'lead', text }) as const;
 
 interface Stream {
   readonly response: Response;
@@ -125,7 +126,7 @@ describe('GET /api/events', () => {
     bus.publish('t1', token('y'));
     const envelopes = await stream.take(2);
     expect(envelopes.map((envelope) => envelope.threadId)).toEqual(['t2', 't1']);
-    expect(envelopes.every((envelope) => envelope.event.type === 'token' && envelope.event.text !== 'old')).toBe(true);
+    expect(envelopes.every((envelope) => envelope.event.type === 'message' && envelope.event.text !== 'old')).toBe(true);
   });
 
   it('unsubscribes when the client goes away', async () => {

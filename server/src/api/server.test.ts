@@ -243,6 +243,8 @@ describe('createServer', () => {
       version: '0.1.0',
       activeRuns: 0,
       pendingApprovals: 1,
+      running: [],
+      waiting: [waiting.id],
     });
   });
 

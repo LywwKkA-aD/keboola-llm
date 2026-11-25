@@ -33,6 +33,9 @@ export function registerWorkspaceRoutes(app: FastifyInstance, deps: ServerDeps):
     version: deps.version,
     activeRuns: runs.active().length,
     pendingApprovals: pendingApprovals().length,
+    // Which chats run or wait right now: the UI reconciles its live view with these (after a restart, a reload).
+    running: runs.active(),
+    waiting: [...new Set(pendingApprovals().map((approval) => approval.threadId))],
   }));
 
   // The default model's provider only (modelsOfProvider), or every model with ?all=1; total counts them all.

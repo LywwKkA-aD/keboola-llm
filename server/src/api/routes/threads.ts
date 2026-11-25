@@ -3,7 +3,7 @@ import { commandError, commandLabel, userTurn } from '../commands.ts';
 import { approvalsBody, messageBody, titleBody } from '../schemas.ts';
 import type { ServerDeps } from '../types.ts';
 
-export function registerThreadRoutes(app: FastifyInstance, { runs, threads, history, deleteThread, settings, team }: ServerDeps): void {
+export function registerThreadRoutes(app: FastifyInstance, { bus, runs, threads, history, deleteThread, settings, team }: ServerDeps): void {
   const findThread = (id: string, reply: FastifyReply) => {
     const thread = threads.get(id);
     if (!thread) reply.code(404).send({ error: 'Thread not found' });
@@ -51,6 +51,14 @@ export function registerThreadRoutes(app: FastifyInstance, { runs, threads, hist
     return reply.code(202).send({ runId });
   });
 
+  // What the chat's run is doing now, for a page that opens or reconnects mid-run: its events may be gone.
+  app.get<{ Params: { id: string } }>('/api/threads/:id/run', async (request, reply) => {
+    if (!findThread(request.params.id, reply)) return reply;
+    const id = request.params.id;
+    const status = runs.active().includes(id) ? 'running' : runs.pending(id).length > 0 ? 'waiting' : 'idle';
+    return { status, resumable: runs.resumable().includes(id) };
+  });
+
   app.get<{ Params: { id: string } }>('/api/threads/:id/approvals', async (request, reply) => {
     if (!findThread(request.params.id, reply)) return reply;
     return runs.pending(request.params.id);
@@ -87,6 +95,7 @@ export function registerThreadRoutes(app: FastifyInstance, { runs, threads, hist
     if (!findThread(request.params.id, reply)) return reply;
     if (runs.isBusy(request.params.id)) runs.cancel(request.params.id);
     runs.discard(request.params.id);
+    bus.forget(request.params.id);
     await deleteThread(request.params.id);
     threads.remove(request.params.id);
     return reply.code(204).send();

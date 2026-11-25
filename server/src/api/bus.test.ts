@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createEventBus } from './bus.ts';
 
-const token = (text: string) => ({ type: 'token', agent: 'lead', text }) as const;
+// A message, not a token: token chunks are not kept for replay.
+const token = (text: string) => ({ type: 'message', agent: 'lead', text }) as const;
 
 describe('createEventBus', () => {
   it('delivers events to matching subscribers with increasing sequence numbers and the publish time', () => {
@@ -52,5 +53,18 @@ describe('createEventBus', () => {
     unsubscribe();
     bus.publish('t1', token('b'));
     expect(seen).toEqual([1]);
+  });
+
+  it('delivers token chunks live but keeps them out of the replay, and forgets a deleted chat', () => {
+    const bus = createEventBus({ historyPerThread: 3 });
+    const live: string[] = [];
+    bus.subscribe(({ event }) => live.push(event.type));
+    bus.publish('t1', { type: 'run.started', runId: 'r' });
+    bus.publish('t1', { type: 'token', agent: 'lead', text: 'x' });
+    bus.publish('t1', { type: 'message', agent: 'lead', text: 'done' });
+    expect(live).toEqual(['run.started', 'token', 'message']);
+    expect(bus.history('t1', 0).map(({ event }) => event.type)).toEqual(['run.started', 'message']);
+    bus.forget('t1');
+    expect(bus.history('t1', 0)).toEqual([]);
   });
 });

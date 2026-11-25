@@ -35,6 +35,8 @@ export interface EventBus {
   publish(threadId: string, event: BusEvent): Envelope;
   subscribe(listener: Listener, filter?: { threadId?: string }): () => void;
   history(threadId: string, afterSeq: number): readonly Envelope[];
+  /** Drop a chat's replay buffer, e.g. when the chat is deleted. */
+  forget(threadId: string): void;
 }
 
 /** In-process pub/sub with a short per-thread replay buffer for reconnecting clients. */
@@ -47,7 +49,12 @@ export function createEventBus({ historyPerThread, now = Date.now }: { historyPe
     publish(threadId, event) {
       seq += 1;
       const envelope: Envelope = { seq, at: now(), threadId, event };
-      recent.set(threadId, [...(recent.get(threadId) ?? []), envelope].slice(-historyPerThread));
+      // Token chunks are most of a run's events and worth nothing on replay (the finished message comes as one):
+      // keeping them would push a long run's start out of the buffer.
+      if (event.type !== 'token') {
+        const kept = recent.get(threadId) ?? [];
+        recent.set(threadId, kept.length >= historyPerThread ? [...kept.slice(1 - historyPerThread), envelope] : [...kept, envelope]);
+      }
       listeners.forEach(({ listener, threadId: only }) => {
         if (only && only !== threadId) return;
         try {
@@ -62,6 +69,9 @@ export function createEventBus({ historyPerThread, now = Date.now }: { historyPe
       const entry = { listener, ...filter };
       listeners.add(entry);
       return () => listeners.delete(entry);
+    },
+    forget(threadId) {
+      recent.delete(threadId);
     },
     history(threadId, afterSeq) {
       return (recent.get(threadId) ?? []).filter((envelope) => envelope.seq > afterSeq);
