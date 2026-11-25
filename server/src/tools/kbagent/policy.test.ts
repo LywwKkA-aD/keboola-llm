@@ -116,6 +116,16 @@ describe('buildInvocation: categories', () => {
   });
 });
 
+describe('buildInvocation: --help never smuggles a command', () => {
+  // Click takes "--help" as the value of the option before it and runs the command: only the help may go through.
+  it('passes only the command words and --help, whatever else the call carries', () => {
+    const smuggled = ['config', 'update', '--project', 'l0-staging', '--component-id', 'c', '--config-id', '1', '--configuration', '{}', '--change-description', '--help'];
+    expect(argvOf(write(smuggled, { productionBranch: '1' }))).toEqual(['--json', '--deny-writes', 'config', 'update', '--help']);
+    expect(argvOf(read(['workspace', 'create', '--project', 'l2-presentation', '--name', '--help']))).toEqual(['--json', '--deny-writes', 'workspace', 'create', '--help']);
+    expect(argvOf(read(['branch', '--help', 'create']))).toEqual(['--json', '--deny-writes', 'branch', '--help']);
+  });
+});
+
 describe('buildInvocation: denied groups and operations', () => {
   it.each([
     [['auth', 'status']],

@@ -178,10 +178,14 @@ export function buildInvocation(request: InvocationRequest): InvocationResult {
   const operation = lookupOperation(commandWords);
   const help = tokens.includes('--help');
 
+  // Help is a read whatever the command: only the command words and --help reach kbagent. Click would take a
+  // "--help" right after an option as that option's value and run the command with everything else.
+  const helpArgv = () => [...globalFlags('read', conversationId), ...commandWords, '--help'];
+
   if (!operation) {
     const groupAllowed = !allowlist || [...allowlist].some((name) => name.startsWith(`${first}.`));
     if (help && isKnownGroup(first) && groupAllowed) {
-      return { ok: true, argv: [...globalFlags('read', conversationId), ...tokens], operation: first, category: 'read' };
+      return { ok: true, argv: helpArgv(), operation: first, category: 'read' };
     }
     if (allowlist && isKnownGroup(first)) return outsideAllowlist(commandWords.join(' '), allowlist);
     return reject(`Unknown kbagent command "${commandWords.join(' ')}". Use ["${first}", "--help"] to list commands.`);
@@ -194,7 +198,7 @@ export function buildInvocation(request: InvocationRequest): InvocationResult {
   if (allowlist && !allowlist.has(operation.name) && (category === 'read' || category === 'write')) {
     return outsideAllowlist(operation.name.replaceAll('.', ' '), allowlist);
   }
-  if (help) return { ok: true, argv: [...globalFlags(access, conversationId), ...tokens], operation: operation.name, category: 'read' };
+  if (help) return { ok: true, argv: helpArgv(), operation: operation.name, category: 'read' };
 
   const categoryError = checkCategory(operation, category, access);
   if (categoryError) return reject(categoryError);
