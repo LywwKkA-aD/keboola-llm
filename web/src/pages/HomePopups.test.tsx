@@ -72,7 +72,13 @@ describe('Home popups', () => {
       answers: [{ interruptId: 'i1', decisions: [{ type: 'approve' }] }],
     });
     await waitFor(() => expect(callsTo('GET', '/api/approvals').length).toBeGreaterThan(1));
+    // Answered: not offered again, even while the server's list still has it.
+    expect(within(panel).queryByRole('button', { name: 'Разрешить' })).toBeNull();
+  });
 
+  it('opens the chat of an approval from the approvals panel', async () => {
+    await openHome({ 'GET /api/approvals': [APPROVAL] });
+    const panel = await openPanel('Подтверждения 1', 'Подтверждения');
     await userEvent.click(within(panel).getByRole('button', { name: 'Где используется customer_id?' }));
     expect(await within(chatPopup()).findByText('двух')).toBeInTheDocument();
   });

@@ -7,12 +7,12 @@ import { Conversation } from '../components/Conversation.tsx';
 import { ThreadList } from '../components/ThreadList.tsx';
 import type { Outgoing } from '../hooks/useCommandField.ts';
 import { useInitWorkspace } from '../hooks/useInitWorkspace.ts';
-import { useLive } from '../live/live-context.tsx';
+import { useLiveActions } from '../live/live-context.tsx';
 import { useSettings } from '../state/settings-context.tsx';
 import { useTeam } from '../state/team-context.tsx';
 
 export function ChatPage() {
-  const { refreshApprovals, refreshStatus } = useLive();
+  const { refreshApprovals, refreshStatus } = useLiveActions();
   const { t } = useSettings();
   const { threadId } = useParams();
   const navigate = useNavigate();

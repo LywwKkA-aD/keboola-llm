@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../App.tsx';
@@ -120,6 +120,19 @@ describe('a chat in step with the server', () => {
     await userEvent.type(screen.getByRole('textbox'), 'important follow-up{Enter}');
     expect(callsTo('POST', '/api/threads/t1/messages')).toHaveLength(0);
     expect(screen.getByRole('textbox')).toHaveValue('important follow-up');
+  });
+});
+
+describe('the Home chat popup', () => {
+  it('offers to continue a chat a restart cut off', async () => {
+    const threads = (baseRoutes['GET /api/threads'] as { id: string }[]).map((thread) => (thread.id === 't1' ? { ...thread, resumable: true } : thread));
+    stubApi({ ...baseRoutes, 'GET /api/threads': threads });
+    window.history.pushState({}, '', '/');
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Чаты' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Где используется customer_id/ }));
+    const popup = await screen.findByRole('dialog', { name: 'Чат' });
+    expect(await within(popup).findByRole('button', { name: 'Продолжить' })).toBeInTheDocument();
   });
 });
 

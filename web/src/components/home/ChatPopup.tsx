@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { api } from '../../api/client.ts';
 import type { Thread } from '../../api/types.ts';
@@ -8,9 +8,10 @@ import { Conversation } from '../Conversation.tsx';
 
 /**
  * One chat in a large floating panel next to the aquarium, so the team stays in view while it works.
- * Non-modal: takes focus when it opens and gives it back to where it came from when it closes.
+ * Non-modal: takes focus when it opens and gives it back to where it came from when it closes. Memoized: Home
+ * re-renders on every event of every chat, which must not re-render (and re-parse) this chat.
  */
-export function ChatPopup({ threadId, onClose }: { threadId: string; onClose: () => void }) {
+export const ChatPopup = memo(function ChatPopup({ threadId, onClose }: { threadId: string; onClose: () => void }) {
   const { t } = useSettings();
   const team = useTeam();
   const popup = useRef<HTMLElement>(null);
@@ -48,8 +49,9 @@ export function ChatPopup({ threadId, onClose }: { threadId: string; onClose: ()
         threadId={threadId}
         title={thread?.title ?? ''}
         {...(thread ? { updatedAt: thread.updatedAt } : {})}
+        resumable={thread?.resumable === true}
         onActivity={refresh}
       />
     </section>
   );
-}
+});

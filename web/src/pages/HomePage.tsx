@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AquariumView } from '../aquarium3d/AquariumView.tsx';
 import { AgentDetail } from '../components/home/AgentDetail.tsx';
 import { AskTeam } from '../components/home/AskTeam.tsx';
@@ -28,6 +28,7 @@ export function HomePage() {
     setPanel(undefined);
     setChatId(threadId);
   };
+  const closeChat = useCallback(() => setChatId(undefined), []);
   const closeTop = () => {
     if (panel) setPanel(undefined);
     else if (chatId) setChatId(undefined);
@@ -66,7 +67,7 @@ export function HomePage() {
         </div>
         <div className="home__right">
           <HomeHud panel={panel} onPanel={setPanel} selected={selected} onSelect={setSelected} onOpenChat={openChat} />
-          {chatId && <ChatPopup key={chatId} threadId={chatId} onClose={() => setChatId(undefined)} />}
+          {chatId && <ChatPopup key={chatId} threadId={chatId} onClose={closeChat} />}
         </div>
       </div>
     </div>

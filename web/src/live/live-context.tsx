@@ -17,6 +17,13 @@ export interface LiveValue extends AquariumEvents {
 
 const STATUS_POLL_MS = 30_000;
 
+interface LiveActions {
+  readonly refreshApprovals: () => void;
+  readonly refreshStatus: () => void;
+}
+
+const LiveActionsContext = createContext<LiveActions>({ refreshApprovals: () => {}, refreshStatus: () => {} });
+
 const LiveContext = createContext<LiveValue>({
   state: initialAquarium('lead'),
   now: 0,
@@ -74,7 +81,15 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     () => ({ ...events, approvals, refreshApprovals, refreshStatus, ...(status ? { status } : {}) }),
     [events, approvals, refreshApprovals, refreshStatus, status],
   );
-  return <LiveContext.Provider value={value}>{children}</LiveContext.Provider>;
+  const actions = useMemo<LiveActions>(() => ({ refreshApprovals, refreshStatus }), [refreshApprovals, refreshStatus]);
+  return (
+    <LiveActionsContext.Provider value={actions}>
+      <LiveContext.Provider value={value}>{children}</LiveContext.Provider>
+    </LiveActionsContext.Provider>
+  );
 }
 
 export const useLive = () => useContext(LiveContext);
+
+/** The refresh actions alone: stable, so a page that only needs them does not re-render on every event. */
+export const useLiveActions = () => useContext(LiveActionsContext);
