@@ -7,7 +7,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compareKbagent, snapshotVersion } from './lib/kbagent-version.mjs';
+import { compareKbagent, snapshotVersions } from './lib/kbagent-version.mjs';
 import { isSupportedNode } from './lib/node-version.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -36,7 +36,7 @@ const print = (level, label, detail) => console.log(`[${level}] ${label}: ${deta
 /** kbagent newer or older than the permission snapshot still works, but the snapshot needs a refresh. */
 function kbagentLine(step) {
   if (step.status !== 'ok') return undefined;
-  const { level, detail } = compareKbagent(step.detail, snapshotVersion(readFileSync(SNAPSHOT_PATH, 'utf8')));
+  const { level, detail } = compareKbagent(step.detail, snapshotVersions(readFileSync(SNAPSHOT_PATH, 'utf8')));
   return level === 'ok' ? undefined : ['warn', detail];
 }
 

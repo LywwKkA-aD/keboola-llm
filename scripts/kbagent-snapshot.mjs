@@ -4,9 +4,13 @@
  * risk categories from `kbagent --json permissions list`, scope flags (--project, --branch)
  * from each command's --help. Run after upgrading kbagent; unknown operations are rejected.
  *
- *   npm run kbagent:snapshot             write the snapshot
- *   npm run kbagent:snapshot -- --check  only say whether the installed kbagent differs (CI: catch a new release that
- *                                        renames, adds or reclassifies commands); the version line is ignored
+ *   npm run kbagent:snapshot             merge the installed kbagent into the snapshot
+ *   npm run kbagent:snapshot -- --check  only say whether that would change it (CI: catch a new release that adds or
+ *                                        reclassifies commands)
+ *
+ * The snapshot is the union of the kbagent versions it was made from, so the app works with each (analysts run 0.x
+ * and 1.x side by side): an operation of any version is known, a category the versions disagree on takes the stricter
+ * one, and --project/--branch are injected only where every version accepts them.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -20,7 +24,7 @@ const OUT = join(ROOT, 'server', 'src', 'tools', 'kbagent', 'operations-snapshot
 const GROUPS = [
   'search', 'component', 'config', 'job', 'storage', 'lineage', 'transformation', 'flow', 'schedule', 'branch',
   'merge-request', 'workspace', 'project', 'data-app', 'sharing', 'docs', 'billing', 'notification',
-  'semantic-layer', 'sync', 'encrypt', 'stream', 'doctor', 'context', 'kai',
+  'semantic-layer', 'sync', 'encrypt', 'stream', 'doctor', 'context', 'kai', 'cls', 'rls',
 ];
 
 const kbagent = (...args) =>
@@ -60,18 +64,48 @@ function scopeOf(flagsByCommand, name) {
   return `${flags.has('--project') ? 'p' : ''}${flags.has('--branch') ? 'b' : ''}`;
 }
 
-function render(version, operations, flagsByCommand) {
-  const base = operations.filter((op) => !op.name.includes(' ')).toSorted((a, b) => a.name.localeCompare(b.name));
-  const conditional = operations.filter((op) => op.name.includes(' ')).toSorted((a, b) => a.name.localeCompare(b.name));
-  const lines = base.map((op) => `  ['${op.name}', '${op.category}', '${scopeOf(flagsByCommand, op.name)}'],`);
-  const rules = conditional.map((op) => {
-    const [name, ...when] = op.name.split(' ');
-    return `  { operation: '${name}', when: ${JSON.stringify(when)}, category: '${op.category}' },`;
-  });
+const STRICTNESS = ['read', 'write', 'destructive', 'admin'];
+const stricter = (a, b) => (STRICTNESS.indexOf(a) >= STRICTNESS.indexOf(b) ? a : b);
+const common = (a, b) => [...a].filter((letter) => b.includes(letter)).join('');
+
+/** The operations and rules the snapshot file holds now, and the versions it was made from. */
+function readSnapshot(text) {
+  const versions = [...(/Snapshot of kbagent (v[\d., v]+) operations/.exec(text)?.[1] ?? '').matchAll(/v([\d.]+)/g)].map((m) => m[1]);
+  const base = new Map([...text.matchAll(/^ {2}\['([^']+)', '(\w+)', '([pb]*)'\],$/gm)].map((m) => [m[1], { category: m[2], scope: m[3] }]));
+  const rules = new Map([...text.matchAll(/^ {2}\{ operation: '([^']+)', when: (\[[^\]]*\]), category: '(\w+)' \},$/gm)].map((m) => [`${m[1]} ${m[2]}`, { name: m[1], when: m[2], category: m[3] }]));
+  return { versions, base, rules };
+}
+
+/** The installed kbagent merged into the snapshot kept so far (see the file comment). */
+function merge(previous, version, operations, flagsByCommand) {
+  const base = new Map(previous.base);
+  const rules = new Map(previous.rules);
+  for (const op of operations) {
+    if (op.name.includes(' ')) {
+      const [name, ...when] = op.name.split(' ');
+      const key = `${name} ${JSON.stringify(when)}`;
+      const kept = rules.get(key);
+      rules.set(key, { name, when: JSON.stringify(when), category: kept ? stricter(kept.category, op.category) : op.category });
+      continue;
+    }
+    const scope = scopeOf(flagsByCommand, op.name);
+    const kept = base.get(op.name);
+    base.set(op.name, kept ? { category: stricter(kept.category, op.category), scope: common(kept.scope, scope) } : { category: op.category, scope });
+  }
+  const versions = [...new Set([...previous.versions, version])].toSorted((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  return { versions, base, rules };
+}
+
+function render({ versions, base, rules: ruleMap }) {
+  const lines = [...base].toSorted(([a], [b]) => a.localeCompare(b)).map(([name, op]) => `  ['${name}', '${op.category}', '${op.scope}'],`);
+  const rules = [...ruleMap.values()]
+    .toSorted((a, b) => `${a.name} ${a.when}`.localeCompare(`${b.name} ${b.when}`))
+    .map((rule) => `  { operation: '${rule.name}', when: ${rule.when}, category: '${rule.category}' },`);
   return `/**
- * Snapshot of kbagent v${version} operations, generated from \`kbagent --json permissions list\`
- * (risk category) and each command's \`--help\` (scope flags). Scope: p = accepts --project,
- * b = accepts --branch. Regenerate when upgrading kbagent; unknown operations are rejected.
+ * Snapshot of kbagent ${versions.map((v) => `v${v}`).join(', ')} operations, generated from \`kbagent --json permissions list\`
+ * (risk category) and each command's \`--help\` (scope flags), merged over those versions: any version's
+ * operation is known, the stricter category wins, and a scope letter means every version accepts the flag.
+ * Scope: p = accepts --project, b = accepts --branch. Unknown operations are rejected.
  */
 import type { Category, ConditionalRule, OperationEntry } from './types.ts';
 
@@ -89,11 +123,12 @@ export type { Category };
 
 const version = kbagent('--version').trim().replace(/^kbagent v?/, '');
 const operations = JSON.parse(kbagent('--json', 'permissions', 'list')).data;
-const rendered = render(version, operations, scanFlags());
+const current = readFileSync(OUT, 'utf8');
+const rendered = render(merge(readSnapshot(current), version, operations, scanFlags()));
 if (process.argv.includes('--check')) {
   const withoutVersion = (text) => text.split('\n').filter((line) => !line.includes('Snapshot of kbagent v'));
   const now = withoutVersion(rendered);
-  const kept = withoutVersion(readFileSync(OUT, 'utf8'));
+  const kept = withoutVersion(current);
   const added = now.filter((line) => !kept.includes(line));
   const removed = kept.filter((line) => !now.includes(line));
   if (added.length + removed.length === 0) {

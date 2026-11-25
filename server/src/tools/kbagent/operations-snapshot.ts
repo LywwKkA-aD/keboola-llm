@@ -1,7 +1,8 @@
 /**
- * Snapshot of kbagent v0.100.4 operations, generated from `kbagent --json permissions list`
- * (risk category) and each command's `--help` (scope flags). Scope: p = accepts --project,
- * b = accepts --branch. Regenerate when upgrading kbagent; unknown operations are rejected.
+ * Snapshot of kbagent v0.100.4, v1.4.1 operations, generated from `kbagent --json permissions list`
+ * (risk category) and each command's `--help` (scope flags), merged over those versions: any version's
+ * operation is known, the stricter category wins, and a scope letter means every version accepts the flag.
+ * Scope: p = accepts --project, b = accepts --branch. Unknown operations are rejected.
  */
 import type { Category, ConditionalRule, OperationEntry } from './types.ts';
 
@@ -37,6 +38,12 @@ export const OPERATIONS: readonly OperationEntry[] = [
   ['branch.reset', 'write', 'p'],
   ['branch.use', 'write', 'pb'],
   ['changelog', 'read', ''],
+  ['cls.create', 'admin', 'p'],
+  ['cls.delete', 'destructive', 'p'],
+  ['cls.detail', 'read', 'p'],
+  ['cls.list', 'read', 'p'],
+  ['cls.schema', 'read', 'p'],
+  ['cls.update', 'admin', 'p'],
   ['component.detail', 'read', 'p'],
   ['component.list', 'read', 'p'],
   ['component.sync-action', 'write', 'pb'],
@@ -71,6 +78,7 @@ export const OPERATIONS: readonly OperationEntry[] = [
   ['data-app.delete', 'destructive', 'p'],
   ['data-app.deploy', 'write', 'pb'],
   ['data-app.detail', 'read', 'pb'],
+  ['data-app.git-auth-set', 'write', 'pb'],
   ['data-app.git-credentials', 'read', 'p'],
   ['data-app.git-credentials-create', 'write', 'p'],
   ['data-app.git-repo', 'read', 'p'],
@@ -115,6 +123,7 @@ export const OPERATIONS: readonly OperationEntry[] = [
   ['flow.examples', 'read', ''],
   ['flow.list', 'read', 'pb'],
   ['flow.new', 'write', 'pb'],
+  ['flow.run', 'write', 'pb'],
   ['flow.schedule', 'write', 'pb'],
   ['flow.schedule-remove', 'destructive', 'pb'],
   ['flow.schema', 'read', 'p'],
@@ -153,6 +162,7 @@ export const OPERATIONS: readonly OperationEntry[] = [
   ['merge-request.request-review', 'destructive', 'pb'],
   ['merge-request.resolve', 'destructive', 'pb'],
   ['merge-request.update', 'write', 'pb'],
+  ['notification.clone', 'write', 'pb'],
   ['notification.create', 'write', 'pb'],
   ['notification.delete', 'destructive', 'p'],
   ['notification.detail', 'read', 'p'],
@@ -164,8 +174,8 @@ export const OPERATIONS: readonly OperationEntry[] = [
   ['permissions.reset', 'admin', ''],
   ['permissions.set', 'admin', ''],
   ['permissions.show', 'read', ''],
-  ['project.add', 'admin', 'p'],
-  ['project.create', 'admin', 'p'],
+  ['project.add', 'admin', ''],
+  ['project.create', 'admin', ''],
   ['project.current', 'read', ''],
   ['project.description-get', 'read', 'p'],
   ['project.description-set', 'write', 'p'],
@@ -183,6 +193,17 @@ export const OPERATIONS: readonly OperationEntry[] = [
   ['project.status', 'read', 'p'],
   ['project.use', 'write', ''],
   ['repl', 'read', ''],
+  ['rls.bind', 'admin', 'p'],
+  ['rls.bindings', 'read', 'p'],
+  ['rls.bindings-sweep', 'read', 'p'],
+  ['rls.create', 'admin', 'p'],
+  ['rls.delete', 'destructive', 'p'],
+  ['rls.detail', 'read', 'p'],
+  ['rls.list', 'read', 'p'],
+  ['rls.schema', 'read', 'p'],
+  ['rls.setup', 'admin', 'p'],
+  ['rls.unbind', 'destructive', 'p'],
+  ['rls.update', 'admin', 'p'],
   ['schedule.detail', 'read', 'pb'],
   ['schedule.find', 'read', 'pb'],
   ['schedule.list', 'read', 'pb'],
@@ -225,6 +246,7 @@ export const OPERATIONS: readonly OperationEntry[] = [
   ['semantic-layer.scope.add', 'write', 'p'],
   ['semantic-layer.scope.get', 'read', 'p'],
   ['semantic-layer.scope.remove', 'write', 'p'],
+  ['semantic-layer.scope.request-cancel', 'write', 'p'],
   ['semantic-layer.scope.request-create', 'write', 'p'],
   ['semantic-layer.scope.request-delete', 'write', 'p'],
   ['semantic-layer.scope.request-list', 'read', 'p'],
@@ -238,7 +260,7 @@ export const OPERATIONS: readonly OperationEntry[] = [
   ['sharing.link', 'write', 'p'],
   ['sharing.list', 'read', 'p'],
   ['sharing.share', 'write', 'p'],
-  ['sharing.unlink', 'write', 'p'],
+  ['sharing.unlink', 'destructive', 'p'],
   ['sharing.unshare', 'write', 'p'],
   ['storage.add-column', 'write', 'pb'],
   ['storage.bucket-detail', 'read', 'pb'],
@@ -310,7 +332,10 @@ export const OPERATIONS: readonly OperationEntry[] = [
 
 export const CONDITIONAL_RULES: readonly ConditionalRule[] = [
   { operation: 'auth.logout', when: ["--remove-projects"], category: 'admin' },
+  { operation: 'cls.create', when: ["--scope","organization"], category: 'destructive' },
   { operation: 'config.variables-set', when: ["--replace"], category: 'destructive' },
+  { operation: 'rls.bindings-sweep', when: ["--yes"], category: 'destructive' },
+  { operation: 'rls.create', when: ["--scope","organization"], category: 'destructive' },
   { operation: 'semantic-layer.add.constraint', when: ["--scope","organization"], category: 'destructive' },
   { operation: 'semantic-layer.add.dataset', when: ["--scope","organization"], category: 'destructive' },
   { operation: 'semantic-layer.add.glossary', when: ["--scope","organization"], category: 'destructive' },

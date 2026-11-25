@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { makeTree } from '../test-utils/tree.ts';
 import { readAppEnv } from './env.ts';
@@ -9,7 +9,7 @@ describe('readAppEnv', () => {
   it('applies local-only defaults', () => {
     expect(readAppEnv({}, '/app')).toEqual({
       rootDir: '/app',
-      dataDir: join('/app', 'data'),
+      dataDir: resolve('/app', 'data'),
       host: '127.0.0.1',
       port: 4800,
       webDevPort: 5173,
@@ -23,7 +23,8 @@ describe('readAppEnv', () => {
   });
 
   it('resolves a relative DATA_DIR against the app folder, wherever it is started from', () => {
-    expect(readAppEnv({ DATA_DIR: 'my-data' }, '/app').dataDir).toBe(join('/app', 'my-data'));
+    // resolve, not join: on Windows the path gains the drive letter, as the app's does.
+    expect(readAppEnv({ DATA_DIR: 'my-data' }, '/app').dataDir).toBe(resolve('/app', 'my-data'));
   });
 
   it('reads overrides and trims values', () => {
@@ -31,7 +32,7 @@ describe('readAppEnv', () => {
       { PORT: '5000', HOST: ' 0.0.0.0 ', DATA_DIR: '/tmp/d', OMNIROUTE_BASE_URL: 'http://x/v1/', OMNIROUTE_API_KEY: ' k ', OMNIROUTE_MODEL: 'm' },
       '/app',
     );
-    expect(env).toMatchObject({ port: 5000, host: '0.0.0.0', dataDir: '/tmp/d', omniroute: { baseUrl: 'http://x/v1', apiKey: 'k', model: 'm' } });
+    expect(env).toMatchObject({ port: 5000, host: '0.0.0.0', dataDir: resolve('/tmp/d'), omniroute: { baseUrl: 'http://x/v1', apiKey: 'k', model: 'm' } });
   });
 
   it('rejects an invalid port', () => {
