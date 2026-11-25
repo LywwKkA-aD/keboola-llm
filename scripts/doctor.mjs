@@ -7,12 +7,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadDotEnv } from './lib/dotenv.mjs';
 import { compareKbagent, snapshotVersion } from './lib/kbagent-version.mjs';
 import { isSupportedNode } from './lib/node-version.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const ENV_PATH = process.env.ENV_FILE?.trim() || join(ROOT, '.env');
+const ENV_PATH = resolve(ROOT, process.env.ENV_FILE?.trim() || '.env');
 const SNAPSHOT_PATH = join(ROOT, 'server', 'src', 'tools', 'kbagent', 'operations-snapshot.ts');
 
 /** What to do about a failed step, in the terminal; the wizard shows the same in the UI. */
@@ -48,8 +47,12 @@ async function main() {
     return;
   }
   print('ok', 'Node.js', process.version);
-  loadDotEnv(ENV_PATH);
+  // Loads TypeScript: only once Node is known to run it.
+  const { loadDotEnv } = await import('./lib/dotenv.mjs');
+  const envWarnings = [];
+  loadDotEnv(ENV_PATH, envWarnings);
   print(existsSync(ENV_PATH) ? 'ok' : 'warn', '.env', existsSync(ENV_PATH) ? 'found' : 'missing: the setup wizard creates it, or copy .env.example to .env');
+  envWarnings.forEach((warning) => print('warn', '.env', warning));
 
   // TypeScript modules of the server, loaded only once Node is known to run them.
   const { readAppEnv } = await import('../server/src/config/env.ts');
