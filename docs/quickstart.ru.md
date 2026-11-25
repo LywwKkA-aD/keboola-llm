@@ -223,7 +223,10 @@ npm start
 
 Агентов, навыки и рутины, которые создаёт или меняет agent-builder, приложение сохраняет в папках `agents`, `skills`
 и `routines`. Если при обновлении мешают локальные изменения, GitHub Desktop предложит их отложить (Stash changes and
-continue); в Git: `git stash`, `git pull`, `git stash pop`.
+continue); в Git: `git stash -u`, `git pull`, `git stash pop` (`-u` откладывает и новые файлы, которые создал
+agent-builder). Если после `git stash pop` Git пишет о конфликте в файле агента, приложение всё равно запустится на
+последней рабочей версии этого агента из истории и покажет ошибку на странице «Агенты»; исправьте файл или верните
+его: `git checkout agents/<имя>/AGENT.md`.
 
 ## Если что-то не так
 
@@ -234,7 +237,15 @@ continue); в Git: `git stash`, `git pull`, `git stash pop`.
 - PowerShell пишет «running scripts is disabled on this system»: выполните
   `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` (администратор не нужен) и откройте PowerShell заново.
 - `npm install` падает на `better-sqlite3`: нужен доступ к GitHub (оттуда скачивается готовая сборка) и Node.js 24.
-- Порт 4800 занят: `$env:PORT=4801; npm start` и откройте http://127.0.0.1:4801.
+- `npm start` пишет «Agent Studio is already running at http://127.0.0.1:4800»: приложение уже запущено в другом
+  окне PowerShell. Откройте этот адрес или закройте то окно (Ctrl+C) и запустите заново. Два окна с одной папкой
+  данных не запускаются: они перезаписывали бы чаты друг друга.
+- `npm start` пишет «Port 4800 is used by another program»: порт занят другой программой. Запустите на другом:
+  `$env:PORT=4801; npm start` и откройте http://127.0.0.1:4801.
+- `.env` записан в кодировке UTF-16 (так делает `>` в PowerShell 5.1): `npm run doctor` об этом скажет. Пересохраните
+  файл в UTF-8 (Блокнот: «Сохранить как», кодировка UTF-8).
+- `npm run doctor` пишет, что `OMNIROUTE_API_KEY` задан ещё и в переменных среды Windows: приложение берёт значение из
+  `.env`; старую переменную лучше удалить (Параметры → «Изменение переменных среды для вашей учётной записи»).
 - **Приложение не видит проекты, а `kbagent project list` в терминале их показывает.** В карточке настройки, в шаге
   «Проект Keboola подключён», будет строка, откуда kbagent в приложении читает настройки. Запустите в терминале
   `kbagent doctor` и сравните её со строкой «Config source». Если пути разные (например, у вас настройки kbagent в
