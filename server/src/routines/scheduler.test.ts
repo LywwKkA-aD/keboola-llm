@@ -200,12 +200,18 @@ describe('createScheduler', () => {
     expect(launched.map((run) => run.name)).toEqual(['other']);
     expect(logs.join('\n')).toMatch(/morning-check.*graph is down/);
 
+    // Not settled: the next check tries that same time again.
     failOn([]);
     time.advanceTo('2026-10-27T08:00:00Z');
-    expect(launched.map((run) => run.name)).toEqual(['other', 'morning-check', 'other']);
+    expect(launched.map((run) => `${run.name} ${run.slot}`)).toEqual([
+      'other 2026-10-26T08:00:00.000Z',
+      'morning-check 2026-10-26T08:00:00.000Z',
+      'morning-check 2026-10-27T08:00:00.000Z',
+      'other 2026-10-27T08:00:00.000Z',
+    ]);
   });
 
-  it('keeps scheduling the others when one routine cannot save its state', () => {
+  it('runs a routine whose state cannot be saved, once, and keeps scheduling the others', () => {
     const time = fakeClock('2026-10-26T07:59:00Z');
     const real = createRoutineStateStore(join(makeTree({}), 'routines.json'));
     real.update('broken', () => ({ settledUntil: '2026-10-23T08:00:00.000Z' }));
@@ -229,8 +235,9 @@ describe('createScheduler', () => {
     });
     scheduler.start();
     time.advance(MINUTE);
+    time.advance(MINUTE);
 
-    expect(launched).toEqual(['morning-check']);
+    expect(launched).toEqual(['broken', 'morning-check']);
     expect(logs.join('\n')).toMatch(/broken: disk full/);
     expect(time.pendingTimers()).toBe(1);
   });
