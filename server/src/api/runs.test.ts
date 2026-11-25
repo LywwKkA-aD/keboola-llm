@@ -1,4 +1,4 @@
-import { AIMessage } from '@langchain/core/messages';
+import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import { Command } from '@langchain/langgraph';
 import { describe, expect, it } from 'vitest';
 import type { ApprovalRequest } from '../runtime/events.ts';
@@ -305,6 +305,25 @@ describe('createRunManager with several interrupts pending (parallel agents)', (
     await all.done;
     expect(all.remaining).toBe(0);
     expect((inputs[1] as Command).resume).toEqual({ a: { decisions: [approve] }, b: { decisions: [approve] } });
+  });
+});
+
+describe('createRunManager event attribution across runs', () => {
+  it('credits the steps a resumed run closes to the agent that started them', async () => {
+    const delegate = [[], 'updates', { model_request: { messages: [new AIMessage({ content: '', name: 'lead', tool_calls: [{ id: 'task-1', name: 'task', args: { subagent_type: 'helper', description: 'Do it' } }] })] } }];
+    const write = [['tools:x'], 'updates', { model_request: { messages: [new AIMessage({ content: '', name: 'helper', tool_calls: [{ id: 'w1', name: 'write_file', args: { file_path: '/a.md' } }] })] } }];
+    const asks = [['tools:x'], 'updates', { __interrupt__: [{ id: 'int-1', value: { actionRequests: [{ name: 'write_file', args: { file_path: '/a.md' } }], reviewConfigs: [{ actionName: 'write_file', allowedDecisions: ['approve'] }] } }] }];
+    const written = [['tools:x'], 'updates', { tools: { messages: [new ToolMessage({ content: 'ok', name: 'write_file', tool_call_id: 'w1' })] } }];
+    const reported = [[], 'updates', { tools: { messages: [new ToolMessage({ content: 'done', name: 'task', tool_call_id: 'task-1' })] } }];
+    const { runs, events } = setup((input) => (input instanceof Command ? [written, reported, finalMessage] : [delegate, write, asks]));
+    await runs.start('t1', {}).done;
+    await runs.answer('t1', [{ interruptId: 'int-1', decisions: [{ type: 'approve' }] }]).done;
+
+    const ends = events.map(({ event }) => event).filter((event) => event.type === 'tool.end' || event.type === 'delegate.end');
+    expect(ends).toEqual([
+      expect.objectContaining({ type: 'tool.end', agent: 'helper', callId: 'w1' }),
+      expect.objectContaining({ type: 'delegate.end', agent: 'lead', to: 'helper', callId: 'task-1' }),
+    ]);
   });
 });
 

@@ -100,6 +100,7 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
   const unfinished = new Set(resumable);
   // Chats deleted while their run went on: its end must not bring them back as resumable.
   const discarded = new Set<string>();
+  const mappers = new Map<string, (chunk: unknown) => TeamEvent[]>();
   const pause = (threadId: string, paused: Waiting) => {
     waiting.set(threadId, paused);
     store?.save(waiting);
@@ -144,7 +145,10 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
   }
 
   async function execute(threadId: string, runId: string, firstInput: unknown, controller: AbortController, resume: boolean): Promise<void> {
-    const mapEvents = createEventMapper(leadName());
+    // A resumed run finishes the steps the paused one started: it keeps that run's mapper, so a subagent's tool and
+    // delegation results are credited to whoever made the call. A new message starts afresh.
+    const mapEvents = (resume ? mappers.get(threadId) : undefined) ?? createEventMapper(leadName());
+    mappers.set(threadId, mapEvents);
     bus.publish(threadId, { type: 'run.started', runId, ...(resume ? { resume: true as const } : {}) });
     try {
       let input = firstInput;
@@ -237,6 +241,7 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
       unfinished.delete(threadId);
       unpause(threadId);
       discarded.add(threadId);
+      mappers.delete(threadId);
     },
     forgetApprovals(threadId) {
       unpause(threadId);

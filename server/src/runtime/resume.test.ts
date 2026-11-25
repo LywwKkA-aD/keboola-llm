@@ -141,7 +141,7 @@ describe('continuing a run on the real graph', () => {
     expect(values.messages?.at(-1)?.content).toBe('Finally.');
   });
 
-  it('after a restart, finds the run that was cut off but not finished or waiting ones', async () => {
+  it('after a restart, finds runs with work left (a waiting one too: the run manager tells it apart), not finished ones', async () => {
     const dir = makeTree({});
     const before = team(
       dir,
@@ -161,7 +161,7 @@ describe('continuing a run on the real graph', () => {
     const after = team(dir, () => new AIMessage('Back.'));
     expect(await hasUnfinishedRun(after.graph, 'cut')).toBe(true);
     expect(await hasUnfinishedRun(after.graph, 'done')).toBe(false);
-    expect(await hasUnfinishedRun(after.graph, 'waiting')).toBe(false);
+    expect(await hasUnfinishedRun(after.graph, 'waiting')).toBe(true);
     expect(await hasUnfinishedRun(after.graph, 'never-used')).toBe(false);
   });
 });

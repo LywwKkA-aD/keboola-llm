@@ -27,6 +27,8 @@ interface CallInfo {
   readonly agent: string;
   readonly tool: string;
   readonly to?: string;
+  /** The call's arguments as JSON: an approval request repeats them, which tells parallel callers apart. */
+  readonly args?: string;
 }
 
 export interface MapperState {
@@ -83,7 +85,7 @@ function fromModelStep(state: MapperState, message: Rec): [MapperState, TeamEven
       const to = str(args.subagent_type);
       return { callId, info: { agent, tool, to }, event: { type: 'delegate.start', agent, callId, to, task: str(args.description) } as const };
     }
-    return { callId, info: { agent, tool }, event: { type: 'tool.start', agent, callId, tool, args } as const };
+    return { callId, info: { agent, tool, args: JSON.stringify(args) }, event: { type: 'tool.start', agent, callId, tool, args } as const };
   });
 
   const nextCalls = new Map(state.calls);
@@ -101,9 +103,14 @@ function fromToolResult(state: MapperState, message: Rec): TeamEvent[] {
   return [{ type: 'tool.end', agent, callId, tool, ok, preview: preview(message.content) }];
 }
 
-/** The agent that most recently called this tool: the interrupt itself does not say who asked. */
-function callerOf(state: MapperState, tool: string): string | undefined {
-  return [...state.calls.values()].toReversed().find((call) => call.tool === tool)?.agent;
+/**
+ * The agent waiting on this request: the interrupt does not say who asked, but it repeats the call's arguments, so
+ * the latest call of this tool with the same arguments; else the latest call of this tool.
+ */
+function callerOf(state: MapperState, tool: string, args: unknown): string | undefined {
+  const calls = [...state.calls.values()].toReversed().filter((call) => call.tool === tool);
+  const same = JSON.stringify(isRec(args) ? args : {});
+  return (calls.find((call) => call.args === same) ?? calls[0])?.agent;
 }
 
 function toRequests(state: MapperState, value: Rec): ApprovalRequest[] {
@@ -113,7 +120,7 @@ function toRequests(state: MapperState, value: Rec): ApprovalRequest[] {
     .map((request): ApprovalRequest => {
       const tool = str(request.name);
       const config = configs.find((entry) => entry.actionName === tool);
-      const agent = callerOf(state, tool);
+      const agent = callerOf(state, tool, request.args);
       return {
         tool,
         ...(agent ? { agent } : {}),

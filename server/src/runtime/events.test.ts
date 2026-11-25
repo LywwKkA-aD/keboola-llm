@@ -135,6 +135,23 @@ describe('mapChunk', () => {
     expect(events[0]).toMatchObject({ requests: [{ tool: 'write_file', agent: 'agent-builder' }] });
   });
 
+  it('names the right agent when parallel agents wait on the same tool', () => {
+    const writes = (ns: string, agent: string, id: string, path: string) =>
+      [[ns], 'updates', { model_request: { messages: [new AIMessage({ content: '', name: agent, tool_calls: [{ id, name: 'write_file', args: { file_path: path } }] })] } }] as const;
+    const asks = (ns: string, id: string, path: string) =>
+      [
+        [ns],
+        'updates',
+        { __interrupt__: [{ id, value: { actionRequests: [{ name: 'write_file', args: { file_path: path } }], reviewConfigs: [{ actionName: 'write_file', allowedDecisions: ['approve'] }] } }] },
+      ] as const;
+    const mapper = createEventMapper('lead');
+    mapper(writes('tools:a', 'alpha', 'wa', '/alpha.md'));
+    mapper(writes('tools:b', 'beta', 'wb', '/beta.md'));
+    // Beta called last, but the first approval is alpha's own call.
+    expect(mapper(asks('tools:a', 'ia', '/alpha.md'))[0]).toMatchObject({ requests: [{ agent: 'alpha' }] });
+    expect(mapper(asks('tools:b', 'ib', '/beta.md'))[0]).toMatchObject({ requests: [{ agent: 'beta' }] });
+  });
+
   it('reports an interrupt once even when parent and subgraph both emit it', () => {
     const [state, first] = mapChunk(initialMapperState('lead'), interruptChunk(SUB_NS));
     const [, second] = mapChunk(state, interruptChunk([]));
