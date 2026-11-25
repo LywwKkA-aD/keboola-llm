@@ -64,6 +64,9 @@ jobs:
       - run: npm ci
       - name: The app lists the projects kbagent has
         run: node scripts/ci/kbagent-projects.mjs
+      # A new kbagent that renames, adds or reclassifies commands must show up here, not on the analyst's machine.
+      - name: The permission snapshot matches the installed kbagent
+        run: node scripts/kbagent-snapshot.mjs --check
 
   e2e:
     name: E2E (stub LLM)

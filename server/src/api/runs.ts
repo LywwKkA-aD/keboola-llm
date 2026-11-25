@@ -101,12 +101,21 @@ export function createRunManager({ bus, getGraph, leadName, autoApprove, store, 
   // Chats deleted while their run went on: its end must not bring them back as resumable.
   const discarded = new Set<string>();
   const mappers = new Map<string, (chunk: unknown) => TeamEvent[]>();
+  // The disk copy only serves a restart: a failed write (a file an antivirus holds on Windows) is logged and must not
+  // break the chat that is running now, which lives in memory.
+  const persist = () => {
+    try {
+      store?.save(waiting);
+    } catch (error) {
+      console.warn(`[approvals] could not save the pending approvals: ${(error as Error).message}`);
+    }
+  };
   const pause = (threadId: string, paused: Waiting) => {
     waiting.set(threadId, paused);
-    store?.save(waiting);
+    persist();
   };
   const unpause = (threadId: string) => {
-    if (waiting.delete(threadId)) store?.save(waiting);
+    if (waiting.delete(threadId)) persist();
   };
 
   const isAutomatic = (threadId: string, approval: PendingApproval) =>

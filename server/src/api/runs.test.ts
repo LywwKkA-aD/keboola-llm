@@ -308,6 +308,23 @@ describe('createRunManager with several interrupts pending (parallel agents)', (
   });
 });
 
+describe('createRunManager when the pending approvals cannot be saved', () => {
+  it('keeps the chat working: waits, takes the answer and resumes', async () => {
+    const store: PendingStore = {
+      load: () => new Map(),
+      save: () => {
+        throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+      },
+    };
+    const { runs, types } = setup((input) => (input instanceof Command ? [finalMessage] : [interrupt]), undefined, store);
+    await runs.start('t1', {}).done;
+    expect(runs.pending('t1')).toHaveLength(1);
+    await runs.answer('t1', [{ interruptId: 'int-1', decisions: [{ type: 'approve' }] }]).done;
+    expect(types().at(-1)).toBe('run.finished');
+    expect(runs.isBusy('t1')).toBe(false);
+  });
+});
+
 describe('createRunManager event attribution across runs', () => {
   it('credits the steps a resumed run closes to the agent that started them', async () => {
     const delegate = [[], 'updates', { model_request: { messages: [new AIMessage({ content: '', name: 'lead', tool_calls: [{ id: 'task-1', name: 'task', args: { subagent_type: 'helper', description: 'Do it' } }] })] } }];

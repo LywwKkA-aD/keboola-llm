@@ -4,10 +4,12 @@
  * risk categories from `kbagent --json permissions list`, scope flags (--project, --branch)
  * from each command's --help. Run after upgrading kbagent; unknown operations are rejected.
  *
- *   npm run kbagent:snapshot
+ *   npm run kbagent:snapshot             write the snapshot
+ *   npm run kbagent:snapshot -- --check  only say whether the installed kbagent differs (CI: catch a new release that
+ *                                        renames, adds or reclassifies commands); the version line is ignored
  */
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -87,5 +89,21 @@ export type { Category };
 
 const version = kbagent('--version').trim().replace(/^kbagent v?/, '');
 const operations = JSON.parse(kbagent('--json', 'permissions', 'list')).data;
-writeFileSync(OUT, render(version, operations, scanFlags()));
-console.log(`[ok] kbagent ${version}: ${operations.length} entries -> ${OUT}`);
+const rendered = render(version, operations, scanFlags());
+if (process.argv.includes('--check')) {
+  const withoutVersion = (text) => text.split('\n').filter((line) => !line.includes('Snapshot of kbagent v'));
+  const now = withoutVersion(rendered);
+  const kept = withoutVersion(readFileSync(OUT, 'utf8'));
+  const added = now.filter((line) => !kept.includes(line));
+  const removed = kept.filter((line) => !now.includes(line));
+  if (added.length + removed.length === 0) {
+    console.log(`[ok] kbagent ${version}: the permission snapshot matches`);
+  } else {
+    console.log(`[drift] kbagent ${version} differs from the permission snapshot; run npm run kbagent:snapshot and review:`);
+    [...removed.map((line) => `- ${line.trim()}`), ...added.map((line) => `+ ${line.trim()}`)].slice(0, 60).forEach((line) => console.log(line));
+    process.exitCode = 1;
+  }
+} else {
+  writeFileSync(OUT, rendered);
+  console.log(`[ok] kbagent ${version}: ${operations.length} entries -> ${OUT}`);
+}
