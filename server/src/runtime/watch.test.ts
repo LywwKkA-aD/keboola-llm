@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { makeTree } from '../test-utils/tree.ts';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { type FSWatcher, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { watchFolders, type WatchFn } from './watch.ts';
+import { defaultWatch, watchFolders, type WatchFn } from './watch.ts';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -10,12 +10,20 @@ afterEach(() => {
 
 function fakeWatch() {
   const listeners = new Map<string, () => void>();
+  const errors = new Map<string, (error: Error) => void>();
   const closed: string[] = [];
-  const watch: WatchFn = (path, listener) => {
+  const watch: WatchFn = (path, listener, onError) => {
     listeners.set(path, listener);
+    errors.set(path, onError);
     return { close: () => closed.push(path) };
   };
-  return { watch, fire: (path: string) => listeners.get(path)?.(), listeners, closed };
+  return {
+    watch,
+    fire: (path: string) => listeners.get(path)?.(),
+    fail: (path: string, error: Error) => errors.get(path)?.(error),
+    listeners,
+    closed,
+  };
 }
 
 describe('watchFolders', () => {
@@ -88,5 +96,31 @@ describe('watchFolders', () => {
     vi.advanceTimersByTime(3000);
     expect(onChange).toHaveBeenCalledTimes(1);
     stop();
+  });
+
+  it('survives a watcher error (Windows: EPERM when the watched folder is deleted) and keeps polling', () => {
+    vi.useFakeTimers();
+    const root = makeTree({ 'agents/a/AGENT.md': 'x' });
+    const { watch, fail, closed } = fakeWatch();
+    const onChange = vi.fn();
+    const logs: string[] = [];
+    const stop = watchFolders([join(root, 'agents')], onChange, { debounceMs: 50, watch, pollMs: 1000, log: (line) => logs.push(line) });
+
+    expect(() => fail(join(root, 'agents'), Object.assign(new Error('EPERM: operation not permitted, watch'), { code: 'EPERM' }))).not.toThrow();
+    expect(closed).toEqual([join(root, 'agents')]);
+    expect(logs.join('\n')).toMatch(/stopped watching .*EPERM/);
+    vi.advanceTimersByTime(100);
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    writeFileSync(join(root, 'agents/a/AGENT.md'), 'x, edited');
+    vi.advanceTimersByTime(1100);
+    expect(onChange).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it('attaches an error listener to the real watcher', () => {
+    const watcher = defaultWatch(makeTree({ 'a.md': 'x' }), () => {}, () => {}) as FSWatcher;
+    expect(watcher.listenerCount('error')).toBe(1);
+    watcher.close();
   });
 });

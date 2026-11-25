@@ -136,5 +136,28 @@ describe('bootstrap', () => {
     expect(spec.lead.systemPrompt).toMatch(/read-only/);
     expect(spec.subagents[0]?.systemPrompt).toContain('## Keboola access');
   });
-});
 
+  it('starts with a lead whose file is broken (merge conflict) on its last good version from the history', () => {
+    const root = repo();
+    const good = agentMd('name: lead\nrole: orchestrator\ndescription: Leads the team and talks to the user.');
+    mkdirSync(join(root, 'data', 'history', 'agents'), { recursive: true });
+    writeFileSync(
+      join(root, 'data', 'history', 'agents', 'lead.json'),
+      JSON.stringify({ versions: [{ id: 1, at: '2026-11-01T10:00:00.000Z', change: 'baseline', size: good.length, hash: 'h', content: good }] }),
+    );
+    writeFileSync(join(root, 'agents', 'lead', 'AGENT.md'), `<<<<<<< Updated upstream\n${good}=======\nlocal\n>>>>>>> Stashed changes\n`);
+    const app = bootstrap(root);
+
+    expect(app.buildTeam({ ...DEFAULT_SETTINGS, language: 'en' }).spec.lead.name).toBe('lead');
+    expect(app.loadErrors.find((error) => error.file.endsWith(join('lead', 'AGENT.md')))?.message).toMatch(/last good version/);
+  });
+
+  it('reads a .env with a byte order mark and tells about a key set twice', () => {
+    const root = repo();
+    writeFileSync(join(root, '.env'), '\uFEFFOMNIROUTE_API_KEY=file-key\nOMNIROUTE_MODEL=cc/test\n');
+    process.env.OMNIROUTE_API_KEY = 'user-level-key';
+    const app = bootstrap(root);
+    expect(app.env.omniroute.apiKey).toBe('file-key');
+    expect(app.envWarnings).toEqual([expect.stringMatching(/OMNIROUTE_API_KEY is also set/)]);
+  });
+});

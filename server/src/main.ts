@@ -22,6 +22,8 @@ import { bootstrap } from './bootstrap.ts';
 import { saveSettings } from './config/settings.ts';
 import { createRoutines } from './routines/service.ts';
 import { createNoteStore, MAX_MEMORY_BYTES } from './knowledge/store.ts';
+import { acquireInstanceLock, InstanceRunningError } from './runtime/instance-lock.ts';
+import { closeCheckpointer, isPortTaken, portTakenMessage } from './runtime/startup.ts';
 import { watchFolders } from './runtime/watch.ts';
 import { createSetupService } from './setup/service.ts';
 import { kbagentConfigSource, kbagentVersion, keboolaAccess, listKeboolaProjects } from './system/keboola.ts';
@@ -40,12 +42,42 @@ interface StateReader {
 }
 
 const app = bootstrap();
+app.envWarnings.forEach((warning) => console.warn(`[.env] ${warning}`));
+
+/** Stop before anything is read or written, with a message the user can act on instead of a stack trace. */
+function refuseToStart(message: string): never {
+  console.error(message);
+  process.exit(1);
+}
+
+// One server per data folder (a second window would overwrite the first one's chats and double every routine).
+let releaseLock: () => void = () => {};
+try {
+  releaseLock = acquireInstanceLock({ dataDir: app.env.dataDir, port: app.env.port });
+} catch (error) {
+  refuseToStart(error instanceof InstanceRunningError ? error.message : `Could not start: ${(error as Error).message}`);
+}
+process.on('exit', () => releaseLock());
+if (await isPortTaken(app.env.host, app.env.port)) {
+  releaseLock();
+  refuseToStart(await portTakenMessage(app.env.host, app.env.port));
+}
+
 const { version } = JSON.parse(await readFile(join(app.env.rootDir, 'package.json'), 'utf8')) as { version: string };
 const models = () => listModels(app.env.omniroute);
 app.loadErrors.forEach((error) => console.warn(`[load] ${error.file}: ${error.message}`));
 
 let settings = app.loadSettings();
-let team = app.buildTeam(settings);
+let team: ReturnType<typeof app.buildTeam>;
+try {
+  team = app.buildTeam(settings);
+} catch (error) {
+  // Only when the lead cannot be read and the history has no earlier version of it (see loadAgents).
+  refuseToStart(
+    `Agent Studio cannot start: ${(error as Error).message}. Fix agents/lead/AGENT.md (the errors above say what is wrong) ` +
+      'or restore it with: git checkout agents/lead/AGENT.md',
+  );
+}
 team.spec.warnings.forEach((warning) => console.warn(`[team] ${warning}`));
 
 const bus = createEventBus({ historyPerThread: 5000 });
@@ -76,7 +108,14 @@ const dropped = await dropStaleApprovals({
 dropped.forEach((threadId) => console.warn(`[approvals] dropped stale pending approvals of ${threadId}`));
 if (runs.waitingThreads().length > 0) console.log(`Restored pending approvals in ${runs.waitingThreads().length} chat(s)`);
 bus.subscribe(({ threadId, event }) => {
-  if (event.type === 'run.finished' || event.type === 'run.waiting') threads.touch(threadId);
+  if (event.type === 'run.finished' || event.type === 'run.waiting') {
+    // The bus swallows a subscriber's error; say when the chat list could not be saved.
+    try {
+      threads.touch(threadId);
+    } catch (error) {
+      console.warn(`[threads] could not save the chat list: ${(error as Error).message}`);
+    }
+  }
   if (event.type === 'run.failed') console.error(`[run] ${threadId}: ${event.reason}: ${event.error}`);
 });
 
@@ -211,12 +250,25 @@ const shutdown = async () => {
   stopWatching();
   routines.stop();
   await server.close();
+  // A complete database file, so a copy of the data folder is a complete backup.
+  try {
+    closeCheckpointer(app.checkpointer as never);
+  } catch (error) {
+    console.warn(`[shutdown] could not close the checkpoint database: ${(error as Error).message}`);
+  }
+  releaseLock();
   process.exit(0);
 };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-await server.listen({ host: app.env.host, port: app.env.port });
+try {
+  await server.listen({ host: app.env.host, port: app.env.port });
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error;
+  releaseLock();
+  refuseToStart(await portTakenMessage(app.env.host, app.env.port));
+}
 // The analyst's access decides how changes reach production; read it now and again every quarter of an hour.
 void refreshAccess();
 setInterval(() => void refreshAccess(), ACCESS_REFRESH_MS).unref();

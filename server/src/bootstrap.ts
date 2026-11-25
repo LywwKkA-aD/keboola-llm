@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite';
+import { loadDotEnv } from './config/dotenv.ts';
 import { type AppEnv, type OmniRouteConfig, readAppEnv } from './config/env.ts';
 import { loadSettings, type Settings } from './config/settings.ts';
 import { createModelFactory } from './llm/model.ts';
@@ -13,6 +14,7 @@ import { buildTeamSpec, createTeam, type TeamSpec } from './runtime/team.ts';
 import { accessSummary, type KeboolaAccess } from './system/keboola-access.ts';
 import { createToolResolver } from './tools/catalog.ts';
 import { createToolFactories } from './tools/registry.ts';
+import { createVersionLog } from './versions/log.ts';
 
 export const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -29,6 +31,8 @@ export interface App {
   readonly reloadDefinitions: () => void;
   /** The .env file config came from: ENV_FILE, else <root>/.env. The setup wizard saves the OmniRoute key here. */
   readonly envFile: string;
+  /** What reading .env found worth telling the user (an unreadable encoding, a variable set twice). */
+  readonly envWarnings: readonly string[];
   /** Use new OmniRoute settings from now on (the setup wizard's key form); the next buildTeam uses them. */
   readonly setOmniRoute: (omniroute: OmniRouteConfig) => void;
   /** What the analyst may do in Keboola, read from kbagent; the next buildTeam tells the agents and picks tools. */
@@ -47,23 +51,22 @@ export interface Team {
   readonly effective: Effective;
 }
 
-function loadDotEnv(file: string): void {
-  try {
-    process.loadEnvFile(file);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-  }
-}
-
 /** Read config, agents and skills from disk and prepare everything needed to build the team. */
 export function bootstrap(rootDir: string = ROOT_DIR): App {
-  const envFile = (process.env.ENV_FILE ?? '').trim() || join(rootDir, '.env');
-  loadDotEnv(envFile);
+  const envFile = resolve(rootDir, (process.env.ENV_FILE ?? '').trim() || '.env');
+  const { warnings: envWarnings } = loadDotEnv(envFile);
   let env = readAppEnv(process.env, rootDir);
   mkdirSync(env.dataDir, { recursive: true });
 
   const skillSources = discoverSkillSources(rootDir);
-  const readDefinitions = () => ({ agents: loadAgents(rootDir), skills: loadSkills(skillSources) });
+  // An agent whose file cannot be read runs on its last good version from the history (newest first).
+  const history = createVersionLog({ dir: join(env.dataDir, 'history') });
+  const lastGood = (name: string) =>
+    history
+      .read('agents', name)
+      .flatMap((version) => (version.content === undefined ? [] : [version.content]))
+      .toReversed();
+  const readDefinitions = () => ({ agents: loadAgents(rootDir, { lastGood }), skills: loadSkills(skillSources) });
   let definitions = readDefinitions();
   let access: KeboolaAccess | undefined;
   const settingsFile = join(env.dataDir, 'settings.json');
@@ -77,6 +80,7 @@ export function bootstrap(rootDir: string = ROOT_DIR): App {
       return env;
     },
     envFile,
+    envWarnings,
     setOmniRoute: (omniroute) => {
       env = { ...env, omniroute };
       createModel = createModelFactory(omniroute);
